@@ -36,7 +36,7 @@ jobs:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
         run: |
           printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$GITHUB_WORKSPACE/deploy_key"
-          chmod 600 "$GITHUB_WORKSPACE/deploy_key"
+          chmod 644 "$GITHUB_WORKSPACE/deploy_key"
           ssh-keygen -y -f "$GITHUB_WORKSPACE/deploy_key" > /dev/null || (echo 'Invalid SSH key in DEPLOY_SSH_KEY secret' && exit 1)
 
       - name: Deploy API via SSH
