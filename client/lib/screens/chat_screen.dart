@@ -58,6 +58,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
+    _text.addListener(() {
+      if (mounted) setState(() {});
+    });
     _load();
     final ws = context.read<WsService>();
     _ws = ws;
@@ -113,6 +116,11 @@ class _ChatScreenState extends State<ChatScreen> {
     while ((ru = ws.takeReactionUpdateFor(widget.peer.id)) != null) {
       final idx = _messages.indexWhere((msg) => msg.id == ru!.messageId);
       if (idx >= 0 && mounted) setState(() => _messages[idx] = _messages[idx].copyWith(reactions: ru!.reactions));
+    }
+    // Пользователь в чате — помечаем все сообщения прочитанными, чтобы при выходе не показывался счётчик непрочитанных
+    if (mounted) {
+      final auth = context.read<AuthService>();
+      Api(auth.token).markMessagesRead(widget.peer.id).catchError((_) {});
     }
   }
 
@@ -1240,8 +1248,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   )
                 else
                   IconButton(
-                    onPressed: _canSend ? _send : null,
-                    icon: const Icon(Icons.send),
+                    onPressed: _sending ? null : () => _send(),
+                    icon: Icon(Icons.send, color: _canSend ? null : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38)),
                     tooltip: 'Отправить',
                   ),
               ],

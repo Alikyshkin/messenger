@@ -19,6 +19,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _username = TextEditingController();
   final _password = TextEditingController();
   bool _loading = false;
+  bool _passwordVisible = false;
   String? _error;
 
   @override
@@ -104,8 +105,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: InputDecoration(
                               labelText: context.tr('password'),
                               border: const OutlineInputBorder(),
+                              suffixIcon: IconButton(
+                                icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
+                                onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                                tooltip: _passwordVisible ? 'Скрыть пароль' : 'Показать пароль',
+                              ),
                             ),
-                            obscureText: true,
+                            obscureText: !_passwordVisible,
                             onFieldSubmitted: (_) => _submit(),
                             validator: (v) =>
                                 v == null || v.isEmpty ? context.tr('enter_password') : null,

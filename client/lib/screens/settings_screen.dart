@@ -27,6 +27,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _loading = false;
+  bool _passwordVisible = false;
   String? _error;
   int _cacheSizeBytes = 0;
   /// День рождения в формате YYYY-MM-DD или null если не указан.
@@ -434,8 +435,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             decoration: InputDecoration(
               labelText: context.tr('current_password'),
               border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
+                onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                tooltip: _passwordVisible ? 'Скрыть пароль' : 'Показать пароль',
+              ),
             ),
-            obscureText: true,
+            obscureText: !_passwordVisible,
             autocorrect: false,
           ),
           const SizedBox(height: 12),
@@ -444,8 +450,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             decoration: InputDecoration(
               labelText: context.tr('new_password'),
               border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
+                onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                tooltip: _passwordVisible ? 'Скрыть пароль' : 'Показать пароль',
+              ),
             ),
-            obscureText: true,
+            obscureText: !_passwordVisible,
             autocorrect: false,
           ),
           const SizedBox(height: 12),
@@ -454,8 +465,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             decoration: InputDecoration(
               labelText: context.tr('confirm_password'),
               border: const OutlineInputBorder(),
+              suffixIcon: IconButton(
+                icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
+                onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                tooltip: _passwordVisible ? 'Скрыть пароль' : 'Показать пароль',
+              ),
             ),
-            obscureText: true,
+            obscureText: !_passwordVisible,
             autocorrect: false,
           ),
           const SizedBox(height: 12),

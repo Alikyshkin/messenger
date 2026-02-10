@@ -20,6 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _email = TextEditingController();
   final _firstFieldFocus = FocusNode();
   bool _loading = false;
+  bool _passwordVisible = false;
   String? _error;
 
   @override
@@ -131,10 +132,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: InputDecoration(
                     labelText: context.tr('password'),
                     border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
+                      onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                      tooltip: _passwordVisible ? 'Скрыть пароль' : 'Показать пароль',
+                    ),
                   ),
                   textInputAction: TextInputAction.done,
                   keyboardType: TextInputType.visiblePassword,
-                  obscureText: true,
+                  obscureText: !_passwordVisible,
                   enableSuggestions: false,
                   autocorrect: false,
                   onFieldSubmitted: (_) => _submit(),
