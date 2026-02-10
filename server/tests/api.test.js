@@ -103,4 +103,68 @@ describe('Messages', () => {
     assert.ok(msg);
     assert.strictEqual(msg.is_mine, true);
   });
+
+  it('GET /messages/:peerId — сообщения содержат поле reactions (массив)', async () => {
+    const { status, data } = await fetchJson(baseUrl, '/messages/' + userId2, {
+      headers: authHeaders(token1),
+    });
+    assert.strictEqual(status, 200);
+    assert.ok(Array.isArray(data));
+    for (const msg of data) {
+      assert.ok(Array.isArray(msg.reactions), 'message should have reactions array');
+    }
+  });
+
+  it('POST /messages/:messageId/reaction — ставит реакцию и возвращает reactions', async () => {
+    const { data: msg } = await fetchJson(baseUrl, '/messages/' + userId2, {
+      headers: authHeaders(token1),
+    });
+    const firstMsg = msg.find((m) => m.content === 'Hello from 1');
+    assert.ok(firstMsg, 'need at least one message');
+    const messageId = firstMsg.id;
+    const { status, data } = await fetchJson(baseUrl, '/messages/' + messageId + '/reaction', {
+      method: 'POST',
+      headers: authHeaders(token2),
+      body: JSON.stringify({ emoji: '👍' }),
+    });
+    assert.strictEqual(status, 200);
+    assert.ok(Array.isArray(data.reactions));
+    const thumbsUp = data.reactions.find((r) => r.emoji === '👍');
+    assert.ok(thumbsUp);
+    assert.ok(Array.isArray(thumbsUp.user_ids));
+    assert.strictEqual(thumbsUp.user_ids.includes(userId2), true);
+  });
+
+  it('POST /messages/:messageId/reaction — повторная та же эмодзи снимает реакцию', async () => {
+    const { data: list } = await fetchJson(baseUrl, '/messages/' + userId1, {
+      headers: authHeaders(token2),
+    });
+    const msg = list.find((m) => m.content === 'Hello from 1');
+    assert.ok(msg);
+    await fetchJson(baseUrl, '/messages/' + msg.id + '/reaction', {
+      method: 'POST',
+      headers: authHeaders(token2),
+      body: JSON.stringify({ emoji: '❤️' }),
+    });
+    const { data: after } = await fetchJson(baseUrl, '/messages/' + msg.id + '/reaction', {
+      method: 'POST',
+      headers: authHeaders(token2),
+      body: JSON.stringify({ emoji: '❤️' }),
+    });
+    const heart = after.reactions.find((r) => r.emoji === '❤️');
+    assert.ok(!heart || heart.user_ids.length === 0, 'same emoji again should remove reaction');
+  });
+
+  it('POST /messages/:messageId/reaction — 400 на недопустимую эмодзи', async () => {
+    const { data: list } = await fetchJson(baseUrl, '/messages/' + userId2, {
+      headers: authHeaders(token1),
+    });
+    const messageId = list[0].id;
+    const res = await fetch(baseUrl + '/messages/' + messageId + '/reaction', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders(token1) },
+      body: JSON.stringify({ emoji: 'invalid' }),
+    });
+    assert.strictEqual(res.status, 400);
+  });
 });

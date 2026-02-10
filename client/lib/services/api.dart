@@ -8,6 +8,22 @@ import '../models/chat.dart';
 import '../models/group.dart';
 import '../models/friend_request.dart';
 
+List<MessageReaction> _parseReactions(dynamic v) {
+  if (v is! List) return [];
+  final list = <MessageReaction>[];
+  for (final e in v) {
+    if (e is! Map<String, dynamic>) continue;
+    final emoji = e['emoji'] as String?;
+    final ids = e['user_ids'];
+    if (emoji == null || emoji.isEmpty) continue;
+    final userIds = ids is List
+        ? (ids.map((x) => x is int ? x : (x is num ? x.toInt() : null)).whereType<int>().toList())
+        : <int>[];
+    list.add(MessageReaction(emoji: emoji, userIds: userIds));
+  }
+  return list;
+}
+
 class Api {
   final String token;
   final String base = apiBaseUrl;
@@ -279,6 +295,40 @@ class Api {
     return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
   }
 
+  /// Отправка нескольких файлов (например, альбом фото). Возвращает список сообщений.
+  Future<List<Message>> sendMessageWithMultipleFiles(
+    int receiverId,
+    String content,
+    List<({List<int> bytes, String filename})> files, {
+    bool attachmentEncrypted = false,
+  }) async {
+    if (files.isEmpty) return [];
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$base/messages'),
+    );
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields['receiver_id'] = receiverId.toString();
+    request.fields['content'] = content;
+    if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
+    for (final f in files) {
+      request.files.add(http.MultipartFile.fromBytes(
+        'file',
+        f.bytes,
+        filename: f.filename,
+      ));
+    }
+    final streamed = await request.send();
+    final r = await http.Response.fromStream(streamed);
+    _checkResponse(r);
+    final data = jsonDecode(_utf8Body(r));
+    if (data is Map<String, dynamic> && data['messages'] != null) {
+      final list = data['messages'] as List<dynamic>;
+      return list.map((e) => Message.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [Message.fromJson(data as Map<String, dynamic>)];
+  }
+
   Future<Message> sendVoiceMessage(
     int receiverId,
     List<int> fileBytes,
@@ -333,6 +383,29 @@ class Api {
     final r = await http.Response.fromStream(streamed);
     _checkResponse(r);
     return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+  }
+
+  Future<List<MessageReaction>> setMessageReaction(int messageId, String emoji) async {
+    final r = await http.post(
+      Uri.parse('$base/messages/$messageId/reaction'),
+      headers: { ..._headers, 'Content-Type': 'application/json' },
+      body: jsonEncode({'emoji': emoji}),
+    );
+    _checkResponse(r);
+    final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+    final reactions = data['reactions'];
+    return _parseReactions(reactions);
+  }
+
+  Future<List<MessageReaction>> setGroupMessageReaction(int groupId, int messageId, String emoji) async {
+    final r = await http.post(
+      Uri.parse('$base/groups/$groupId/messages/$messageId/reaction'),
+      headers: { ..._headers, 'Content-Type': 'application/json' },
+      body: jsonEncode({'emoji': emoji}),
+    );
+    _checkResponse(r);
+    final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+    return _parseReactions(data['reactions']);
   }
 
   Future<void> forgotPassword(String email) async {
@@ -547,6 +620,32 @@ class Api {
     final r = await http.Response.fromStream(streamed);
     _checkResponse(r);
     return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+  }
+
+  /// Отправка нескольких файлов в группу (альбом). Возвращает список сообщений.
+  Future<List<Message>> sendGroupMessageWithMultipleFiles(
+    int groupId,
+    String content,
+    List<({List<int> bytes, String filename})> files, {
+    bool attachmentEncrypted = false,
+  }) async {
+    if (files.isEmpty) return [];
+    final request = http.MultipartRequest('POST', Uri.parse('$base/groups/$groupId/messages'));
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields['content'] = content;
+    if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
+    for (final f in files) {
+      request.files.add(http.MultipartFile.fromBytes('file', f.bytes, filename: f.filename));
+    }
+    final streamed = await request.send();
+    final r = await http.Response.fromStream(streamed);
+    _checkResponse(r);
+    final data = jsonDecode(_utf8Body(r));
+    if (data is Map<String, dynamic> && data['messages'] != null) {
+      final list = data['messages'] as List<dynamic>;
+      return list.map((e) => Message.fromJson(e as Map<String, dynamic>)).toList();
+    }
+    return [Message.fromJson(data as Map<String, dynamic>)];
   }
 
   Future<Message> sendGroupVoiceMessage(

@@ -6,6 +6,22 @@ import '../config.dart';
 import '../models/message.dart';
 import '../models/call_signal.dart';
 
+class ReactionUpdate {
+  final int messageId;
+  final int? peerId;
+  final int? groupId;
+  final List<MessageReaction> reactions;
+  ReactionUpdate({required this.messageId, this.peerId, this.groupId, required this.reactions});
+}
+
+class _ReactionUpdate {
+  final int messageId;
+  final int? peerId;
+  final int? groupId;
+  final List<MessageReaction> reactions;
+  _ReactionUpdate({required this.messageId, this.peerId, this.groupId, required this.reactions});
+}
+
 class WsService extends ChangeNotifier {
   WebSocketChannel? _channel;
   StreamSubscription? _sub;
@@ -14,6 +30,7 @@ class WsService extends ChangeNotifier {
   bool _allowReconnect = true;
   Timer? _reconnectTimer;
   final List<Message> _incoming = [];
+  final List<_ReactionUpdate> _reactionUpdates = [];
   final StreamController<CallSignal> _callSignalController = StreamController<CallSignal>.broadcast();
   final StreamController<void> _newMessageController = StreamController<void>.broadcast();
 
@@ -91,8 +108,40 @@ class WsService extends ChangeNotifier {
         if (!_newMessageController.isClosed) _newMessageController.add(null);
       } else if (map['type'] == 'call_signal' && map['fromUserId'] != null && map['signal'] != null) {
         _callSignalController.add(CallSignal.fromJson(map));
+      } else if (map['type'] == 'reaction' && map['message_id'] != null && map['peer_id'] != null && map['reactions'] != null) {
+        final reactions = _parseReactions(map['reactions']);
+        _reactionUpdates.add(_ReactionUpdate(
+          messageId: map['message_id'] as int,
+          peerId: map['peer_id'] as int,
+          reactions: reactions,
+        ));
+        notifyListeners();
+      } else if (map['type'] == 'group_reaction' && map['group_id'] != null && map['message_id'] != null && map['reactions'] != null) {
+        final reactions = _parseReactions(map['reactions']);
+        _reactionUpdates.add(_ReactionUpdate(
+          messageId: map['message_id'] as int,
+          groupId: map['group_id'] as int,
+          reactions: reactions,
+        ));
+        notifyListeners();
       }
     } catch (_) {}
+  }
+
+  static List<MessageReaction> _parseReactions(dynamic v) {
+    if (v is! List) return [];
+    final list = <MessageReaction>[];
+    for (final e in v) {
+      if (e is! Map<String, dynamic>) continue;
+      final emoji = e['emoji'] as String?;
+      final ids = e['user_ids'];
+      if (emoji == null || emoji.isEmpty) continue;
+      final userIds = ids is List
+          ? (ids.map((x) => x is int ? x : (x is num ? x.toInt() : null)).whereType<int>().toList())
+          : <int>[];
+      list.add(MessageReaction(emoji: emoji, userIds: userIds));
+    }
+    return list;
   }
 
   void sendCallSignal(int toUserId, String signal, [Map<String, dynamic>? payload]) {
@@ -119,8 +168,25 @@ class WsService extends ChangeNotifier {
     return _incoming.removeAt(i);
   }
 
+  ReactionUpdate? takeReactionUpdateFor(int peerId) {
+    final i = _reactionUpdates.indexWhere((u) => u.peerId == peerId && u.groupId == null);
+    if (i < 0) return null;
+    final u = _reactionUpdates.removeAt(i);
+    notifyListeners();
+    return ReactionUpdate(messageId: u.messageId, peerId: u.peerId, reactions: u.reactions);
+  }
+
+  ReactionUpdate? takeGroupReactionUpdateFor(int groupId) {
+    final i = _reactionUpdates.indexWhere((u) => u.groupId == groupId);
+    if (i < 0) return null;
+    final u = _reactionUpdates.removeAt(i);
+    notifyListeners();
+    return ReactionUpdate(messageId: u.messageId, groupId: u.groupId, reactions: u.reactions);
+  }
+
   void clearPending() {
     _incoming.clear();
+    _reactionUpdates.clear();
     notifyListeners();
   }
 
@@ -134,6 +200,7 @@ class WsService extends ChangeNotifier {
     _channel = null;
     _connected = false;
     _incoming.clear();
+    _reactionUpdates.clear();
     notifyListeners();
   }
 }

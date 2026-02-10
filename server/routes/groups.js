@@ -8,8 +8,20 @@ import { fileURLToPath } from 'url';
 import { mkdirSync, existsSync, unlinkSync } from 'fs';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
-import { notifyNewGroupMessage } from '../realtime.js';
+import { notifyNewGroupMessage, notifyGroupReaction } from '../realtime.js';
 import { decryptIfLegacy } from '../cipher.js';
+
+const ALLOWED_EMOJIS = new Set(['👍', '👎', '❤️', '🔥', '😂', '😮', '😢']);
+function getGroupMessageReactions(groupMessageId) {
+  const rows = db.prepare('SELECT user_id, emoji FROM group_message_reactions WHERE group_message_id = ?').all(groupMessageId);
+  const byEmoji = {};
+  for (const r of rows) {
+    if (!ALLOWED_EMOJIS.has(r.emoji)) continue;
+    if (!byEmoji[r.emoji]) byEmoji[r.emoji] = [];
+    byEmoji[r.emoji].push(r.user_id);
+  }
+  return Object.entries(byEmoji).map(([emoji, user_ids]) => ({ emoji, user_ids }));
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, '../uploads');
@@ -342,9 +354,37 @@ router.get('/:id/messages', (req, res) => {
         multiple: !!pollRow.multiple,
       };
     }
+    msg.reactions = getGroupMessageReactions(r.id);
     return msg;
   });
   res.json(list);
+});
+
+// Реакция на сообщение в группе
+router.post('/:id/messages/:messageId/reaction', (req, res) => {
+  const groupId = parseInt(req.params.id, 10);
+  const messageId = parseInt(req.params.messageId, 10);
+  const emoji = typeof req.body?.emoji === 'string' ? req.body.emoji.trim() : '';
+  if (Number.isNaN(groupId) || Number.isNaN(messageId) || messageId < 1) return res.status(400).json({ error: 'Некорректный id' });
+  if (!ALLOWED_EMOJIS.has(emoji)) return res.status(400).json({ error: 'Недопустимая реакция' });
+  const me = req.user.userId;
+  if (!isMember(me, groupId)) return res.status(404).json({ error: 'Группа не найдена' });
+  const row = db.prepare('SELECT id, group_id FROM group_messages WHERE id = ? AND group_id = ?').get(messageId, groupId);
+  if (!row) return res.status(404).json({ error: 'Сообщение не найдено' });
+  const existing = db.prepare('SELECT emoji FROM group_message_reactions WHERE group_message_id = ? AND user_id = ?').get(messageId, me);
+  if (existing) {
+    if (existing.emoji === emoji) {
+      db.prepare('DELETE FROM group_message_reactions WHERE group_message_id = ? AND user_id = ?').run(messageId, me);
+    } else {
+      db.prepare('UPDATE group_message_reactions SET emoji = ? WHERE group_message_id = ? AND user_id = ?').run(emoji, messageId, me);
+    }
+  } else {
+    db.prepare('INSERT INTO group_message_reactions (group_message_id, user_id, emoji) VALUES (?, ?, ?)').run(messageId, me, emoji);
+  }
+  const reactions = getGroupMessageReactions(messageId);
+  const memberIds = getGroupMemberIds(groupId);
+  notifyGroupReaction(memberIds, groupId, messageId, reactions);
+  res.json({ reactions });
 });
 
 // Отметить прочтение
@@ -367,10 +407,10 @@ router.patch('/:id/read', (req, res) => {
   res.status(204).send();
 });
 
-// Отправить сообщение в группу (текст, файл, опрос)
+// Отправить сообщение в группу (текст, файл/несколько файлов, опрос)
 router.post('/:id/messages', (req, res, next) => {
   if (req.get('Content-Type')?.startsWith('multipart/form-data')) {
-    return fileUpload.single('file')(req, res, (err) => {
+    return fileUpload.array('file', 20)(req, res, (err) => {
       if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки файла' });
       next();
     });
@@ -395,7 +435,8 @@ router.post('/:id/messages', (req, res, next) => {
   } = req.body || {};
   const isPoll = type === 'poll' && question && Array.isArray(optArr) && optArr.length >= 2;
   const text = (content ?? '').trim();
-  if (!isPoll && !text && !req.file) return res.status(400).json({ error: 'content или файл обязательны' });
+  const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
+  if (!isPoll && !text && files.length === 0) return res.status(400).json({ error: 'content или файл обязательны' });
   const replyToId = reply_to_id != null ? parseInt(reply_to_id, 10) : null;
   const isFwd = is_forwarded === true || is_forwarded === 'true';
   const fwdFromId = forward_from_sender_id != null ? parseInt(forward_from_sender_id, 10) : null;
@@ -438,15 +479,71 @@ router.post('/:id/messages', (req, res, next) => {
       is_forwarded: false,
       forward_from_sender_id: null,
       forward_from_display_name: null,
+      reactions: [],
     };
     const memberIds = getGroupMemberIds(groupId);
     notifyNewGroupMessage(memberIds, me, payload);
     return res.status(201).json(payload);
   }
 
-  let attachmentPath = req.file?.filename ?? null;
-  if (req.file) {
-    const fullPath = path.join(uploadsDir, req.file.filename);
+  const attachmentKind = (files.length === 1 && (req.body?.attachment_kind === 'voice' || req.body?.attachment_kind === 'video_note'))
+    ? req.body.attachment_kind
+    : 'file';
+  const attachmentDurationSec = req.body?.attachment_duration_sec != null
+    ? parseInt(req.body.attachment_duration_sec, 10)
+    : null;
+  const attachmentEncrypted = req.body?.attachment_encrypted === 'true' || req.body?.attachment_encrypted === true ? 1 : 0;
+  const sender = db.prepare('SELECT public_key, display_name, username FROM users WHERE id = ?').get(me);
+  const memberIds = getGroupMemberIds(groupId);
+
+  if (files.length === 0) {
+    const ins = db.prepare(
+      `INSERT INTO group_messages (group_id, sender_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name)
+       VALUES (?, ?, ?, NULL, NULL, 'text', 'file', NULL, 0, ?, ?, ?, ?)`,
+    ).run(groupId, me, text, Number.isNaN(replyToId) ? null : replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
+    const msgId = ins.lastInsertRowid;
+    const row = db.prepare(
+      'SELECT id, group_id, sender_id, content, created_at, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM group_messages WHERE id = ?',
+    ).get(msgId);
+    const payload = {
+      id: row.id,
+      group_id: row.group_id,
+      sender_id: row.sender_id,
+      sender_display_name: sender?.display_name || sender?.username || '?',
+      content: row.content,
+      created_at: row.created_at,
+      is_mine: true,
+      attachment_url: null,
+      attachment_filename: null,
+      message_type: row.message_type || 'text',
+      poll_id: null,
+      attachment_kind: row.attachment_kind || 'file',
+      attachment_duration_sec: row.attachment_duration_sec ?? null,
+      attachment_encrypted: !!(row.attachment_encrypted),
+      sender_public_key: sender?.public_key ?? null,
+      reply_to_id: row.reply_to_id ?? null,
+      is_forwarded: !!(row.is_forwarded),
+      forward_from_sender_id: row.forward_from_sender_id ?? null,
+      forward_from_display_name: row.forward_from_display_name ?? null,
+    };
+    if (row.reply_to_id) {
+      const replyRow = db.prepare('SELECT content, sender_id FROM group_messages WHERE id = ?').get(row.reply_to_id);
+      if (replyRow) {
+        const replySender = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(replyRow.sender_id);
+        payload.reply_to_content = (replyRow.content || '').length > 80 ? (replyRow.content || '').slice(0, 77) + '...' : (replyRow.content || '');
+        payload.reply_to_sender_name = replySender?.display_name || replySender?.username || '?';
+      }
+    }
+    payload.reactions = [];
+    notifyNewGroupMessage(memberIds, me, payload);
+    return res.status(201).json(payload);
+  }
+
+  const payloads = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    let attachmentPath = file.filename;
+    const fullPath = path.join(uploadsDir, file.filename);
     try {
       const stat = fs.statSync(fullPath);
       if (stat.size >= MIN_SIZE_TO_COMPRESS) {
@@ -454,74 +551,71 @@ router.post('/:id/messages', (req, res, next) => {
         const compressed = zlib.gzipSync(data);
         fs.writeFileSync(fullPath + '.gz', compressed);
         fs.unlinkSync(fullPath);
-        attachmentPath = req.file.filename + '.gz';
+        attachmentPath = file.filename + '.gz';
       }
     } catch (_) {}
-  }
-  const attachmentFilename = req.file?.originalname ?? null;
-  const attachmentKind = (req.body?.attachment_kind === 'voice' || req.body?.attachment_kind === 'video_note')
-    ? req.body.attachment_kind
-    : 'file';
-  const attachmentDurationSec = req.body?.attachment_duration_sec != null
-    ? parseInt(req.body.attachment_duration_sec, 10)
-    : null;
-  const attachmentEncrypted = req.body?.attachment_encrypted === 'true' || req.body?.attachment_encrypted === true ? 1 : 0;
-  const contentToStore = text || (attachmentKind === 'voice' ? 'Голосовое сообщение' : attachmentKind === 'video_note' ? 'Видеокружок' : '(файл)');
+    const attachmentFilename = file.originalname ?? null;
+    const kind = (i === 0 && files.length === 1) ? attachmentKind : 'file';
+    const durationSec = (i === 0 && files.length === 1) ? attachmentDurationSec : null;
+    const enc = (i === 0 && files.length === 1) ? attachmentEncrypted : 0;
+    const contentToStore = (i === 0 && text) ? text : (kind === 'voice' ? 'Голосовое сообщение' : kind === 'video_note' ? 'Видеокружок' : '(файл)');
 
-  const ins = db.prepare(
-    `INSERT INTO group_messages (group_id, sender_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name)
-     VALUES (?, ?, ?, ?, ?, 'text', ?, ?, ?, ?, ?, ?, ?)`,
-  ).run(
-    groupId,
-    me,
-    contentToStore,
-    attachmentPath,
-    attachmentFilename,
-    attachmentKind,
-    attachmentDurationSec,
-    attachmentEncrypted,
-    Number.isNaN(replyToId) ? null : replyToId,
-    isFwd ? 1 : 0,
-    fwdFromId,
-    fwdFromName,
-  );
-  const msgId = ins.lastInsertRowid;
-  const row = db.prepare(
-    'SELECT id, group_id, sender_id, content, created_at, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM group_messages WHERE id = ?',
-  ).get(msgId);
-  const sender = db.prepare('SELECT public_key, display_name, username FROM users WHERE id = ?').get(me);
-  const payload = {
-    id: row.id,
-    group_id: row.group_id,
-    sender_id: row.sender_id,
-    sender_display_name: sender?.display_name || sender?.username || '?',
-    content: row.content,
-    created_at: row.created_at,
-    is_mine: true,
-    attachment_url: row.attachment_path ? `${baseUrl}/uploads/${row.attachment_path}` : null,
-    attachment_filename: row.attachment_filename || null,
-    message_type: row.message_type || 'text',
-    poll_id: null,
-    attachment_kind: row.attachment_kind || 'file',
-    attachment_duration_sec: row.attachment_duration_sec ?? null,
-    attachment_encrypted: !!(row.attachment_encrypted),
-    sender_public_key: sender?.public_key ?? null,
-    reply_to_id: row.reply_to_id ?? null,
-    is_forwarded: !!(row.is_forwarded),
-    forward_from_sender_id: row.forward_from_sender_id ?? null,
-    forward_from_display_name: row.forward_from_display_name ?? null,
-  };
-  if (row.reply_to_id) {
-    const replyRow = db.prepare('SELECT content, sender_id FROM group_messages WHERE id = ?').get(row.reply_to_id);
-    if (replyRow) {
-      const replySender = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(replyRow.sender_id);
-      payload.reply_to_content = (replyRow.content || '').length > 80 ? (replyRow.content || '').slice(0, 77) + '...' : (replyRow.content || '');
-      payload.reply_to_sender_name = replySender?.display_name || replySender?.username || '?';
+    const ins = db.prepare(
+      `INSERT INTO group_messages (group_id, sender_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name)
+       VALUES (?, ?, ?, ?, ?, 'text', ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(
+      groupId,
+      me,
+      contentToStore,
+      attachmentPath,
+      attachmentFilename,
+      kind,
+      durationSec,
+      enc,
+      Number.isNaN(replyToId) ? null : replyToId,
+      isFwd ? 1 : 0,
+      fwdFromId,
+      fwdFromName,
+    );
+    const msgId = ins.lastInsertRowid;
+    const row = db.prepare(
+      'SELECT id, group_id, sender_id, content, created_at, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM group_messages WHERE id = ?',
+    ).get(msgId);
+    const payload = {
+      id: row.id,
+      group_id: row.group_id,
+      sender_id: row.sender_id,
+      sender_display_name: sender?.display_name || sender?.username || '?',
+      content: row.content,
+      created_at: row.created_at,
+      is_mine: true,
+      attachment_url: row.attachment_path ? `${baseUrl}/uploads/${row.attachment_path}` : null,
+      attachment_filename: row.attachment_filename || null,
+      message_type: row.message_type || 'text',
+      poll_id: null,
+      attachment_kind: row.attachment_kind || 'file',
+      attachment_duration_sec: row.attachment_duration_sec ?? null,
+      attachment_encrypted: !!(row.attachment_encrypted),
+      sender_public_key: sender?.public_key ?? null,
+      reply_to_id: row.reply_to_id ?? null,
+      is_forwarded: !!(row.is_forwarded),
+      forward_from_sender_id: row.forward_from_sender_id ?? null,
+      forward_from_display_name: row.forward_from_display_name ?? null,
+    };
+    if (row.reply_to_id) {
+      const replyRow = db.prepare('SELECT content, sender_id FROM group_messages WHERE id = ?').get(row.reply_to_id);
+      if (replyRow) {
+        const replySender = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(replyRow.sender_id);
+        payload.reply_to_content = (replyRow.content || '').length > 80 ? (replyRow.content || '').slice(0, 77) + '...' : (replyRow.content || '');
+        payload.reply_to_sender_name = replySender?.display_name || replySender?.username || '?';
+      }
     }
+    payload.reactions = [];
+    notifyNewGroupMessage(memberIds, me, payload);
+    payloads.push(payload);
   }
-  const memberIds = getGroupMemberIds(groupId);
-  notifyNewGroupMessage(memberIds, me, payload);
-  res.status(201).json(payload);
+  if (payloads.length === 1) return res.status(201).json(payloads[0]);
+  return res.status(201).json({ messages: payloads });
 });
 
 // Голос в опросе группы

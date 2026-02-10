@@ -24,3 +24,16 @@ export function notifyNewGroupMessage(memberUserIds, senderId, message) {
     }
   });
 }
+
+/** Реакция на личное сообщение: уведомить обоих участников чата. */
+export function notifyReaction(messageId, senderId, receiverId, reactions) {
+  const payload = { type: 'reaction', message_id: messageId, peer_id: null, reactions };
+  broadcastToUser(senderId, { ...payload, peer_id: receiverId });
+  broadcastToUser(receiverId, { ...payload, peer_id: senderId });
+}
+
+/** Реакция на сообщение в группе: уведомить всех участников. */
+export function notifyGroupReaction(memberUserIds, groupId, messageId, reactions) {
+  const payload = { type: 'group_reaction', group_id: groupId, message_id: messageId, reactions };
+  memberUserIds.forEach((userId) => broadcastToUser(userId, payload));
+}

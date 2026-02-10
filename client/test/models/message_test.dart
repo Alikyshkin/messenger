@@ -105,5 +105,74 @@ void main() {
         true,
       );
     });
+
+    test('fromJson parses message with reactions', () {
+      final json = {
+        'id': 20,
+        'sender_id': 1,
+        'receiver_id': 2,
+        'content': 'Hi',
+        'created_at': '2025-01-01T12:00:00Z',
+        'is_mine': true,
+        'message_type': 'text',
+        'reactions': [
+          {'emoji': '👍', 'user_ids': [2, 3]},
+          {'emoji': '❤️', 'user_ids': [1]},
+        ],
+      };
+      final m = Message.fromJson(json);
+      expect(m.reactions.length, 2);
+      expect(m.reactions[0].emoji, '👍');
+      expect(m.reactions[0].userIds, [2, 3]);
+      expect(m.reactions[0].count, 2);
+      expect(m.reactions[1].emoji, '❤️');
+      expect(m.reactions[1].userIds, [1]);
+      expect(m.reactions[1].count, 1);
+    });
+
+    test('fromJson parses message without reactions as empty list', () {
+      final m = Message.fromJson({
+        'id': 1,
+        'sender_id': 1,
+        'receiver_id': 2,
+        'content': 'x',
+        'created_at': '',
+        'is_mine': false,
+      });
+      expect(m.reactions, isEmpty);
+    });
+
+    test('copyWith updates reactions', () {
+      final m = Message.fromJson({
+        'id': 1,
+        'sender_id': 1,
+        'receiver_id': 2,
+        'content': 'x',
+        'created_at': '',
+        'is_mine': false,
+        'reactions': [{'emoji': '👍', 'user_ids': [2]}],
+      });
+      final updated = m.copyWith(
+        reactions: [MessageReaction(emoji: '❤️', userIds: [2, 3])],
+      );
+      expect(updated.reactions.length, 1);
+      expect(updated.reactions[0].emoji, '❤️');
+      expect(updated.reactions[0].count, 2);
+      expect(m.reactions[0].emoji, '👍'); // original unchanged
+    });
+
+    test('isGroupMessage when group_id present', () {
+      final m = Message.fromJson({
+        'id': 1,
+        'sender_id': 1,
+        'receiver_id': 0,
+        'group_id': 5,
+        'content': 'x',
+        'created_at': '',
+        'is_mine': false,
+      });
+      expect(m.isGroupMessage, true);
+      expect(m.groupId, 5);
+    });
   });
 }

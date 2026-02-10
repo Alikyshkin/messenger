@@ -183,4 +183,32 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll ON group_poll_votes(group_poll_id);
 `);
 
+// Реакции на сообщения (личные и групповые)
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS message_reactions (
+      message_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      emoji TEXT NOT NULL,
+      PRIMARY KEY (message_id, user_id),
+      FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_message_reactions_message ON message_reactions(message_id);
+  `);
+} catch (_) {}
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS group_message_reactions (
+      group_message_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      emoji TEXT NOT NULL,
+      PRIMARY KEY (group_message_id, user_id),
+      FOREIGN KEY (group_message_id) REFERENCES group_messages(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_group_message_reactions_msg ON group_message_reactions(group_message_id);
+  `);
+} catch (_) {}
+
 export default db;

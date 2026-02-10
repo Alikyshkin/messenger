@@ -122,6 +122,7 @@ class LocalDb {
     final db = await _getDb();
     if (db == null) return;
     final peer = chat.peer;
+    if (peer == null) return;
     final last = chat.lastMessage;
     await db.insert(
       'chats',

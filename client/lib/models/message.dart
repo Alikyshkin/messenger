@@ -1,3 +1,10 @@
+class MessageReaction {
+  final String emoji;
+  final List<int> userIds;
+  MessageReaction({required this.emoji, required this.userIds});
+  int get count => userIds.length;
+}
+
 class Message {
   final int id;
   final int senderId;
@@ -23,6 +30,7 @@ class Message {
   final bool isForwarded;
   final int? forwardFromSenderId;
   final String? forwardFromDisplayName;
+  final List<MessageReaction> reactions;
 
   Message({
     required this.id,
@@ -49,9 +57,40 @@ class Message {
     this.isForwarded = false,
     this.forwardFromSenderId,
     this.forwardFromDisplayName,
+    this.reactions = const [],
   });
 
   bool get isGroupMessage => groupId != null;
+
+  Message copyWith({List<MessageReaction>? reactions}) {
+    return Message(
+      id: id,
+      senderId: senderId,
+      receiverId: receiverId,
+      groupId: groupId,
+      content: content,
+      createdAt: createdAt,
+      readAt: readAt,
+      isMine: isMine,
+      attachmentUrl: attachmentUrl,
+      attachmentFilename: attachmentFilename,
+      messageType: messageType,
+      pollId: pollId,
+      poll: poll,
+      attachmentKind: attachmentKind,
+      attachmentDurationSec: attachmentDurationSec,
+      senderPublicKey: senderPublicKey,
+      senderDisplayName: senderDisplayName,
+      attachmentEncrypted: attachmentEncrypted,
+      replyToId: replyToId,
+      replyToContent: replyToContent,
+      replyToSenderName: replyToSenderName,
+      isForwarded: isForwarded,
+      forwardFromSenderId: forwardFromSenderId,
+      forwardFromDisplayName: forwardFromDisplayName,
+      reactions: reactions ?? this.reactions,
+    );
+  }
 
   factory Message.fromJson(Map<String, dynamic> json) {
     PollData? poll;
@@ -97,7 +136,22 @@ class Message {
       isForwarded: json['is_forwarded'] as bool? ?? false,
       forwardFromSenderId: json['forward_from_sender_id'] as int?,
       forwardFromDisplayName: json['forward_from_display_name'] as String?,
+      reactions: _parseReactions(json['reactions']),
     );
+  }
+
+  static List<MessageReaction> _parseReactions(dynamic v) {
+    if (v is! List) return [];
+    final list = <MessageReaction>[];
+    for (final e in v) {
+      if (e is! Map<String, dynamic>) continue;
+      final emoji = e['emoji'] as String?;
+      final ids = e['user_ids'];
+      if (emoji == null || emoji.isEmpty) continue;
+      final userIds = ids is List ? (ids.map((x) => (x is int) ? x : (x is num ? x.toInt() : null)).whereType<int>().toList()) : <int>[];
+      list.add(MessageReaction(emoji: emoji, userIds: userIds));
+    }
+    return list;
   }
 
   bool get hasAttachment => attachmentUrl != null && attachmentUrl!.isNotEmpty;
