@@ -32,13 +32,15 @@ class LastMessage {
 class ChatPreview {
   final User peer;
   final LastMessage? lastMessage;
+  final int unreadCount;
 
-  ChatPreview({required this.peer, this.lastMessage});
+  ChatPreview({required this.peer, this.lastMessage, this.unreadCount = 0});
 
   factory ChatPreview.fromJson(Map<String, dynamic> json) {
     return ChatPreview(
       peer: User.fromJson(json['peer'] as Map<String, dynamic>),
       lastMessage: LastMessage.fromJson(json['last_message'] as Map<String, dynamic>?),
+      unreadCount: json['unread_count'] as int? ?? 0,
     );
   }
 }

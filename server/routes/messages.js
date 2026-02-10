@@ -42,6 +42,16 @@ function getBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
+router.patch('/:peerId/read', (req, res) => {
+  const peerId = parseInt(req.params.peerId, 10);
+  if (Number.isNaN(peerId)) return res.status(400).json({ error: 'Invalid peer id' });
+  const me = req.user.userId;
+  db.prepare(
+    'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE receiver_id = ? AND sender_id = ? AND read_at IS NULL'
+  ).run(me, peerId);
+  res.status(204).send();
+});
+
 router.get('/:peerId', (req, res) => {
   const peerId = parseInt(req.params.peerId, 10);
   if (Number.isNaN(peerId)) {

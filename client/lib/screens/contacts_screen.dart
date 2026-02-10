@@ -4,6 +4,7 @@ import '../models/user.dart';
 import '../models/friend_request.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
+import '../widgets/skeleton.dart';
 import 'add_contact_screen.dart';
 import 'chat_screen.dart';
 
@@ -74,7 +75,10 @@ class _ContactsScreenState extends State<ContactsScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView.builder(
+              itemCount: 12,
+              itemBuilder: (_, __) => const SkeletonContactTile(),
+            )
           : _error != null
               ? Center(
                   child: Column(

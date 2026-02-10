@@ -19,6 +19,7 @@ import '../services/e2ee_service.dart';
 import '../services/ws_service.dart';
 import '../utils/temp_file.dart';
 import '../utils/voice_file_io.dart';
+import '../widgets/skeleton.dart';
 import '../widgets/voice_message_bubble.dart';
 import '../widgets/video_note_bubble.dart';
 import 'call_screen.dart';
@@ -49,6 +50,7 @@ class _ChatScreenState extends State<ChatScreen> {
   VoidCallback? _wsUnsub;
   final E2EEService _e2ee = E2EEService();
   Message? _replyingTo;
+  PendingAttachment? _pendingAttachment;
 
   @override
   void initState() {
@@ -169,6 +171,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _loading = false;
       });
       _scrollToBottom();
+      await api.markMessagesRead(peerId);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -282,22 +285,77 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  bool get _canSend {
+    if (_sending) return false;
+    if (_text.text.trim().isNotEmpty) return true;
+    if (_pendingAttachment != null) return true;
+    return false;
+  }
+
   Future<void> _send() async {
+    if (!_canSend) return;
     final content = _text.text.trim();
-    if (content.isEmpty || _sending) return;
     final replyToId = _replyingTo?.id;
-    _text.clear();
+    final pending = _pendingAttachment;
     setState(() {
       _sending = true;
       _replyingTo = null;
+      _text.clear();
+      _pendingAttachment = null;
     });
+    final api = Api(context.read<AuthService>().token);
+
+    if (pending != null) {
+      try {
+        if (pending is PendingFile) {
+          final msg = await api.sendMessageWithFile(
+            widget.peer.id,
+            content,
+            pending.bytes.toList(),
+            pending.filename,
+            attachmentEncrypted: pending.encrypted,
+          );
+          if (!mounted) return;
+          await LocalDb.upsertMessage(msg, widget.peer.id);
+          await LocalDb.updateChatLastMessage(widget.peer.id, msg);
+          setState(() {
+            _messages.add(msg);
+            _sending = false;
+          });
+          _scrollToBottom();
+        } else if (pending is PendingVoice) {
+          final msg = await api.sendVoiceMessage(
+            widget.peer.id,
+            pending.bytes.toList(),
+            'voice.m4a',
+            pending.durationSec,
+            attachmentEncrypted: pending.encrypted,
+          );
+          if (!mounted) return;
+          await LocalDb.upsertMessage(msg, widget.peer.id);
+          await LocalDb.updateChatLastMessage(widget.peer.id, msg);
+          setState(() {
+            _messages.add(msg);
+            _sending = false;
+          });
+          _scrollToBottom();
+        }
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _sending = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка отправки')),
+        );
+      }
+      return;
+    }
+
     String toSend = content;
     try {
       if (widget.peer.publicKey != null) {
         final encrypted = await _e2ee.encrypt(content, widget.peer.publicKey);
         if (encrypted != null) toSend = encrypted;
       }
-      final api = Api(context.read<AuthService>().token);
       final msg = await api.sendMessage(widget.peer.id, toSend, replyToId: replyToId);
       if (!mounted) return;
       final toShow = toSend != content
@@ -345,7 +403,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<void> _attachAndSend() async {
+  Future<void> _attachFile() async {
     if (_sending) return;
     final result = await FilePicker.platform.pickFiles(allowMultiple: false, withData: true);
     if (result == null || result.files.isEmpty || result.files.single.bytes == null) return;
@@ -359,31 +417,10 @@ class _ChatScreenState extends State<ChatScreen> {
         encrypted = true;
       }
     }
-    final content = _text.text.trim();
-    _text.clear();
-    setState(() => _sending = true);
-    try {
-      final api = Api(context.read<AuthService>().token);
-      final msg = await api.sendMessageWithFile(
-        widget.peer.id,
-        content,
-        bytes,
-        file.name,
-        attachmentEncrypted: encrypted,
-      );
-      if (!mounted) return;
-      setState(() {
-        _messages.add(msg);
-        _sending = false;
-      });
-      _scrollToBottom();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _sending = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка отправки файла')),
-      );
-    }
+    final name = file.name.toLowerCase();
+    final isImage = name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.webp');
+    if (!mounted) return;
+    setState(() => _pendingAttachment = PendingFile(bytes: bytes, filename: file.name, isImage: isImage, encrypted: encrypted));
   }
 
   Future<void> _createPoll() async {
@@ -448,14 +485,10 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _messages[idx] = newMsg);
   }
 
+  DateTime? _recordStartTime;
+
   Future<void> _startVoiceRecord() async {
     if (_sending || _isRecording) return;
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Голосовые сообщения пока только на мобильных и ПК')),
-      );
-      return;
-    }
     try {
       final hasPermission = await _audioRecorder.hasPermission();
       if (!hasPermission) {
@@ -465,12 +498,15 @@ class _ChatScreenState extends State<ChatScreen> {
         );
         return;
       }
-      final dir = await getTemporaryDirectory();
-      final path = p.join(dir.path, 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a');
+      final path = kIsWeb
+          ? 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a'
+          : p.join((await getTemporaryDirectory()).path, 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a');
       await _audioRecorder.start(const RecordConfig(encoder: AudioEncoder.aacLc, sampleRate: 44100), path: path);
+      if (!mounted) return;
       setState(() {
         _isRecording = true;
         _recordPath = path;
+        _recordStartTime = DateTime.now();
       });
     } catch (e) {
       if (!mounted) return;
@@ -482,21 +518,29 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _stopVoiceRecord() async {
     if (!_isRecording || _recordPath == null) return;
+    final startTime = _recordStartTime;
     try {
       final path = await _audioRecorder.stop();
+      if (!mounted) return;
       setState(() {
         _isRecording = false;
         _recordPath = null;
+        _recordStartTime = null;
       });
       if (path == null || path.isEmpty) return;
       int durationSec = 0;
-      try {
-        final ap = AudioPlayer();
-        await ap.setFilePath(path);
-        final d = ap.duration;
-        durationSec = d?.inSeconds ?? 0;
-        await ap.dispose();
-      } catch (_) {}
+      if (!kIsWeb) {
+        try {
+          final ap = AudioPlayer();
+          await ap.setFilePath(path);
+          final d = ap.duration;
+          durationSec = d?.inSeconds ?? 0;
+          await ap.dispose();
+        } catch (_) {}
+      }
+      if (durationSec < 1 && startTime != null) {
+        durationSec = DateTime.now().difference(startTime).inSeconds;
+      }
       if (durationSec < 1) return;
       var voiceBytes = Uint8List.fromList(await readVoiceFileBytes(path));
       var encrypted = false;
@@ -507,23 +551,8 @@ class _ChatScreenState extends State<ChatScreen> {
           encrypted = true;
         }
       }
-      setState(() => _sending = true);
-      try {
-        final api = Api(context.read<AuthService>().token);
-        final msg = await api.sendVoiceMessage(widget.peer.id, voiceBytes, 'voice.m4a', durationSec, attachmentEncrypted: encrypted);
-        if (!mounted) return;
-        setState(() {
-          _messages.add(msg);
-          _sending = false;
-        });
-        _scrollToBottom();
-      } catch (e) {
-        if (!mounted) return;
-        setState(() => _sending = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка отправки')),
-        );
-      }
+      if (!mounted) return;
+      setState(() => _pendingAttachment = PendingVoice(bytes: voiceBytes, durationSec: durationSec, encrypted: encrypted));
     } catch (_) {}
   }
 
@@ -586,7 +615,11 @@ class _ChatScreenState extends State<ChatScreen> {
         children: [
           Expanded(
             child: _loading && _messages.isEmpty
-                ? const Center(child: CircularProgressIndicator())
+                ? ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    itemCount: 10,
+                    itemBuilder: (context, i) => SkeletonMessageBubble(isRight: i.isOdd),
+                  )
                 : _error != null && _messages.isEmpty
                     ? Center(
                         child: Column(
@@ -614,6 +647,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             alignment: m.isMine ? Alignment.centerRight : Alignment.centerLeft,
                             child: GestureDetector(
                               onLongPress: () => _showMessageActions(m),
+                              onSecondaryTap: () => _showMessageActions(m),
                               child: Container(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -692,8 +726,10 @@ class _ChatScreenState extends State<ChatScreen> {
                                       _buildVideoNoteBubble(m)
                                     else ...[
                                     if (m.content.isNotEmpty && !_isFilePlaceholderContent(m))
-                                      Text(
-                                        m.content,
+                                      SelectableText(
+                                        m.content.startsWith('e2ee:')
+                                            ? 'Сообщение не удалось расшифровать'
+                                            : m.content,
                                         style: m.isMine
                                             ? TextStyle(color: Theme.of(context).colorScheme.onPrimary)
                                             : null,
@@ -704,13 +740,35 @@ class _ChatScreenState extends State<ChatScreen> {
                                     ],
                                   ],
                                   const SizedBox(height: 4),
-                                  Text(
-                                    _formatTime(m.createdAt),
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: m.isMine
-                                          ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.8)
-                                          : Theme.of(context).colorScheme.onSurfaceVariant,
-                                    ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        _formatTime(m.createdAt),
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: m.isMine
+                                              ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.8)
+                                              : Theme.of(context).colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                      if (m.isMine) ...[
+                                        const SizedBox(width: 4),
+                                        Icon(
+                                          m.readAt != null ? Icons.done_all : Icons.done,
+                                          size: 14,
+                                          color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.8),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Text(
+                                          m.readAt != null ? 'Прочитано' : 'Отправлено',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.8),
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ],
                               ),
@@ -756,12 +814,59 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
+          if (_pendingAttachment != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: Row(
+                children: [
+                  if (_pendingAttachment is PendingFile) ...[
+                    if ((_pendingAttachment! as PendingFile).isImage && !(_pendingAttachment! as PendingFile).encrypted)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          (_pendingAttachment! as PendingFile).bytes,
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    else
+                      Icon(Icons.insert_drive_file, color: Theme.of(context).colorScheme.primary, size: 40),
+                  ] else if (_pendingAttachment is PendingVoice) ...[
+                    Icon(Icons.mic, color: Theme.of(context).colorScheme.primary, size: 32),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatDuration((_pendingAttachment! as PendingVoice).durationSec),
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _pendingAttachment is PendingFile
+                          ? (_pendingAttachment! as PendingFile).filename
+                          : 'Голосовое сообщение',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => setState(() => _pendingAttachment = null),
+                    tooltip: 'Убрать вложение',
+                  ),
+                ],
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(8),
             child: Row(
               children: [
                 IconButton(
-                  onPressed: _sending ? null : _attachAndSend,
+                  onPressed: _sending ? null : _attachFile,
                   icon: const Icon(Icons.photo_library_outlined),
                   tooltip: 'Фото или файл',
                 ),
@@ -781,7 +886,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     icon: _isRecording
                         ? const Icon(Icons.stop_circle, color: Colors.red)
                         : const Icon(Icons.mic_none),
-                    tooltip: _isRecording ? 'Остановить и отправить' : 'Нажмите для записи голосового (или удерживайте)',
+                    tooltip: _isRecording ? 'Остановить запись' : 'Нажмите для записи голосового (или удерживайте)',
                   ),
                 ),
                 IconButton(
@@ -824,7 +929,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   )
                 else
                   IconButton(
-                    onPressed: _send,
+                    onPressed: _canSend ? _send : null,
                     icon: const Icon(Icons.send),
                     tooltip: 'Отправить',
                   ),
@@ -1100,6 +1205,12 @@ class _ChatScreenState extends State<ChatScreen> {
       return iso;
     }
   }
+
+  static String _formatDuration(int seconds) {
+    final m = seconds ~/ 60;
+    final s = seconds % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
 }
 
 class _PollFormResult {
@@ -1227,4 +1338,30 @@ class _CreatePollDialogState extends State<_CreatePollDialog> {
       ],
     );
   }
+}
+
+abstract class PendingAttachment {}
+
+class PendingFile extends PendingAttachment {
+  final Uint8List bytes;
+  final String filename;
+  final bool isImage;
+  final bool encrypted;
+  PendingFile({
+    required this.bytes,
+    required this.filename,
+    this.isImage = false,
+    this.encrypted = false,
+  });
+}
+
+class PendingVoice extends PendingAttachment {
+  final Uint8List bytes;
+  final int durationSec;
+  final bool encrypted;
+  PendingVoice({
+    required this.bytes,
+    required this.durationSec,
+    this.encrypted = false,
+  });
 }

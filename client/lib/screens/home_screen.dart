@@ -6,6 +6,7 @@ import '../models/chat.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../services/ws_service.dart';
+import '../widgets/skeleton.dart';
 import 'chat_screen.dart';
 import 'contacts_screen.dart';
 import 'profile_screen.dart';
@@ -138,7 +139,10 @@ class _HomeScreenState extends State<HomeScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading && _chats.isEmpty
-            ? const Center(child: CircularProgressIndicator())
+            ? ListView.builder(
+                itemCount: 10,
+                itemBuilder: (_, __) => const SkeletonChatTile(),
+              )
             : _error != null && _chats.isEmpty
                 ? Center(
                     child: Column(
@@ -156,8 +160,29 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemCount: _chats.length,
                         itemBuilder: (context, i) {
                           final c = _chats[i];
+                          final unread = c.unreadCount;
                           return ListTile(
-                            title: Text(c.peer.displayName),
+                            title: Row(
+                              children: [
+                                Expanded(child: Text(c.peer.displayName)),
+                                if (unread > 0)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      unread > 99 ? '99+' : '$unread',
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.onPrimary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
                             subtitle: c.lastMessage != null
                                 ? Text(
                                     c.lastMessage!.isMine

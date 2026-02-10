@@ -22,6 +22,13 @@ router.get('/', (req, res) => {
     WHERE sender_id = ? OR receiver_id = ?
     GROUP BY peer_id
   `).all(me, me, me);
+  const unreadCounts = db.prepare(`
+    SELECT sender_id AS peer_id, COUNT(*) AS cnt
+    FROM messages
+    WHERE receiver_id = ? AND read_at IS NULL
+    GROUP BY sender_id
+  `).all(me);
+  const unreadMap = Object.fromEntries(unreadCounts.map((r) => [r.peer_id, r.cnt]));
   const result = lastIds.map(({ mid, peer_id }) => {
     const msg = db.prepare('SELECT id, content, created_at, sender_id, message_type FROM messages WHERE id = ?').get(mid);
     const user = db.prepare('SELECT id, username, display_name, bio, avatar_path, public_key FROM users WHERE id = ?').get(peer_id);
@@ -41,6 +48,7 @@ router.get('/', (req, res) => {
         is_mine: msg.sender_id === me,
         message_type: msg.message_type || 'text',
       },
+      unread_count: unreadMap[peer_id] ?? 0,
     };
   });
   result.sort((a, b) => new Date(b.last_message.created_at) - new Date(a.last_message.created_at));

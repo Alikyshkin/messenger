@@ -172,6 +172,14 @@ class Api {
     return list.map((e) => ChatPreview.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  Future<void> markMessagesRead(int peerId) async {
+    final r = await http.patch(
+      Uri.parse('$base/messages/$peerId/read'),
+      headers: _headers,
+    );
+    _checkResponse(r);
+  }
+
   Future<List<Message>> getMessages(int peerId, {int? before, int limit = 100}) async {
     final params = <String, String>{'limit': limit.toString()};
     if (before != null) params['before'] = before.toString();
