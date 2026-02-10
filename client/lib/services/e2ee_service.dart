@@ -25,7 +25,7 @@ class E2EEService {
       if (parts.length == 2) return parts[1];
     }
     final keyPair = await _x25519.newKeyPair();
-    final privBytes = keyPair.extractPrivateKeyBytes();
+    final privBytes = await keyPair.extractPrivateKeyBytes();
     final pubKey = await keyPair.extractPublicKey();
     final pubBytes = pubKey.bytes;
     final stored = '${base64Encode(privBytes)}:${base64Encode(pubBytes)}';
