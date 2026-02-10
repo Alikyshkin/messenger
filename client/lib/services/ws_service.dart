@@ -11,6 +11,8 @@ class WsService extends ChangeNotifier {
   StreamSubscription? _sub;
   bool _connected = false;
   String _token = '';
+  bool _allowReconnect = true;
+  Timer? _reconnectTimer;
   final List<Message> _incoming = [];
   final StreamController<CallSignal> _callSignalController = StreamController<CallSignal>.broadcast();
 
@@ -20,9 +22,21 @@ class WsService extends ChangeNotifier {
 
   void connect(String token) {
     if (_token == token && _connected) return;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     disconnect();
     _token = token;
-    final uri = Uri.parse('$wsBaseUrl?token=$token');
+    _allowReconnect = token.isNotEmpty;
+    if (token.isEmpty) return;
+    _doConnect();
+  }
+
+  void _doConnect() {
+    _sub?.cancel();
+    _sub = null;
+    _channel?.sink.close();
+    _channel = null;
+    final uri = Uri.parse('$wsBaseUrl?token=$_token');
     try {
       _channel = WebSocketChannel.connect(uri);
       _sub = _channel!.stream.listen(
@@ -30,10 +44,12 @@ class WsService extends ChangeNotifier {
         onError: (e) {
           _connected = false;
           notifyListeners();
+          _scheduleReconnect();
         },
         onDone: () {
           _connected = false;
           notifyListeners();
+          _scheduleReconnect();
         },
         cancelOnError: false,
       );
@@ -42,7 +58,17 @@ class WsService extends ChangeNotifier {
     } catch (_) {
       _connected = false;
       notifyListeners();
+      _scheduleReconnect();
     }
+  }
+
+  void _scheduleReconnect() {
+    if (!_allowReconnect || _token.isEmpty) return;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = Timer(const Duration(seconds: 3), () {
+      _reconnectTimer = null;
+      if (!_connected && _allowReconnect && _token.isNotEmpty) _doConnect();
+    });
   }
 
   void _onMessage(dynamic data) {
@@ -82,6 +108,9 @@ class WsService extends ChangeNotifier {
   }
 
   void disconnect() {
+    _allowReconnect = false;
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
     _sub?.cancel();
     _sub = null;
     _channel?.sink.close();

@@ -124,8 +124,12 @@ wss.on('connection', (ws, req) => {
   ws.on('message', (raw) => {
     try {
       const data = JSON.parse(raw.toString());
-      if (data.type === 'call_signal' && data.toUserId && data.signal) {
-        broadcastToUser(data.toUserId, {
+      if (data.type === 'call_signal' && data.toUserId != null && data.signal) {
+        const toId = Number(data.toUserId);
+        const set = clients.get(toId);
+        const n = set ? set.size : 0;
+        console.log(`[ws] call_signal from ${userId} to ${toId} (${n} connection(s))`);
+        broadcastToUser(toId, {
           type: 'call_signal',
           fromUserId: userId,
           signal: data.signal,

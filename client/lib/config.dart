@@ -19,6 +19,8 @@ String get apiBaseUrl {
 String get wsBaseUrl {
   final uri = Uri.parse(apiBaseUrl);
   final scheme = uri.scheme == 'https' ? 'wss' : 'ws';
-  final port = uri.hasPort ? uri.port : (uri.scheme == 'https' ? 443 : 3000);
+  final port = uri.hasPort ? uri.port : (uri.scheme == 'https' ? 443 : 80);
+  final isDefaultPort = (scheme == 'wss' && port == 443) || (scheme == 'ws' && (port == 80 || port == 3000));
+  if (isDefaultPort) return '$scheme://${uri.host}/ws';
   return '$scheme://${uri.host}:$port/ws';
 }
