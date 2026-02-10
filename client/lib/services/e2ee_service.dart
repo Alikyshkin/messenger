@@ -12,7 +12,6 @@ class E2EEService {
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
-    webOptions: WebOptions(useSessionStorage: false),
   );
 
   final X25519 _x25519 = X25519();
