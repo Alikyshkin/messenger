@@ -18,7 +18,9 @@ import pollsRoutes from './routes/polls.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const uploadsDir = join(__dirname, 'uploads');
+const publicDir = join(__dirname, 'public');
 if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
+if (!existsSync(publicDir)) mkdirSync(publicDir, { recursive: true });
 
 const app = express();
 const server = createServer(app);
@@ -35,6 +37,14 @@ app.use('/users', usersRoutes);
 app.use('/polls', pollsRoutes);
 
 app.get('/health', (req, res) => res.json({ ok: true }));
+
+// Веб-клиент (Flutter build) — отдаём по корню, чтобы открывать приложение по http://IP:3000/
+app.use(express.static(publicDir));
+app.get(/^\/(?!auth|contacts|messages|users|polls|uploads|health|reset-password|ws)/, (req, res) => {
+  const index = join(publicDir, 'index.html');
+  if (existsSync(index)) return res.sendFile(index);
+  res.status(404).send('Web client not deployed. Push to main to deploy, or run locally: flutter run -d chrome --dart-define=API_BASE_URL=http://THIS_SERVER:3000');
+});
 
 app.get('/reset-password', (req, res) => {
   const token = req.query.token || '';

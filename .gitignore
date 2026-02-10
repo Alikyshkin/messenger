@@ -3,6 +3,7 @@ server/.env
 server/messenger.db
 server/node_modules
 server/uploads
+server/public
 
 # Client
 client/.dart_tool
