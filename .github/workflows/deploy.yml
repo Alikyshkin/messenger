@@ -31,31 +31,36 @@ jobs:
           mkdir -p server/public
           cp -r client/build/web/* server/public/
 
-      - name: Deploy API via SSH
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Prepare SSH key
         env:
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/messenger' }}
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: DEPLOY_PATH
-          script: |
-            set -e
-            cd "$DEPLOY_PATH"
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$GITHUB_WORKSPACE/deploy_key"
+          chmod 600 "$GITHUB_WORKSPACE/deploy_key"
+          ssh-keygen -y -f "$GITHUB_WORKSPACE/deploy_key" > /dev/null || (echo 'Invalid SSH key' && exit 1)
+
+      - name: Copy web client to server
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          PATH_TO_DEPLOY="${DEPLOY_PATH:-/opt/messenger}"
+          scp -o StrictHostKeyChecking=accept-new -i "$GITHUB_WORKSPACE/deploy_key" -r server/public/* "$DEPLOY_USER@$DEPLOY_HOST:$PATH_TO_DEPLOY/server/public/"
+
+      - name: Deploy API via SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          PATH_TO_DEPLOY="${DEPLOY_PATH:-/opt/messenger}"
+          ssh -o StrictHostKeyChecking=accept-new -i "$GITHUB_WORKSPACE/deploy_key" "$DEPLOY_USER@$DEPLOY_HOST" "set -e
+            cd $PATH_TO_DEPLOY
             git fetch origin main
             git reset --hard origin/main
             cd server
             npm ci --omit=dev
             mkdir -p public
             pm2 restart messenger || (pm2 start index.js --name messenger)
-            pm2 save
-
-      - name: Copy web client to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: "server/public"
-          target: "${{ secrets.DEPLOY_PATH || '/opt/messenger' }}/server"
+            pm2 save"
