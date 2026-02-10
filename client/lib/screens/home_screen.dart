@@ -100,7 +100,8 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Чаты'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.people_outline),
+            icon: const Icon(Icons.group_outlined),
+            tooltip: 'Друзья',
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
@@ -110,7 +111,8 @@ class _HomeScreenState extends State<HomeScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.person_outline),
+            icon: const Icon(Icons.account_circle_outlined),
+            tooltip: 'Мой профиль',
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(

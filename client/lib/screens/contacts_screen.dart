@@ -52,7 +52,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Контакты'),
+        title: const Text('Друзья'),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -81,7 +81,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
                   ),
                 )
               : _contacts.isEmpty
-                  ? const Center(child: Text('Нет контактов.\nНажмите + чтобы добавить.', textAlign: TextAlign.center))
+                  ? const Center(child: Text('Нет друзей.\nНажмите + чтобы добавить.', textAlign: TextAlign.center))
                   : ListView.builder(
                       itemCount: _contacts.length,
                       itemBuilder: (context, i) {
@@ -111,8 +111,8 @@ class _ContactsScreenState extends State<ContactsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Удалить контакт?'),
-        content: Text('Удалить ${u.displayName} из контактов?'),
+        title: const Text('Удалить из друзей?'),
+        content: Text('Удалить ${u.displayName} из друзей?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),

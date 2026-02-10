@@ -74,7 +74,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Добавить контакт')),
+      appBar: AppBar(title: const Text('Добавить друга')),
       body: Column(
         children: [
           Padding(

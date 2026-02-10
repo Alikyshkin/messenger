@@ -98,6 +98,13 @@ class Api {
     return User.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
+  /// Публичный профиль пользователя (имя, био, аватар, количество друзей — без списка друзей).
+  Future<User> getUserProfile(int userId) async {
+    final r = await http.get(Uri.parse('$base/users/$userId'), headers: _headers);
+    _checkResponse(r);
+    return User.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
   Future<List<User>> searchUsers(String q) async {
     final r = await http.get(
       Uri.parse('$base/users/search').replace(queryParameters: {'q': q}),
@@ -152,11 +159,28 @@ class Api {
     return list.map((e) => Message.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<Message> sendMessage(int receiverId, String content) async {
+  Future<Message> sendMessage(
+    int receiverId,
+    String content, {
+    int? replyToId,
+    bool isForwarded = false,
+    int? forwardFromSenderId,
+    String? forwardFromDisplayName,
+  }) async {
+    final body = <String, dynamic>{
+      'receiver_id': receiverId,
+      'content': content,
+    };
+    if (replyToId != null) body['reply_to_id'] = replyToId;
+    if (isForwarded) {
+      body['is_forwarded'] = true;
+      if (forwardFromSenderId != null) body['forward_from_sender_id'] = forwardFromSenderId;
+      if (forwardFromDisplayName != null) body['forward_from_display_name'] = forwardFromDisplayName;
+    }
     final r = await http.post(
       Uri.parse('$base/messages'),
       headers: _headers,
-      body: jsonEncode({'receiver_id': receiverId, 'content': content}),
+      body: jsonEncode(body),
     );
     _checkResponse(r);
     return Message.fromJson(jsonDecode(r.body) as Map<String, dynamic>);

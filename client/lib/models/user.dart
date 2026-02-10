@@ -6,6 +6,8 @@ class User {
   final String? avatarUrl;
   final String? publicKey;
   final String? email;
+  /// Количество друзей (контактов). Видно только число; список видит только владелец.
+  final int? friendsCount;
 
   User({
     required this.id,
@@ -15,6 +17,7 @@ class User {
     this.avatarUrl,
     this.publicKey,
     this.email,
+    this.friendsCount,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -26,6 +29,7 @@ class User {
       avatarUrl: json['avatar_url'] as String?,
       publicKey: json['public_key'] as String?,
       email: json['email'] as String?,
+      friendsCount: json['friends_count'] as int?,
     );
   }
 
@@ -37,6 +41,7 @@ class User {
     String? avatarUrl,
     String? publicKey,
     String? email,
+    int? friendsCount,
   }) {
     return User(
       id: id ?? this.id,
@@ -46,6 +51,7 @@ class User {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       publicKey: publicKey ?? this.publicKey,
       email: email ?? this.email,
+      friendsCount: friendsCount ?? this.friendsCount,
     );
   }
 }

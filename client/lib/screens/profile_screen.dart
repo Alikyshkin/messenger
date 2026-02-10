@@ -1,10 +1,32 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import 'contacts_screen.dart';
 import 'settings_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+String _friendsCountLabel(int? count) {
+  if (count == null) return '—';
+  if (count == 0) return 'Нет друзей';
+  if (count == 1) return '1 друг';
+  if (count >= 2 && count <= 4) return '$count друга';
+  return '$count друзей';
+}
+
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AuthService>().refreshUser();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +96,18 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
           ],
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
+          ListTile(
+            leading: const Icon(Icons.people_outline),
+            title: Text('Друзья'),
+            subtitle: Text(_friendsCountLabel(u.friendsCount)),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ContactsScreen()),
+              );
+            },
+          ),
+          const SizedBox(height: 8),
           ListTile(
             leading: const Icon(Icons.settings_outlined),
             title: const Text('Настройки'),
@@ -117,3 +150,4 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 }
+
