@@ -1,0 +1,16 @@
+# Server
+server/.env
+server/messenger.db
+server/node_modules
+server/uploads
+
+# Client
+client/.dart_tool
+client/.packages
+client/build
+client/*.iml
+
+# IDE / OS
+.idea
+.DS_Store
+*.log
