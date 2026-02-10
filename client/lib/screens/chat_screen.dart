@@ -165,7 +165,7 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       final fromDb = await LocalDb.getMessages(peerId);
       setState(() {
-        _messages = fromDb;
+        _messages = fromDb.isNotEmpty ? fromDb : decryptedList;
         _loading = false;
       });
       _scrollToBottom();

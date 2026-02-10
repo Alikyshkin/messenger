@@ -58,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final merged = await LocalDb.getChats();
       if (!mounted) return;
       setState(() {
-        _chats = merged;
+        _chats = merged.isNotEmpty ? merged : list;
         _loading = false;
       });
       _flushOutbox();
