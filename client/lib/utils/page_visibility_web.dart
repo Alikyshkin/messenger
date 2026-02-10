@@ -1,7 +1,7 @@
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 
-bool get isPageVisible => !html.document.hidden;
+bool get isPageVisible => !(html.document.hidden ?? false);
 
 Future<bool> requestNotificationPermission() async {
   if (html.Notification.permission == 'granted') return true;
@@ -23,6 +23,7 @@ Future<void> showPageNotification({required String title, required String body})
 
 Future<void> focusWindow() async {
   try {
-    html.window.focus();
+    // Window.focus() removed from dart:html; call via JS interop at runtime
+    (html.window as dynamic).focus();
   } catch (_) {}
 }
