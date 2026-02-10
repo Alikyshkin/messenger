@@ -1231,15 +1231,28 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             child: Row(
               children: [
-                IconButton(
-                  onPressed: _sending ? null : _attachFile,
-                  icon: const Icon(Icons.photo_library_outlined),
-                  tooltip: 'Фото или файл',
-                ),
-                IconButton(
-                  onPressed: _sending ? null : _createPoll,
-                  icon: const Icon(Icons.poll_outlined),
-                  tooltip: 'Опрос',
+                PopupMenuButton<String>(
+                  enabled: !_sending,
+                  tooltip: 'Вложения',
+                  icon: const Icon(Icons.attach_file),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'file':
+                        _attachFile();
+                        break;
+                      case 'poll':
+                        _createPoll();
+                        break;
+                      case 'video':
+                        _openRecordVideoNote();
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'file', child: Row(children: [Icon(Icons.photo_library_outlined), SizedBox(width: 12), Text('Фото или файл')])),
+                    const PopupMenuItem(value: 'poll', child: Row(children: [Icon(Icons.poll_outlined), SizedBox(width: 12), Text('Опрос')])),
+                    const PopupMenuItem(value: 'video', child: Row(children: [Icon(Icons.videocam_rounded), SizedBox(width: 12), Text('Видеокружок')])),
+                  ],
                 ),
                 GestureDetector(
                   onLongPressStart: (_) => _startVoiceRecord(),
@@ -1254,11 +1267,6 @@ class _ChatScreenState extends State<ChatScreen> {
                         : const Icon(Icons.mic_none),
                     tooltip: _isRecording ? 'Остановить запись' : 'Нажмите для записи голосового (или удерживайте)',
                   ),
-                ),
-                IconButton(
-                  onPressed: _sending ? null : _openRecordVideoNote,
-                  icon: const Icon(Icons.videocam_rounded),
-                  tooltip: 'Видеокружок',
                 ),
                 Expanded(
                   child: TextField(
