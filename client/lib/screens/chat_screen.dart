@@ -777,11 +777,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   onLongPressStart: (_) => _startVoiceRecord(),
                   onLongPressEnd: (_) => _stopVoiceRecord(),
                   child: IconButton(
-                    onPressed: () {}, // запись только по долгому нажатию
+                    onPressed: _sending ? null : () {
+                      if (_isRecording) _stopVoiceRecord();
+                      else _startVoiceRecord();
+                    },
                     icon: _isRecording
                         ? const Icon(Icons.stop_circle, color: Colors.red)
                         : const Icon(Icons.mic_none),
-                    tooltip: 'Удерживайте для записи голосового',
+                    tooltip: _isRecording ? 'Остановить и отправить' : 'Нажмите для записи голосового (или удерживайте)',
                   ),
                 ),
                 IconButton(
