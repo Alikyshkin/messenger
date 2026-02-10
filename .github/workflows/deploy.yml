@@ -26,6 +26,11 @@ jobs:
           flutter pub get
           flutter build web --release
 
+      - name: Cache-bust web assets (version in script URL so users get updates without hard refresh)
+        run: |
+          VERSION="${GITHUB_SHA:0:7}"
+          sed -i "s|flutter_bootstrap.js|flutter_bootstrap.js?v=$VERSION|g" client/build/web/index.html
+
       - name: Prepare public folder
         run: |
           mkdir -p server/public

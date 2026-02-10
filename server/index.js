@@ -38,11 +38,20 @@ app.use('/polls', pollsRoutes);
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
-// Веб-клиент (Flutter build) — отдаём по корню, чтобы открывать приложение по http://IP:3000/
-app.use(express.static(publicDir));
+// Веб-клиент (Flutter build) — отдаём по корню; без долгого кэша, чтобы после пуша сразу видеть изменения
+app.use(express.static(publicDir, {
+  setHeaders: (res, path) => {
+    const p = path.toLowerCase();
+    if (p.endsWith('.html') || p.endsWith('.js') || p.endsWith('.json'))
+      res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+  },
+}));
 app.get(/^\/(?!auth|contacts|messages|users|polls|uploads|health|reset-password|ws)/, (req, res) => {
   const index = join(publicDir, 'index.html');
-  if (existsSync(index)) return res.sendFile(index);
+  if (existsSync(index)) {
+    res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+    return res.sendFile(index);
+  }
   res.status(404).send('Web client not deployed. Push to main to deploy, or run locally: flutter run -d chrome --dart-define=API_BASE_URL=http://THIS_SERVER:3000');
 });
 
