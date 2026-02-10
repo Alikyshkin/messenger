@@ -32,6 +32,15 @@
 
   <title>Мессенджер</title>
   <link rel="manifest" href="manifest.json">
+
+  <!-- Всегда переходить на HTTPS (звонки и камера в браузере работают только по HTTPS) -->
+  <script>
+    (function() {
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        location.replace('https://' + location.host + location.pathname + location.search + location.hash);
+      }
+    })();
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

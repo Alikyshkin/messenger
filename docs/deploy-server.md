@@ -204,6 +204,16 @@ server {
 }
 ```
 
+**Редирект HTTP → HTTPS (обязательно для видеозвонков в браузере):** после настройки HTTPS (после certbot) убедитесь, что запросы по `http://` перенаправляются на `https://`. Certbot обычно добавляет это сам. Если при заходе по `http://` звонок пишет «только по HTTPS» — добавьте в nginx **отдельный** блок в начале конфига (перед основным `server`):
+
+```nginx
+server {
+    listen 80;
+    server_name messenger.example.com;
+    return 301 https://$host$request_uri;
+}
+```
+
 Сохраните (Ctrl+O, Enter, Ctrl+X). Включите сайт и проверьте конфиг:
 
 ```bash

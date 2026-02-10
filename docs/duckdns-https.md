@@ -90,6 +90,18 @@ sudo certbot --nginx -d messgo.duckdns.org
 - Согласитесь с условиями (Y).
 - Certbot сам настроит HTTPS и редирект с http на https.
 
+**Если при заходе по http:// звонок всё равно пишет «только по HTTPS»** — добавьте в начало конфига nginx отдельный блок редиректа (перед остальными `server`):
+
+```nginx
+server {
+    listen 80;
+    server_name messgo.duckdns.org;
+    return 301 https://$host$request_uri;
+}
+```
+
+Затем `sudo nginx -t` и `sudo systemctl reload nginx`.
+
 ---
 
 ## 7. Указать в приложении адрес по HTTPS
