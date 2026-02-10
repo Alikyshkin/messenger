@@ -62,7 +62,7 @@ nano .env   # или vim
 
 - **JWT_SECRET** — длинная случайная строка (например, сгенерируйте: `openssl rand -base64 32`).
 - **PORT** — порт, на котором будет слушать приложение (например, 3000).
-- **APP_BASE_URL** — полный адрес вашего сервера (например, `https://api.ваш-домен.ru` или `https://ВАШ_IP`).
+- **APP_BASE_URL** — полный адрес вашего сервера. Для защищённого доступа укажите **https://** (например, `https://messenger.ваш-домен.ru`). После настройки HTTPS (раздел 8) обновите эту переменную и перезапустите: `pm2 restart messenger`.
 - **MESSENGER_DB_PATH** — путь к файлу базы данных (чаты и пользователи). **На сервере обязательно задайте**, чтобы данные не терялись при деплое: `MESSENGER_DB_PATH=/opt/messenger/data/messenger.db` (если репозиторий в другом каталоге — подставьте свой путь). Папка `data` создаётся при деплое автоматически.
 
 По желанию настройте SMTP для писем сброса пароля (SMTP_HOST, SMTP_USER, SMTP_PASS, MAIL_FROM).
@@ -160,7 +160,108 @@ sudo ufw enable
 
 ---
 
-## 8. Настройте автодеплой из GitHub
+## 8. Включение HTTPS (защищённое соединение)
+
+Чтобы сайт открывался по **https://**, перед приложением ставят обратный прокси (nginx), который принимает HTTPS и отдаёт запросы Node по HTTP на localhost. Сертификат берётся бесплатно у **Let's Encrypt** (нужен **домен**, указывающий на ваш сервер).
+
+### 8.1. Требования
+
+- У вас есть **домен** (например `messenger.example.com`), и в DNS у него указан **A-запись** на IP вашего сервера.
+- Порт **80** на сервере открыт (для проверки Let's Encrypt при выдаче сертификата).
+
+### 8.2. Установка nginx и Certbot (Ubuntu/Debian)
+
+```bash
+sudo apt-get update
+sudo apt-get install -y nginx certbot python3-certbot-nginx
+```
+
+### 8.3. Выдача сертификата и базовая настройка nginx
+
+Certbot может сам настроить nginx и получить сертификат. Сначала создайте конфиг сайта:
+
+```bash
+sudo nano /etc/nginx/sites-available/messenger
+```
+
+Вставьте (подставьте свой домен вместо `messenger.example.com`):
+
+```nginx
+server {
+    listen 80;
+    server_name messenger.example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Сохраните (Ctrl+O, Enter, Ctrl+X). Включите сайт и проверьте конфиг:
+
+```bash
+sudo ln -sf /etc/nginx/sites-available/messenger /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+Откройте порт 80 в файрволе, если ещё не открыт:
+
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw reload
+```
+
+Получите сертификат и автоматическую настройку HTTPS в nginx:
+
+```bash
+sudo certbot --nginx -d messenger.example.com
+```
+
+Укажите email для уведомлений Let's Encrypt, примите условия. Certbot добавит в конфиг редирект с HTTP на HTTPS и путь к сертификатам.
+
+Проверьте: откройте в браузере **https://messenger.example.com** — должен открыться мессенджер без предупреждений о незащищённом соединении.
+
+### 8.4. Переменные окружения приложения
+
+В `server/.env` укажите полный адрес по **HTTPS**:
+
+```bash
+APP_BASE_URL=https://messenger.example.com
+```
+
+После изменения перезапустите приложение:
+
+```bash
+pm2 restart messenger
+```
+
+### 8.5. Продление сертификата
+
+Let's Encrypt выдаёт сертификаты на 90 дней. Продление обычно настраивается автоматически. Проверить таймер можно так:
+
+```bash
+sudo certbot renew --dry-run
+```
+
+### 8.6. Только IP, без домена
+
+Если есть только IP-адрес, бесплатный Let's Encrypt недоступен. Варианты:
+
+- **Самоподписанный сертификат** — браузер будет показывать предупреждение «Небезопасное соединение», но трафик будет шифроваться. Настройка через nginx и `openssl req -x509 ...`.
+- **Взять домен** (в том числе бесплатный, например no-ip, duckdns) и направить его на IP сервера — тогда можно использовать Let's Encrypt по инструкции выше.
+
+---
+
+## 9. Настройте автодеплой из GitHub
 
 При пуше в ветку `main` сервер будет обновляться сам. Нужно один раз добавить секреты в репозитории.
 
@@ -189,7 +290,7 @@ sudo ufw enable
 
 ---
 
-## 9. Приватный репозиторий
+## 10. Приватный репозиторий
 
 Если репозиторий закрытый, на сервере нужен доступ к GitHub по SSH или по токену.
 

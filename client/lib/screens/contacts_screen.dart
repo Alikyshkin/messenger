@@ -135,17 +135,26 @@ class _ContactsScreenState extends State<ContactsScreen> {
                             ..._contacts.map((u) => ListTile(
                               title: Text(u.displayName),
                               subtitle: Text('@${u.username}'),
-                              trailing: IconButton(
-                                icon: const Icon(Icons.message),
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => ChatScreen(peer: u),
-                                    ),
-                                  );
-                                },
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.message),
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => ChatScreen(peer: u),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.person_remove_outlined),
+                                    tooltip: 'Удалить из друзей',
+                                    onPressed: () => _confirmRemove(context, u),
+                                  ),
+                                ],
                               ),
-                              onLongPress: () => _confirmRemove(context, u),
                             )),
                           ],
                         ],

@@ -942,11 +942,14 @@ class _ChatScreenState extends State<ChatScreen> {
             return ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ImagePreviewScreen(imageBytes: bytes, filename: name),
-                  ),
-                ),
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ImagePreviewScreen(imageBytes: bytes, filename: name),
+                    ),
+                  );
+                },
                 child: Image.memory(
                   bytes,
                   width: 200,
@@ -987,21 +990,38 @@ class _ChatScreenState extends State<ChatScreen> {
     if (isImage) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => ImagePreviewScreen(
-                imageUrl: url,
-                filename: name,
-                bytesFuture: Api.getAttachmentBytes(url).then((list) => Uint8List.fromList(list)),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ImagePreviewScreen(
+                  imageUrl: url,
+                  filename: name,
+                  bytesFuture: Api.getAttachmentBytes(url).then((list) => Uint8List.fromList(list)),
+                ),
               ),
-            ),
-          ),
+            );
+          },
           child: Image.network(
             url,
             width: 200,
             height: 200,
             fit: BoxFit.cover,
+            loadingBuilder: (_, child, progress) {
+              if (progress == null) return child;
+              return SizedBox(
+                width: 200,
+                height: 200,
+                child: Center(
+                  child: CircularProgressIndicator(
+                    value: progress.expectedTotalBytes != null
+                        ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1)
+                        : null,
+                  ),
+                ),
+              );
+            },
             errorBuilder: (_, __, ___) => Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1044,9 +1064,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   bool _isImageFilename(String name) {
-    final parts = name.toLowerCase().split('.');
+    final lower = name.toLowerCase();
+    final parts = lower.split('.');
     final ext = parts.length > 1 ? parts.last : '';
-    return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(ext);
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(ext)) return true;
+    // Файлы без расширения или с типичными именами с камеры/галереи
+    if (ext.isEmpty && (lower.startsWith('img') || lower.startsWith('photo') || lower == 'image')) return true;
+    return false;
   }
 
   Future<void> _openUrl(String url) async {
