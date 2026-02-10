@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 /// Base URL API.
-/// На вебе — тот же хост, что и у страницы, порт 3000.
+/// На вебе — тот же хост и порт, что и у страницы (запросы идут через nginx; при HTTPS порт 443).
 /// Если задан dart-define API_BASE_URL — используется он (удобно для проверки против удалённого сервера).
 /// На мобильных/десктопе — 127.0.0.1. Для эмулятора Android замените на 10.0.2.2:3000.
 String get apiBaseUrl {
@@ -11,7 +11,7 @@ String get apiBaseUrl {
   );
   if (fromEnv.isNotEmpty) return fromEnv;
   if (kIsWeb) {
-    return '${Uri.base.scheme}://${Uri.base.host}:3000';
+    return Uri.base.origin;
   }
   return 'http://127.0.0.1:3000';
 }
