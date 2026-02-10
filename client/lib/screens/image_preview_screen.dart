@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import '../utils/temp_file.dart';
-import 'package:url_launcher/url_launcher.dart';
+import '../utils/download_file.dart';
 
 /// Полноэкранный просмотр изображения. По тапу — превью, в меню (⋮) — «Скачать».
 class ImagePreviewScreen extends StatelessWidget {
@@ -29,11 +28,7 @@ class ImagePreviewScreen extends StatelessWidget {
       return;
     }
     try {
-      final path = await writeTempBytes(bytes, filename);
-      final uri = Uri.file(path);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
+      await saveOrDownloadFile(bytes, filename);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Сохранено')));
     } catch (_) {

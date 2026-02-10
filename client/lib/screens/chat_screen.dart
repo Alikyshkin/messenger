@@ -691,7 +691,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     else if (m.isVideoNote)
                                       _buildVideoNoteBubble(m)
                                     else ...[
-                                    if (m.content.isNotEmpty)
+                                    if (m.content.isNotEmpty && !_isFilePlaceholderContent(m))
                                       Text(
                                         m.content,
                                         style: m.isMine
@@ -699,7 +699,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                             : null,
                                       ),
                                     if (m.hasAttachment) ...[
-                                      if (m.content.isNotEmpty) const SizedBox(height: 8),
+                                      if (m.content.isNotEmpty && !_isFilePlaceholderContent(m)) const SizedBox(height: 8),
                                       _buildAttachment(m),
                                     ],
                                   ],
@@ -1071,6 +1071,14 @@ class _ChatScreenState extends State<ChatScreen> {
     // Файлы без расширения или с типичными именами с камеры/галереи
     if (ext.isEmpty && (lower.startsWith('img') || lower.startsWith('photo') || lower == 'image')) return true;
     return false;
+  }
+
+  /// Содержимое — служебная подпись «(файл)» при картинке: в пузыре не показываем.
+  bool _isFilePlaceholderContent(Message m) {
+    if (!m.hasAttachment) return false;
+    final content = m.content.trim();
+    if (content != '(файл)' && content.isNotEmpty) return false;
+    return _isImageFilename(m.attachmentFilename ?? '');
   }
 
   Future<void> _openUrl(String url) async {
