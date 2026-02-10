@@ -699,7 +699,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                               ),
                                             if (m.replyToContent != null && m.replyToContent!.isNotEmpty)
                                               Text(
-                                                m.replyToContent!,
+                                                _safeMessageContent(m.replyToContent),
                                                 maxLines: 2,
                                                 overflow: TextOverflow.ellipsis,
                                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -727,9 +727,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     else ...[
                                     if (m.content.isNotEmpty && !_isFilePlaceholderContent(m))
                                       SelectableText(
-                                        m.content.startsWith('e2ee:')
-                                            ? 'Сообщение не удалось расшифровать'
-                                            : m.content,
+                                        _safeMessageContent(m.content),
                                         style: m.isMine
                                             ? TextStyle(color: Theme.of(context).colorScheme.onPrimary)
                                             : null,
@@ -798,7 +796,10 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                         if (_replyingTo!.content.isNotEmpty)
                           Text(
-                            _replyingTo!.content.length > 60 ? '${_replyingTo!.content.substring(0, 57)}...' : _replyingTo!.content,
+                            () {
+                              final safe = _safeMessageContent(_replyingTo!.content);
+                              return safe.length > 60 ? '${safe.substring(0, 57)}...' : safe;
+                            }(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall,
@@ -1210,6 +1211,18 @@ class _ChatScreenState extends State<ChatScreen> {
     final m = seconds ~/ 60;
     final s = seconds % 60;
     return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  /// Текст для отображения: не показываем шифротекст и «кракозябры» после неудачной расшифровки.
+  static const String _undecryptedPlaceholder = 'Сообщение не удалось расшифровать';
+
+  String _safeMessageContent(String? content) {
+    if (content == null || content.isEmpty) return '';
+    if (content.startsWith('e2ee:')) return _undecryptedPlaceholder;
+    if (content.length > 24 && RegExp(r'^[A-Za-z0-9+/]+=*$').hasMatch(content)) return _undecryptedPlaceholder;
+    final replacementCount = content.runes.where((r) => r == 0xFFFD).length;
+    if (content.isNotEmpty && replacementCount > content.length ~/ 2) return _undecryptedPlaceholder;
+    return content;
   }
 }
 
