@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/user.dart';
 import '../models/call_signal.dart';
 import '../services/ws_service.dart';
+import '../services/app_sound_service.dart';
 
 /// Экран звонка: исходящий (calling), входящий (incoming), в разговоре (connected), завершён (closed).
 class CallScreen extends StatefulWidget {
@@ -209,9 +210,13 @@ class _CallScreenState extends State<CallScreen> {
           'sdp': answer.sdp,
           'type': answer.type,
         });
-        if (mounted) setState(() => _state = 'connected');
+        if (mounted) {
+          AppSoundService.instance.stopRingtone();
+          setState(() => _state = 'connected');
+        }
       } catch (e) {
         if (mounted) {
+          AppSoundService.instance.stopRingtone();
           setState(() {
             _state = 'ended';
             _error = _mediaErrorMessage(e);
@@ -226,7 +231,10 @@ class _CallScreenState extends State<CallScreen> {
         s.payload!['type'] as String,
       );
       await _pc?.setRemoteDescription(desc);
-      if (mounted) setState(() => _state = 'connected');
+      if (mounted) {
+        AppSoundService.instance.stopRingtone();
+        setState(() => _state = 'connected');
+      }
       return;
     }
     if (s.signal == 'ice' && s.payload != null) {
@@ -275,9 +283,13 @@ class _CallScreenState extends State<CallScreen> {
         'sdp': answer.sdp,
         'type': answer.type,
       });
-      if (mounted) setState(() => _state = 'connected');
+      if (mounted) {
+        AppSoundService.instance.stopRingtone();
+        setState(() => _state = 'connected');
+      }
     } catch (e) {
       if (mounted) {
+        AppSoundService.instance.stopRingtone();
         setState(() {
           _state = 'ended';
           _error = _mediaErrorMessage(e);
@@ -297,6 +309,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _endCall() async {
+    AppSoundService.instance.stopRingtone();
     _signalSub?.cancel();
     _localRenderer.srcObject = null;
     _remoteRenderer.srcObject = null;
@@ -314,6 +327,7 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
+    AppSoundService.instance.stopRingtone();
     _signalSub?.cancel();
     _localRenderer.srcObject = null;
     _remoteRenderer.srcObject = null;

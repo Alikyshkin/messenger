@@ -5,10 +5,13 @@ import '../models/user.dart';
 import '../models/call_signal.dart';
 import '../services/ws_service.dart';
 import '../services/auth_service.dart';
+import '../services/app_sound_service.dart';
 import '../utils/app_page_route.dart';
+import '../utils/page_visibility.dart';
 import '../screens/call_screen.dart';
 
-/// Слушает входящие звонки (offer) и открывает экран звонка.
+/// Слушает входящие звонки (offer) и открывает экран звонка. Проигрывает рингтон,
+/// при неактивной вкладке показывает браузерное уведомление и пытается перевести фокус.
 class WsCallListener extends StatefulWidget {
   final Widget child;
 
@@ -33,13 +36,27 @@ class _WsCallListenerState extends State<WsCallListener> {
     final auth = context.read<AuthService>();
     if (!auth.isLoggedIn) return;
     _sub?.cancel();
-    _sub = ws.callSignals.listen((signal) {
+    _sub = ws.callSignals.listen((signal) async {
       if (!mounted || signal.signal != 'offer') return;
+      final displayName = 'Пользователь #${signal.fromUserId}';
       final peer = User(
         id: signal.fromUserId,
         username: '',
-        displayName: 'Пользователь #${signal.fromUserId}',
+        displayName: displayName,
       );
+
+      AppSoundService.instance.playRingtone();
+
+      if (!isPageVisible) {
+        await requestNotificationPermission();
+        await showPageNotification(
+          title: 'Входящий звонок',
+          body: displayName,
+        );
+        await focusWindow();
+      }
+
+      if (!mounted) return;
       Navigator.of(context).push(
         AppPageRoute(
           builder: (_) => CallScreen(

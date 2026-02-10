@@ -33,12 +33,15 @@ class WsService extends ChangeNotifier {
   final List<_ReactionUpdate> _reactionUpdates = [];
   final StreamController<CallSignal> _callSignalController = StreamController<CallSignal>.broadcast();
   final StreamController<void> _newMessageController = StreamController<void>.broadcast();
+  final StreamController<Message> _newMessagePayloadController = StreamController<Message>.broadcast();
 
   bool get connected => _connected;
   List<Message> get pendingIncoming => List.unmodifiable(_incoming);
   Stream<CallSignal> get callSignals => _callSignalController.stream;
   /// Срабатывает при получении любого нового сообщения (чтобы обновить список чатов и счётчик непрочитанных).
   Stream<void> get onNewMessage => _newMessageController.stream;
+  /// То же сообщение с данными (для уведомлений и звука).
+  Stream<Message> get onNewMessageWithPayload => _newMessagePayloadController.stream;
 
   void connect(String token) {
     if (_token == token && _connected) return;
@@ -99,6 +102,7 @@ class WsService extends ChangeNotifier {
         _incoming.add(msg);
         notifyListeners();
         if (!_newMessageController.isClosed) _newMessageController.add(null);
+        if (!_newMessagePayloadController.isClosed) _newMessagePayloadController.add(msg);
       } else if (map['type'] == 'new_group_message' && map['group_id'] != null && map['message'] != null) {
         final msgMap = map['message'] as Map<String, dynamic>;
         msgMap['group_id'] = map['group_id'];
@@ -106,6 +110,7 @@ class WsService extends ChangeNotifier {
         _incoming.add(msg);
         notifyListeners();
         if (!_newMessageController.isClosed) _newMessageController.add(null);
+        if (!_newMessagePayloadController.isClosed) _newMessagePayloadController.add(msg);
       } else if (map['type'] == 'call_signal' && map['fromUserId'] != null && map['signal'] != null) {
         _callSignalController.add(CallSignal.fromJson(map));
       } else if (map['type'] == 'reaction' && map['message_id'] != null && map['peer_id'] != null && map['reactions'] != null) {

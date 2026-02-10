@@ -5,10 +5,13 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../database/local_db.dart';
 import '../l10n/app_localizations.dart';
 import '../models/chat.dart';
+import '../models/message.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../services/ws_service.dart';
+import '../services/app_sound_service.dart';
 import '../utils/app_page_route.dart';
+import '../utils/page_visibility.dart';
 import '../widgets/skeleton.dart';
 import 'chat_screen.dart';
 import 'contacts_screen.dart';
@@ -29,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _loading = true;
   String? _error;
   StreamSubscription? _newMessageSub;
+  StreamSubscription<Message>? _newMessagePayloadSub;
 
   @override
   void initState() {
@@ -41,6 +45,21 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!mounted) return;
         _load();
       });
+      _newMessagePayloadSub = ws.onNewMessageWithPayload.listen((msg) {
+        if (!mounted || isPageVisible) return;
+        AppSoundService.instance.playNotification();
+        requestNotificationPermission();
+        final from = msg.isGroupMessage
+            ? 'Группа'
+            : (msg.senderDisplayName ?? 'Сообщение');
+        final preview = msg.content.isEmpty
+            ? (msg.hasAttachment ? 'Вложение' : '—')
+            : (msg.content.length > 50 ? '${msg.content.substring(0, 50)}…' : msg.content);
+        showPageNotification(
+          title: 'Новое сообщение',
+          body: '$from: $preview',
+        );
+      });
     });
     Connectivity().onConnectivityChanged.listen((_) {
       if (!mounted) return;
@@ -51,6 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _newMessageSub?.cancel();
+    _newMessagePayloadSub?.cancel();
     super.dispose();
   }
 
