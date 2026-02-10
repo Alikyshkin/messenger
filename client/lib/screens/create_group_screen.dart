@@ -6,6 +6,8 @@ import '../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
+import '../widgets/app_back_button.dart';
+import '../utils/app_page_route.dart';
 import 'group_chat_screen.dart';
 
 class CreateGroupScreen extends StatefulWidget {
@@ -101,9 +103,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       setState(() => _loading = false);
       Navigator.of(context).pop();
       await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => GroupChatScreen(group: group),
-        ),
+        AppPageRoute(builder: (_) => GroupChatScreen(group: group)),
       );
     } catch (e) {
       if (!mounted) return;
@@ -118,6 +118,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: Text(context.tr('create_group')),
         actions: [
           if (_loading)

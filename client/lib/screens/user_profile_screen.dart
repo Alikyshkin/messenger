@@ -4,6 +4,8 @@ import '../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
+import '../utils/app_page_route.dart';
+import '../widgets/app_back_button.dart';
 import 'chat_screen.dart';
 
 /// Профиль другого пользователя: отображается только количество друзей (не список).
@@ -78,13 +80,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (_error != null) {
       return Scaffold(
         appBar: AppBar(
-          leading: Navigator.canPop(context)
-              ? IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.of(context).pop(),
-                  tooltip: context.tr('back'),
-                )
-              : null,
+          leading: const AppBackButton(),
           title: Text(u.displayName),
         ),
         body: Center(
@@ -101,13 +97,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
     return Scaffold(
       appBar: AppBar(
-        leading: Navigator.canPop(context)
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.of(context).pop(),
-                tooltip: 'Назад',
-              )
-            : null,
+        leading: const AppBackButton(),
         title: Text(u.displayName),
         actions: [
           IconButton(
@@ -115,7 +105,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             tooltip: context.tr('write'),
             onPressed: () {
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => ChatScreen(peer: u)),
+                AppPageRoute(builder: (_) => ChatScreen(peer: u)),
               );
             },
           ),
@@ -213,7 +203,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   child: FilledButton.icon(
                     onPressed: () {
                       Navigator.of(context).pushReplacement(
-                        MaterialPageRoute(builder: (_) => ChatScreen(peer: u)),
+                        AppPageRoute(builder: (_) => ChatScreen(peer: u)),
                       );
                     },
                     icon: const Icon(Icons.message),

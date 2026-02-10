@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/api.dart';
+import '../utils/app_page_route.dart';
 import 'forgot_password_screen.dart';
 import 'register_screen.dart';
 
@@ -137,9 +138,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ? null
                                 : () {
                                     Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => const ForgotPasswordScreen(),
-                                      ),
+                                      AppPageRoute(builder: (_) => const ForgotPasswordScreen()),
                                     );
                                   },
                             child: Text(context.tr('forgot_password')),
@@ -147,9 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextButton(
                             onPressed: () {
                               Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const RegisterScreen(),
-                                ),
+                                AppPageRoute(builder: (_) => const RegisterScreen()),
                               );
                             },
                             child: Text(context.tr('no_account_register')),

@@ -5,6 +5,8 @@ import '../models/user.dart';
 import '../models/friend_request.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
+import '../utils/app_page_route.dart';
+import '../widgets/app_back_button.dart';
 import '../widgets/skeleton.dart';
 import 'add_contact_screen.dart';
 import 'chat_screen.dart';
@@ -62,6 +64,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: Text(context.tr('contacts')),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
@@ -72,9 +75,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
             tooltip: context.tr('possible_friends'),
             onPressed: () async {
               await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const PossibleFriendsScreen(),
-                ),
+                AppPageRoute(builder: (_) => const PossibleFriendsScreen()),
               );
               _load();
             },
@@ -84,9 +85,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
             tooltip: context.tr('add_by_username'),
             onPressed: () async {
               await Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const AddContactScreen(),
-                ),
+                AppPageRoute(builder: (_) => const AddContactScreen()),
               );
               _load();
             },
@@ -223,7 +222,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
                                     title: Text(u.displayName, style: const TextStyle(fontWeight: FontWeight.w500)),
                                     subtitle: Text('@${u.username}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
                                     onTap: () => Navigator.of(context).push(
-                                      MaterialPageRoute(builder: (_) => UserProfileScreen(user: u)),
+                                      AppPageRoute(builder: (_) => UserProfileScreen(user: u)),
                                     ),
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -231,13 +230,13 @@ class _ContactsScreenState extends State<ContactsScreen> {
                                         IconButton(
                                           icon: const Icon(Icons.person_outline),
                                           onPressed: () => Navigator.of(context).push(
-                                            MaterialPageRoute(builder: (_) => UserProfileScreen(user: u)),
+                                            AppPageRoute(builder: (_) => UserProfileScreen(user: u)),
                                           ),
                                           tooltip: context.tr('profile_tooltip'),
                                         ),
                                         IconButton(
                                           icon: const Icon(Icons.message_outlined),
-                                          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChatScreen(peer: u))),
+                                          onPressed: () => Navigator.of(context).push(AppPageRoute(builder: (_) => ChatScreen(peer: u))),
                                           tooltip: context.tr('write'),
                                         ),
                                         IconButton(

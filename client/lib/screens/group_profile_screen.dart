@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../models/group.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
+import '../widgets/app_back_button.dart';
 import 'group_chat_screen.dart';
 
 class GroupProfileScreen extends StatefulWidget {
@@ -83,6 +84,7 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: Text(g.name),
         actions: [
           if (_loading)

@@ -6,6 +6,8 @@ import '../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
+import '../utils/app_page_route.dart';
+import '../widgets/app_back_button.dart';
 import 'user_profile_screen.dart';
 
 /// Нормализация номера: только цифры (как на сервере).
@@ -145,13 +147,7 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: Navigator.canPop(context)
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.of(context).pop(),
-                tooltip: context.tr('back'),
-              )
-            : null,
+        leading: const AppBackButton(),
         title: Text(context.tr('possible_friends')),
         actions: [
           if (_syncing)
@@ -244,7 +240,7 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
                                 child: Text(context.tr('add')),
                               ),
                               onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute(builder: (_) => UserProfileScreen(user: u)),
+                                AppPageRoute(builder: (_) => UserProfileScreen(user: u)),
                               ),
                             ),
                           );

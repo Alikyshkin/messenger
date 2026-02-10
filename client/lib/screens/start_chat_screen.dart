@@ -4,6 +4,8 @@ import '../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
+import '../utils/app_page_route.dart';
+import '../widgets/app_back_button.dart';
 import 'chat_screen.dart';
 
 /// Поиск пользователя и открытие чата (без добавления в друзья).
@@ -59,16 +61,14 @@ class _StartChatScreenState extends State<StartChatScreen> {
   void _openChat(User u) {
     Navigator.of(context).pop();
     Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => ChatScreen(peer: u),
-      ),
+      AppPageRoute(builder: (_) => ChatScreen(peer: u)),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('new_chat'))),
+      appBar: AppBar(leading: const AppBackButton(), title: Text(context.tr('new_chat'))),
       body: Column(
         children: [
           Padding(

@@ -7,6 +7,8 @@ import '../models/message.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../services/ws_service.dart';
+import '../utils/app_page_route.dart';
+import '../widgets/app_back_button.dart';
 import 'group_profile_screen.dart';
 
 class GroupChatScreen extends StatefulWidget {
@@ -50,12 +52,28 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     super.dispose();
   }
 
+  static const List<String> _reactionEmojis = ['👍', '👎', '❤️', '🔥', '😂', '😮', '😢'];
+
   Future<void> _drainIncoming(WsService ws) async {
     Message? m;
     while ((m = ws.takeIncomingGroupFor(widget.group.id)) != null) {
       if (!mounted) return;
       setState(() => _messages.add(m!));
     }
+    ReactionUpdate? ru;
+    while ((ru = ws.takeGroupReactionUpdateFor(widget.group.id)) != null) {
+      final idx = _messages.indexWhere((msg) => msg.id == ru!.messageId);
+      if (idx >= 0 && mounted) setState(() => _messages[idx] = _messages[idx].copyWith(reactions: ru!.reactions));
+    }
+  }
+
+  Future<void> _setGroupReaction(Message m, String emoji) async {
+    try {
+      final reactions = await Api(context.read<AuthService>().token).setGroupMessageReaction(widget.group.id, m.id, emoji);
+      if (!mounted) return;
+      final idx = _messages.indexWhere((msg) => msg.id == m.id);
+      if (idx >= 0) setState(() => _messages[idx] = _messages[idx].copyWith(reactions: reactions));
+    } catch (_) {}
   }
 
   Future<void> _load() async {
@@ -92,24 +110,45 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     });
   }
 
+  static const int _maxMultipleFiles = 10;
+
   Future<void> _sendFile() async {
-    final result = await FilePicker.platform.pickFiles(allowMultiple: false, withData: true);
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true, withData: true);
     if (result == null || result.files.isEmpty) return;
-    final file = result.files.single;
-    if (file.bytes == null || file.bytes!.isEmpty) return;
+    final files = result.files
+        .where((f) => f.bytes != null && f.bytes!.isNotEmpty)
+        .take(_maxMultipleFiles)
+        .toList();
+    if (files.isEmpty) return;
     setState(() => _sending = true);
     try {
-      final msg = await Api(context.read<AuthService>().token).sendGroupMessageWithFile(
-        widget.group.id,
-        '',
-        file.bytes!.toList(),
-        file.name,
-      );
-      if (!mounted) return;
-      setState(() {
-        _messages.add(msg);
-        _sending = false;
-      });
+      final api = Api(context.read<AuthService>().token);
+      if (files.length == 1) {
+        final file = files.single;
+        final msg = await api.sendGroupMessageWithFile(
+          widget.group.id,
+          '',
+          file.bytes!.toList(),
+          file.name,
+        );
+        if (!mounted) return;
+        setState(() {
+          _messages.add(msg);
+          _sending = false;
+        });
+      } else {
+        final list = files.map((f) => (bytes: f.bytes!.toList(), filename: f.name)).toList();
+        final messages = await api.sendGroupMessageWithMultipleFiles(
+          widget.group.id,
+          '',
+          list,
+        );
+        if (!mounted) return;
+        setState(() {
+          _messages.addAll(messages);
+          _sending = false;
+        });
+      }
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
@@ -164,12 +203,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: GestureDetector(
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => GroupProfileScreen(group: widget.group),
-              ),
+              AppPageRoute(builder: (_) => GroupProfileScreen(group: widget.group)),
             ).then((_) {
               if (mounted) _load();
             });
@@ -261,6 +299,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.attach_file),
+                  tooltip: 'Фото или файл',
                   onPressed: _sending ? null : _sendFile,
                 ),
                 Expanded(
@@ -279,6 +318,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 IconButton.filled(
+                  tooltip: 'Отправить',
                   onPressed: _sending ? null : _sendText,
                   icon: _sending
                       ? const SizedBox(
@@ -367,13 +407,44 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                         ),
                       ),
                     GestureDetector(
-                      onLongPress: () {
-                        showModalBottomSheet(
+                      onLongPress: () => _showGroupMessageActions(m),
+                      onSecondaryTapDown: (details) => _showGroupMessageActions(m, details.globalPosition),
+                      child: _buildGroupMessageContent(m),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showGroupMessageActions(Message m, [Offset? position]) {
+    void openSheet() {
+      showModalBottomSheet(
                           context: context,
                           builder: (ctx) => SafeArea(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                                    children: _reactionEmojis.map((emoji) {
+                                      return GestureDetector(
+                                        onTap: () {
+                                          Navigator.pop(ctx);
+                                          _setGroupReaction(m, emoji);
+                                        },
+                                        child: Text(emoji, style: const TextStyle(fontSize: 28)),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ),
+                                const Divider(height: 1),
                                 ListTile(
                                   leading: const Icon(Icons.reply),
                                   title: Text(context.tr('reply')),
@@ -386,26 +457,80 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                             ),
                           ),
                         );
-                      },
-                      child: Text(
-                        m.content,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ),
-                    Text(
-                      m.createdAt.length > 19 ? m.createdAt.substring(11, 16) : m.createdAt,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 10,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
+    }
+    if (position != null) {
+      final screen = MediaQuery.sizeOf(context);
+      showMenu<void>(
+        context: context,
+        position: RelativeRect.fromLTRB(position.dx, position.dy, screen.width - position.dx, screen.height - position.dy),
+        items: [
+          PopupMenuItem(
+            onTap: () {
+              if (!mounted) return;
+              openSheet();
+            },
+            child: const ListTile(
+              contentPadding: EdgeInsets.symmetric(horizontal: 8),
+              leading: Icon(Icons.emoji_emotions_outlined),
+              title: Text('Реакция'),
+            ),
+          ),
+          PopupMenuItem(
+            onTap: () {
+              if (!mounted) return;
+              _onReply(m);
+            },
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              leading: const Icon(Icons.reply),
+              title: Text(context.tr('reply')),
+            ),
+          ),
+        ],
+      );
+    } else {
+      openSheet();
+    }
+  }
+
+  Widget _buildGroupMessageContent(Message m) {
+    final align = m.isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    return Column(
+      crossAxisAlignment: align,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          m.content,
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
+        if (m.reactions.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 6,
+            runSpacing: 4,
+            children: m.reactions.map((r) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ),
-            ],
+                child: Text(
+                  '${r.emoji} ${r.count > 1 ? r.count : ''}',
+                  style: Theme.of(context).textTheme.labelSmall,
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+        Text(
+          m.createdAt.length > 19 ? m.createdAt.substring(11, 16) : m.createdAt,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            fontSize: 10,
+            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
           ),
         ),
-      ),
+      ],
     );
   }
 }

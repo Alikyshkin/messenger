@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../utils/download_file.dart';
+import '../widgets/app_back_button.dart';
 
 /// Полноэкранный просмотр изображения. По тапу — превью, в меню (⋮) — «Скачать».
 class ImagePreviewScreen extends StatelessWidget {
@@ -42,6 +43,7 @@ class ImagePreviewScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
+        leading: const AppBackButton(),
         backgroundColor: Colors.black54,
         foregroundColor: Colors.white,
         title: Text(

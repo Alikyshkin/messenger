@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/api.dart';
+import '../widgets/app_back_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -71,7 +72,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('register_title'))),
+      appBar: AppBar(leading: const AppBackButton(), title: Text(context.tr('register_title'))),
       body: SafeArea(
         child: SingleChildScrollView(
           primary: true,

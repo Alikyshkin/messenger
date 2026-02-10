@@ -7,6 +7,7 @@ import 'package:camera/camera.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../services/e2ee_service.dart';
+import '../widgets/app_back_button.dart';
 
 class RecordVideoNoteScreen extends StatefulWidget {
   final int peerId;
@@ -156,7 +157,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
     }
     if (_error != null && _controller == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Видеокружок')),
+        appBar: AppBar(leading: const AppBackButton(), title: const Text('Видеокружок')),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -206,6 +207,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
             child: Column(
               children: [
                 AppBar(
+                  leading: const AppBackButton(),
                   title: const Text('Видеокружок'),
                   backgroundColor: Colors.transparent,
                   foregroundColor: Colors.white,

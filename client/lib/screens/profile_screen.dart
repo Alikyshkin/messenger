@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
+import '../utils/app_page_route.dart';
 import 'contacts_screen.dart';
 import 'settings_screen.dart';
 
@@ -61,7 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: const Icon(Icons.settings),
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                AppPageRoute(builder: (_) => const SettingsScreen()),
               );
             },
           ),
@@ -142,7 +143,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   subtitle: Text(_friendsCountLabel(context, u.friendsCount)),
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const ContactsScreen()),
+                      AppPageRoute(builder: (_) => const ContactsScreen()),
                     );
                   },
                 ),
@@ -153,7 +154,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   subtitle: Text(context.tr('settings_subtitle')),
                   onTap: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      AppPageRoute(builder: (_) => const SettingsScreen()),
                     );
                   },
                 ),

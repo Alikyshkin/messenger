@@ -4,6 +4,8 @@ import '../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
+import '../utils/app_page_route.dart';
+import '../widgets/app_back_button.dart';
 import 'chat_screen.dart';
 
 class AddContactScreen extends StatefulWidget {
@@ -65,9 +67,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
         SnackBar(content: Text(context.tr('request_sent'))),
       );
       Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ChatScreen(peer: added),
-        ),
+        AppPageRoute(builder: (_) => ChatScreen(peer: added)),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -78,7 +78,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(context.tr('add_friend'))),
+      appBar: AppBar(leading: const AppBackButton(), title: Text(context.tr('add_friend'))),
       body: Column(
         children: [
           Padding(
