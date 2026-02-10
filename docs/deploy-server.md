@@ -252,12 +252,99 @@ Let's Encrypt выдаёт сертификаты на 90 дней. Продле
 sudo certbot renew --dry-run
 ```
 
-### 8.6. Только IP, без домена
+### 8.6. HTTPS без покупки домена
 
-Если есть только IP-адрес, бесплатный Let's Encrypt недоступен. Варианты:
+Два варианта: **бесплатный поддомен** (рекомендуется) или **только по IP** с самоподписанным сертификатом.
 
-- **Самоподписанный сертификат** — браузер будет показывать предупреждение «Небезопасное соединение», но трафик будет шифроваться. Настройка через nginx и `openssl req -x509 ...`.
-- **Взять домен** (в том числе бесплатный, например no-ip, duckdns) и направить его на IP сервера — тогда можно использовать Let's Encrypt по инструкции выше.
+---
+
+#### Вариант А: Бесплатный поддомен + Let's Encrypt (рекомендуется)
+
+Домен покупать не нужно. Сервисы вроде **DuckDNS**, **No-IP**, **Afraid.org** дают бесплатный поддомен (например `mymessenger.duckdns.org`), который указывает на IP вашего сервера. После этого можно получить бесплатный сертификат Let's Encrypt — браузер не будет показывать предупреждений.
+
+**Шаги (на примере DuckDNS):**
+
+1. Зайдите на [duckdns.org](https://www.duckdns.org), войдите через Google/GitHub и создайте поддомен (например `mymessenger`). Получите имя вида `mymessenger.duckdns.org` и токен для обновления IP.
+2. В панели управления вашего VPS/DNS настройте **A-запись** для этого имени на IP сервера (если DuckDNS сам обновляет IP по токену — просто сохраните поддомен, он привяжется к вашему IP при первом заходе).
+3. На сервере установите nginx и certbot (см. разделы 8.2 и 8.3 выше), в конфиге nginx укажите `server_name mymessenger.duckdns.org;`.
+4. Откройте порты 80 и 443, выполните:
+   ```bash
+   sudo certbot --nginx -d mymessenger.duckdns.org
+   ```
+5. В `server/.env` укажите: `APP_BASE_URL=https://mymessenger.duckdns.org`, затем `pm2 restart messenger`.
+
+В браузере сайт будет открываться по **https://** без предупреждений. Продление сертификата — автоматическое.
+
+---
+
+#### Вариант Б: Только IP — самоподписанный сертификат
+
+Если не хотите использовать даже бесплатный поддомен, можно включить HTTPS по **IP** с самоподписанным сертификатом. Трафик будет шифроваться, но при первом заходе браузер покажет предупреждение («Ваше подключение не защищено»). Нужно нажать «Дополнительно» → «Перейти на сайт (небезопасно)». Для личного использования этого достаточно.
+
+**На сервере:**
+
+1. Установите nginx (если ещё не установлен):
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y nginx
+   ```
+
+2. Создайте папку для сертификата и сгенерируйте самоподписанный сертификат (подставьте свой IP вместо `123.45.67.89`):
+   ```bash
+   sudo mkdir -p /etc/nginx/ssl
+   sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+     -keyout /etc/nginx/ssl/messenger.key \
+     -out /etc/nginx/ssl/messenger.crt \
+     -subj "/CN=123.45.67.89" \
+     -addext "subjectAltName=IP:123.45.67.89"
+   ```
+
+3. Создайте конфиг nginx (замените `123.45.67.89` на IP вашего сервера):
+   ```bash
+   sudo nano /etc/nginx/sites-available/messenger
+   ```
+   Содержимое:
+   ```nginx
+   server {
+       listen 443 ssl;
+       server_name 123.45.67.89;
+
+       ssl_certificate     /etc/nginx/ssl/messenger.crt;
+       ssl_certificate_key /etc/nginx/ssl/messenger.key;
+
+       location / {
+           proxy_pass http://127.0.0.1:3000;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection "upgrade";
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+   }
+   ```
+
+4. Включите сайт и перезапустите nginx:
+   ```bash
+   sudo ln -sf /etc/nginx/sites-available/messenger /etc/nginx/sites-enabled/
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
+
+5. Откройте порт 443:
+   ```bash
+   sudo ufw allow 443/tcp
+   sudo ufw reload
+   ```
+
+6. В `server/.env` укажите:
+   ```bash
+   APP_BASE_URL=https://123.45.67.89
+   ```
+   Выполните `pm2 restart messenger`.
+
+Откройте в браузере **https://123.45.67.89**. При предупреждении выберите «Дополнительно» → «Перейти на сайт». Соединение будет зашифровано.
 
 ---
 
