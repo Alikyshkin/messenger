@@ -80,7 +80,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final myId = context.read<AuthService>().user?.id;
     Message? m;
     while ((m = ws.takeIncomingFor(widget.peer.id)) != null) {
-      Message decrypted = await _decryptMessage(m!);
+      Message decrypted = await _decryptMessage(m!, myId: myId);
       if (myId != null && decrypted.isMine != (decrypted.senderId == myId)) {
         decrypted = Message(
           id: decrypted.id,
@@ -125,9 +125,14 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<Message> _decryptMessage(Message m) async {
-    if (!m.content.startsWith('e2ee:') || m.senderPublicKey == null) return m;
-    final decrypted = await _e2ee.decrypt(m.content, m.senderPublicKey);
+  Future<Message> _decryptMessage(Message m, {int? myId}) async {
+    if (!m.content.startsWith('e2ee:')) return m;
+    String? keyToUse = m.senderPublicKey;
+    if (keyToUse == null && myId != null && m.senderId == myId) {
+      keyToUse = await _e2ee.ensureKeyPair();
+    }
+    if (keyToUse == null || keyToUse.isEmpty) return m;
+    final decrypted = await _e2ee.decrypt(m.content, keyToUse);
     if (decrypted == null) return m;
     return Message(
       id: m.id,
@@ -206,9 +211,10 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       final ws = _ws ?? context.read<WsService>();
       await _drainIncoming(ws);
+      final myId = auth.user?.id;
       final decryptedList = <Message>[];
       for (final m in list) {
-        final dec = await _decryptMessage(m);
+        final dec = await _decryptMessage(m, myId: myId);
         decryptedList.add(dec);
         await LocalDb.upsertMessage(dec, peerId);
       }
