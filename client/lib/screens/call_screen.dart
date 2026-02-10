@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
@@ -86,25 +87,56 @@ class _CallScreenState extends State<CallScreen> {
       if (!mounted) return;
       setState(() {
         _state = 'ended';
-        _error = e.toString();
+        _error = _mediaErrorMessage(e);
       });
     }
   }
 
+  /// Сообщение для пользователя при ошибке камеры/микрофона (например по HTTP в браузере).
+  String _mediaErrorMessage(Object e) {
+    if (kIsWeb) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('null') || msg.contains('getusermedia') || msg.contains('media'))
+        return 'Видеозвонок в браузере доступен только по HTTPS. Откройте сайт по https:// или используйте приложение на телефоне.';
+    }
+    if (e.toString().toLowerCase().contains('permission'))
+      return 'Нет доступа к камере или микрофону. Разрешите доступ в настройках.';
+    return e.toString();
+  }
+
   Future<void> _getUserMedia() async {
-    _localStream = await navigator.mediaDevices.getUserMedia({
-      'audio': true,
-      'video': {
-        'mandatory': {
-          'minWidth': '320',
-          'minHeight': '240',
-          'minFrameRate': '15',
+    if (kIsWeb) {
+      try {
+        _localStream = await navigator.mediaDevices.getUserMedia({
+          'audio': true,
+          'video': {
+            'mandatory': {
+              'minWidth': '320',
+              'minHeight': '240',
+              'minFrameRate': '15',
+            },
+            'facingMode': 'user',
+            'optional': [],
+          },
+        });
+      } catch (e) {
+        throw Exception(_mediaErrorMessage(e));
+      }
+    } else {
+      _localStream = await navigator.mediaDevices.getUserMedia({
+        'audio': true,
+        'video': {
+          'mandatory': {
+            'minWidth': '320',
+            'minHeight': '240',
+            'minFrameRate': '15',
+          },
+          'facingMode': 'user',
+          'optional': [],
         },
-        'facingMode': 'user',
-        'optional': [],
-      },
-    });
-    if (_renderersInitialized) _localRenderer.srcObject = _localStream;
+      });
+    }
+    if (_renderersInitialized && _localStream != null) _localRenderer.srcObject = _localStream;
   }
 
   void _setupPeerConnection() {
@@ -167,7 +199,7 @@ class _CallScreenState extends State<CallScreen> {
         if (mounted) {
           setState(() {
             _state = 'ended';
-            _error = e.toString();
+            _error = _mediaErrorMessage(e);
           });
         }
       }
@@ -233,7 +265,7 @@ class _CallScreenState extends State<CallScreen> {
       if (mounted) {
         setState(() {
           _state = 'ended';
-          _error = e.toString();
+          _error = _mediaErrorMessage(e);
         });
       }
     }

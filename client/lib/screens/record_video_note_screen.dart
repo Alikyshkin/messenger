@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:camera/camera.dart';
@@ -32,13 +33,24 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
     _initCamera();
   }
 
+  String _cameraErrorMessage(Object e) {
+    if (kIsWeb) {
+      // В браузере камера работает только по HTTPS; по HTTP браузер блокирует доступ
+      return 'Видеокружок в браузере доступен только по HTTPS. Откройте сайт по https:// или используйте приложение на телефоне.';
+    }
+    if (e.toString().toLowerCase().contains('permission')) return 'Нет доступа к камере. Разрешите доступ в настройках.';
+    return 'Ошибка камеры. Проверьте, что приложению разрешён доступ к камере.';
+  }
+
   Future<void> _initCamera() async {
     try {
       _cameras = await availableCameras();
       if (_cameras == null || _cameras!.isEmpty) {
         setState(() {
           _loading = false;
-          _error = 'Камера недоступна';
+          _error = kIsWeb
+              ? 'Видеокружок в браузере доступен только по HTTPS. Откройте сайт по https:// или используйте приложение на телефоне.'
+              : 'Камера недоступна';
         });
         return;
       }
@@ -55,7 +67,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
     } catch (e) {
       setState(() {
         _loading = false;
-        _error = e.toString().contains('Permission') ? 'Нет доступа к камере' : 'Ошибка камеры';
+        _error = _cameraErrorMessage(e);
       });
     }
   }
