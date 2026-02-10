@@ -6,6 +6,10 @@ class User {
   final String? avatarUrl;
   final String? publicKey;
   final String? email;
+  /// День рождения в формате YYYY-MM-DD.
+  final String? birthday;
+  /// Номер телефона (только цифры).
+  final String? phone;
   /// Количество друзей (контактов). Видно только число; список видит только владелец.
   final int? friendsCount;
 
@@ -17,6 +21,8 @@ class User {
     this.avatarUrl,
     this.publicKey,
     this.email,
+    this.birthday,
+    this.phone,
     this.friendsCount,
   });
 
@@ -29,6 +35,8 @@ class User {
       avatarUrl: json['avatar_url'] as String?,
       publicKey: json['public_key'] as String?,
       email: json['email'] as String?,
+      birthday: json['birthday'] as String?,
+      phone: json['phone'] as String?,
       friendsCount: json['friends_count'] as int?,
     );
   }
@@ -41,6 +49,8 @@ class User {
     String? avatarUrl,
     String? publicKey,
     String? email,
+    String? birthday,
+    String? phone,
     int? friendsCount,
   }) {
     return User(
@@ -51,6 +61,8 @@ class User {
       avatarUrl: avatarUrl ?? this.avatarUrl,
       publicKey: publicKey ?? this.publicKey,
       email: email ?? this.email,
+      birthday: birthday ?? this.birthday,
+      phone: phone ?? this.phone,
       friendsCount: friendsCount ?? this.friendsCount,
     );
   }

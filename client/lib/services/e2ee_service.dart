@@ -63,8 +63,9 @@ class E2EEService {
       final aesKeyBytes = await _hkdf(sharedBytes, _aesKeyLen);
       final secretKey = SecretKey(aesKeyBytes);
       final nonce = _aes.newNonce();
+      final plainBytes = Uint8List.fromList(utf8.encode(plaintext));
       final secretBox = await _aes.encrypt(
-        plaintext.codeUnits,
+        plainBytes,
         secretKey: secretKey,
         nonce: nonce,
       );
@@ -100,7 +101,8 @@ class E2EEService {
       final cipherText = combined.sublist(nonceLen, combined.length - macLen);
       final secretBox = SecretBox(cipherText, nonce: nonce, mac: mac);
       final decrypted = await _aes.decrypt(secretBox, secretKey: secretKey);
-      return String.fromCharCodes(decrypted is Uint8List ? decrypted : Uint8List.fromList(decrypted));
+      final bytes = decrypted is Uint8List ? decrypted : Uint8List.fromList(decrypted);
+      return utf8.decode(bytes);
     } catch (_) {
       return null;
     }

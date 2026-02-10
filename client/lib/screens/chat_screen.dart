@@ -68,9 +68,36 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _drainIncoming(WsService ws) async {
+    final myId = context.read<AuthService>().user?.id;
     Message? m;
     while ((m = ws.takeIncomingFor(widget.peer.id)) != null) {
-      final decrypted = await _decryptMessage(m!);
+      Message decrypted = await _decryptMessage(m!);
+      if (myId != null && decrypted.isMine != (decrypted.senderId == myId)) {
+        decrypted = Message(
+          id: decrypted.id,
+          senderId: decrypted.senderId,
+          receiverId: decrypted.receiverId,
+          content: decrypted.content,
+          createdAt: decrypted.createdAt,
+          readAt: decrypted.readAt,
+          isMine: decrypted.senderId == myId,
+          attachmentUrl: decrypted.attachmentUrl,
+          attachmentFilename: decrypted.attachmentFilename,
+          messageType: decrypted.messageType,
+          pollId: decrypted.pollId,
+          poll: decrypted.poll,
+          attachmentKind: decrypted.attachmentKind,
+          attachmentDurationSec: decrypted.attachmentDurationSec,
+          senderPublicKey: decrypted.senderPublicKey,
+          attachmentEncrypted: decrypted.attachmentEncrypted,
+          replyToId: decrypted.replyToId,
+          replyToContent: decrypted.replyToContent,
+          replyToSenderName: decrypted.replyToSenderName,
+          isForwarded: decrypted.isForwarded,
+          forwardFromSenderId: decrypted.forwardFromSenderId,
+          forwardFromDisplayName: decrypted.forwardFromDisplayName,
+        );
+      }
       await LocalDb.upsertMessage(decrypted, widget.peer.id);
       await LocalDb.updateChatLastMessage(widget.peer.id, decrypted);
       if (!mounted) return;
@@ -112,7 +139,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<Uint8List?> _getAttachmentBytes(Message m) async {
     if (m.attachmentUrl == null || m.attachmentUrl!.isEmpty) return null;
     try {
-      final name = m.attachmentFilename ?? 'file';
+      final name = m.attachmentFilename ?? 'файл';
       final cached = await getCachedAttachmentBytes(widget.peer.id, m.id, name);
       if (cached != null) return Uint8List.fromList(cached);
 
@@ -190,33 +217,71 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  void _showMessageActions(Message m) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.reply),
-              title: const Text('Ответить'),
-              onTap: () {
-                Navigator.pop(ctx);
-                setState(() => _replyingTo = m);
-              },
+  void _showMessageActions(Message m, [Offset? position]) {
+    if (position != null) {
+      final screen = MediaQuery.sizeOf(context);
+      final menuPosition = RelativeRect.fromLTRB(
+        position.dx,
+        position.dy,
+        screen.width - position.dx,
+        screen.height - position.dy,
+      );
+      showMenu<void>(
+        context: context,
+        position: menuPosition,
+        items: [
+          PopupMenuItem(
+            onTap: () {
+              if (!mounted) return;
+              setState(() => _replyingTo = m);
+            },
+            child: const ListTile(
+              contentPadding: EdgeInsets.symmetric(horizontal: 8),
+              leading: Icon(Icons.reply),
+              title: Text('Ответить'),
             ),
-            ListTile(
-              leading: const Icon(Icons.forward),
-              title: const Text('Переслать'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _showForwardPicker(m);
-              },
+          ),
+          PopupMenuItem(
+            onTap: () {
+              if (!mounted) return;
+              _showForwardPicker(m);
+            },
+            child: const ListTile(
+              contentPadding: EdgeInsets.symmetric(horizontal: 8),
+              leading: Icon(Icons.forward),
+              title: Text('Переслать'),
             ),
-          ],
+          ),
+        ],
+      );
+    } else {
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.reply),
+                title: const Text('Ответить'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() => _replyingTo = m);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.forward),
+                title: const Text('Переслать'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showForwardPicker(m);
+                },
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   Future<void> _showForwardPicker(Message m) async {
@@ -575,17 +640,50 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        title: Row(
           children: [
-            Text(widget.peer.displayName),
-            Text(
-              '@${widget.peer.username}',
-              style: Theme.of(context).textTheme.bodySmall,
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.white24,
+              backgroundImage: widget.peer.avatarUrl != null && widget.peer.avatarUrl!.isNotEmpty
+                  ? NetworkImage(widget.peer.avatarUrl!)
+                  : null,
+              child: widget.peer.avatarUrl == null || widget.peer.avatarUrl!.isEmpty
+                  ? const Icon(Icons.person, color: Colors.white70, size: 24)
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.peer.displayName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    '@${widget.peer.username}',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Colors.white70,
+                      fontSize: 13,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
           ],
         ),
+        iconTheme: const IconThemeData(color: Colors.white),
+        actionsIconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
@@ -639,7 +737,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       )
                     : ListView.builder(
                         controller: _scroll,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         itemCount: _messages.length,
                         itemBuilder: (context, i) {
                           final m = _messages[i];
@@ -647,18 +745,25 @@ class _ChatScreenState extends State<ChatScreen> {
                             alignment: m.isMine ? Alignment.centerRight : Alignment.centerLeft,
                             child: GestureDetector(
                               onLongPress: () => _showMessageActions(m),
-                              onSecondaryTap: () => _showMessageActions(m),
+                              onSecondaryTapDown: (details) => _showMessageActions(m, details.globalPosition),
                               child: Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                margin: const EdgeInsets.only(bottom: 10),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                 constraints: BoxConstraints(
                                   maxWidth: MediaQuery.of(context).size.width * 0.75,
                                 ),
                                 decoration: BoxDecoration(
                                   color: m.isMine
                                       ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(context).colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(16),
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.circular(18),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.06),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -779,8 +884,13 @@ class _ChatScreenState extends State<ChatScreen> {
           if (_replyingTo != null)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -818,8 +928,13 @@ class _ChatScreenState extends State<ChatScreen> {
           if (_pendingAttachment != null)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+              ),
               child: Row(
                 children: [
                   if (_pendingAttachment is PendingFile) ...[
@@ -862,8 +977,20 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.all(8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            margin: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
             child: Row(
               children: [
                 IconButton(
