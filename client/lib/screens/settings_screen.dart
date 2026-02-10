@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/attachment_cache.dart';
 import '../services/locale_service.dart';
 import '../services/theme_service.dart';
+import '../widgets/app_back_button.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -204,13 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        leading: Navigator.canPop(context)
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.of(context).pop(),
-                tooltip: context.tr('back'),
-              )
-            : null,
+        leading: const AppBackButton(),
         title: Text(context.tr('settings')),
         actions: [
           if (_loading)
@@ -368,16 +363,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          const SizedBox(height: 8),
-          SwitchListTile(
-            value: context.watch<ThemeService>().isDark,
-            onChanged: _loading
-                ? null
-                : (value) => context.read<ThemeService>().setDark(value),
-            title: Text(context.tr('dark_theme')),
-            subtitle: Text(context.tr('dark_theme_subtitle')),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.tr('dark_theme'),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<ThemeMode>(
+                    segments: [
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        label: Text(context.tr('theme_light')),
+                        icon: const Icon(Icons.light_mode_outlined, size: 20),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        label: Text(context.tr('theme_dark')),
+                        icon: const Icon(Icons.dark_mode_outlined, size: 20),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.system,
+                        label: Text(context.tr('theme_system')),
+                        icon: const Icon(Icons.brightness_auto_outlined, size: 20),
+                      ),
+                    ],
+                    selected: {context.watch<ThemeService>().themeMode},
+                    onSelectionChanged: _loading
+                        ? null
+                        : (Set<ThemeMode> selected) {
+                            context.read<ThemeService>().setThemeMode(selected.first);
+                          },
+                  ),
+                ],
+              ),
+            ),
           ),
+          const SizedBox(height: 16),
           ListTile(
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             leading: const Icon(Icons.language),
@@ -478,19 +507,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 40),
           const Divider(),
           Text(
-            context.tr('account_section'),
+            context.tr('danger_zone'),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
+              color: Theme.of(context).colorScheme.error,
             ),
           ),
           const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: _loading ? null : _deleteAccount,
-            icon: const Icon(Icons.person_remove, size: 20),
-            label: Text(context.tr('delete_account')),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-              side: BorderSide(color: Theme.of(context).colorScheme.error),
+          Card(
+            color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    context.tr('delete_account_confirm_body'),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: _loading ? null : _deleteAccount,
+                    icon: const Icon(Icons.person_remove, size: 22),
+                    label: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(context.tr('delete_account')),
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.error,
+                      foregroundColor: Theme.of(context).colorScheme.onError,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
