@@ -60,11 +60,14 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 380),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     'Мессенджер',
@@ -144,6 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text('Нет аккаунта? Зарегистрироваться'),
                   ),
                 ],
+                ),
               ),
             ),
           ),
