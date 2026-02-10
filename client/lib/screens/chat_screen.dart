@@ -24,6 +24,7 @@ import '../widgets/video_note_bubble.dart';
 import 'call_screen.dart';
 import 'record_video_note_screen.dart';
 import 'user_profile_screen.dart';
+import 'image_preview_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final User peer;
@@ -940,18 +941,25 @@ class _ChatScreenState extends State<ChatScreen> {
           if (isImage) {
             return ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.memory(
-                bytes,
-                width: 200,
-                height: 200,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.broken_image, color: textColor, size: 48),
-                    const SizedBox(width: 8),
-                    Text(name, style: TextStyle(color: textColor, fontSize: 12)),
-                  ],
+              child: GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ImagePreviewScreen(imageBytes: bytes, filename: name),
+                  ),
+                ),
+                child: Image.memory(
+                  bytes,
+                  width: 200,
+                  height: 200,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.broken_image, color: textColor, size: 48),
+                      const SizedBox(width: 8),
+                      Text(name, style: TextStyle(color: textColor, fontSize: 12)),
+                    ],
+                  ),
                 ),
               ),
             );
@@ -980,7 +988,15 @@ class _ChatScreenState extends State<ChatScreen> {
       return ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: InkWell(
-          onTap: () => _openUrl(url),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ImagePreviewScreen(
+                imageUrl: url,
+                filename: name,
+                bytesFuture: Api.getAttachmentBytes(url).then((list) => Uint8List.fromList(list)),
+              ),
+            ),
+          ),
           child: Image.network(
             url,
             width: 200,
