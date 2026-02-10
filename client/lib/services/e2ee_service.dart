@@ -26,7 +26,8 @@ class E2EEService {
     }
     final keyPair = await _x25519.newKeyPair();
     final privBytes = keyPair.extractPrivateKeyBytes();
-    final pubBytes = keyPair.extractPublicKey().bytes;
+    final pubKey = await keyPair.extractPublicKey();
+    final pubBytes = pubKey.bytes;
     final stored = '${base64Encode(privBytes)}:${base64Encode(pubBytes)}';
     await _storage.write(key: _storageKeyPair, value: stored);
     return base64Encode(pubBytes);
@@ -58,7 +59,7 @@ class E2EEService {
     try {
       final theirPublic = SimplePublicKey(base64Decode(recipientPublicKeyBase64), type: KeyPairType.x25519);
       final sharedSecret = await _x25519.sharedSecretKey(keyPair: keyPair as KeyPair, remotePublicKey: theirPublic);
-      final sharedBytes = await sharedSecret.extractBytes();
+      final sharedBytes = Uint8List.fromList(await sharedSecret.extractBytes());
       final aesKeyBytes = await _hkdf(sharedBytes, _aesKeyLen);
       final secretKey = SecretKey(aesKeyBytes);
       final nonce = _aes.newNonce();
@@ -67,10 +68,10 @@ class E2EEService {
         secretKey: secretKey,
         nonce: nonce,
       );
-      final combined = Uint8List(nonce.length + secretBox.cipherText.length + secretBox.mac.bytes.length)
-        ..setRange(0, nonce.length, nonce)
-        ..setRange(nonce.length, nonce.length + secretBox.cipherText.length, secretBox.cipherText)
-        ..setRange(nonce.length + secretBox.cipherText.length, combined.length, secretBox.mac.bytes);
+      final combined = Uint8List(nonce.length + secretBox.cipherText.length + secretBox.mac.bytes.length);
+      combined.setRange(0, nonce.length, nonce);
+      combined.setRange(nonce.length, nonce.length + secretBox.cipherText.length, secretBox.cipherText);
+      combined.setRange(nonce.length + secretBox.cipherText.length, combined.length, secretBox.mac.bytes);
       return _prefix + base64Encode(combined);
     } catch (_) {
       return null;
@@ -86,7 +87,7 @@ class E2EEService {
     try {
       final theirPublic = SimplePublicKey(base64Decode(senderPublicKeyBase64), type: KeyPairType.x25519);
       final sharedSecret = await _x25519.sharedSecretKey(keyPair: keyPair as KeyPair, remotePublicKey: theirPublic);
-      final sharedBytes = await sharedSecret.extractBytes();
+      final sharedBytes = Uint8List.fromList(await sharedSecret.extractBytes());
       final aesKeyBytes = await _hkdf(sharedBytes, _aesKeyLen);
       final secretKey = SecretKey(aesKeyBytes);
       final raw = content.substring(_prefix.length);
@@ -99,7 +100,7 @@ class E2EEService {
       final cipherText = combined.sublist(nonceLen, combined.length - macLen);
       final secretBox = SecretBox(cipherText, nonce: nonce, mac: mac);
       final decrypted = await _aes.decrypt(secretBox, secretKey: secretKey);
-      return String.fromCharCodes(decrypted);
+      return String.fromCharCodes(decrypted is Uint8List ? decrypted : Uint8List.fromList(decrypted));
     } catch (_) {
       return null;
     }
@@ -115,7 +116,7 @@ class E2EEService {
     try {
       final theirPublic = SimplePublicKey(base64Decode(recipientPublicKeyBase64), type: KeyPairType.x25519);
       final sharedSecret = await _x25519.sharedSecretKey(keyPair: keyPair as KeyPair, remotePublicKey: theirPublic);
-      final sharedBytes = await sharedSecret.extractBytes();
+      final sharedBytes = Uint8List.fromList(await sharedSecret.extractBytes());
       final aesKeyBytes = await _hkdfBytes(sharedBytes, _aesKeyLen);
       final secretKey = SecretKey(aesKeyBytes);
       final nonce = _aes.newNonce();
@@ -145,7 +146,7 @@ class E2EEService {
     try {
       final theirPublic = SimplePublicKey(base64Decode(otherPublicKeyBase64), type: KeyPairType.x25519);
       final sharedSecret = await _x25519.sharedSecretKey(keyPair: keyPair as KeyPair, remotePublicKey: theirPublic);
-      final sharedBytes = await sharedSecret.extractBytes();
+      final sharedBytes = Uint8List.fromList(await sharedSecret.extractBytes());
       final aesKeyBytes = await _hkdfBytes(sharedBytes, _aesKeyLen);
       final secretKey = SecretKey(aesKeyBytes);
       const nonceLen = 12;
@@ -154,7 +155,8 @@ class E2EEService {
       final mac = Mac(ciphertext.sublist(ciphertext.length - macLen));
       final enc = ciphertext.sublist(4 + nonceLen, ciphertext.length - macLen);
       final secretBox = SecretBox(enc, nonce: nonce, mac: mac);
-      return await _aes.decrypt(secretBox, secretKey: secretKey);
+      final dec = await _aes.decrypt(secretBox, secretKey: secretKey);
+      return Uint8List.fromList(dec);
     } catch (_) {
       return null;
     }
@@ -167,7 +169,7 @@ class E2EEService {
       nonce: Uint8List(0),
       info: Uint8List.fromList('e2ee-message-v1'.codeUnits),
     );
-    return out.extractBytes();
+    return Uint8List.fromList(await out.extractBytes());
   }
 
   static Future<Uint8List> _hkdfBytes(Uint8List ikm, int length) async {
@@ -177,6 +179,6 @@ class E2EEService {
       nonce: Uint8List(0),
       info: Uint8List.fromList('e2ee-file-v1'.codeUnits),
     );
-    return out.extractBytes();
+    return Uint8List.fromList(await out.extractBytes());
   }
 }
