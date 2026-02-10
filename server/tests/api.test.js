@@ -50,8 +50,8 @@ describe('Users', () => {
   });
 
   it('GET /users/me — 401 без токена', async () => {
-    const { status } = await fetch(baseUrl + '/users/me');
-    assert.strictEqual(status, 401);
+    const res = await fetch(baseUrl + '/users/me');
+    assert.strictEqual(res.status, 401);
   });
 
   it('PATCH /users/me — обновляет display_name и bio', async () => {
