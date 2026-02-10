@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/api.dart';
 
@@ -61,7 +62,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Ошибка соединения';
+        _error = context.tr('connection_error');
         _loading = false;
       });
     }
@@ -70,7 +71,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Регистрация')),
+      appBar: AppBar(title: Text(context.tr('register_title'))),
       body: SafeArea(
         child: SingleChildScrollView(
           primary: true,
@@ -84,9 +85,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   focusNode: _firstFieldFocus,
                   controller: _username,
-                  decoration: const InputDecoration(
-                    labelText: 'Имя пользователя',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.tr('username'),
+                    border: const OutlineInputBorder(),
                   ),
                   textInputAction: TextInputAction.next,
                   keyboardType: TextInputType.name,
@@ -95,7 +96,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   autofocus: true,
                   validator: (v) {
                     if (v == null || v.trim().length < 3) {
-                      return 'Минимум 3 символа';
+                      return context.tr('min_3_chars');
                     }
                     return null;
                   },
@@ -103,9 +104,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _displayName,
-                  decoration: const InputDecoration(
-                    labelText: 'Отображаемое имя (необязательно)',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.tr('display_name_optional'),
+                    border: const OutlineInputBorder(),
                   ),
                   textInputAction: TextInputAction.next,
                   keyboardType: TextInputType.name,
@@ -114,10 +115,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _email,
-                  decoration: const InputDecoration(
-                    labelText: 'Email (для восстановления пароля)',
-                    hintText: 'example@mail.com',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.tr('email_for_recovery'),
+                    hintText: context.tr('email_hint_example'),
+                    border: const OutlineInputBorder(),
                   ),
                   textInputAction: TextInputAction.next,
                   keyboardType: TextInputType.emailAddress,
@@ -126,9 +127,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _password,
-                  decoration: const InputDecoration(
-                    labelText: 'Пароль',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.tr('password'),
+                    border: const OutlineInputBorder(),
                   ),
                   textInputAction: TextInputAction.done,
                   keyboardType: TextInputType.visiblePassword,
@@ -137,7 +138,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   autocorrect: false,
                   onFieldSubmitted: (_) => _submit(),
                   validator: (v) {
-                    if (v == null || v.length < 6) return 'Минимум 6 символов';
+                    if (v == null || v.length < 6) return context.tr('min_6_chars');
                     return null;
                   },
                 ),
@@ -161,7 +162,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Создать аккаунт'),
+                      : Text(context.tr('create_account')),
                 ),
               ],
             ),

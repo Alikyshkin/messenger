@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/api.dart';
 import 'forgot_password_screen.dart';
@@ -47,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Ошибка соединения';
+        _error = context.tr('connection_error');
         _loading = false;
       });
     }
@@ -70,81 +71,92 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Мессенджер',
+                    context.tr('messenger'),
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: -0.5,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 48),
-                  TextFormField(
-                    controller: _username,
-                    decoration: const InputDecoration(
-                      labelText: 'Имя пользователя',
-                      border: OutlineInputBorder(),
+                  const SizedBox(height: 32),
+                  Card(
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TextFormField(
+                            controller: _username,
+                            decoration: InputDecoration(
+                              labelText: context.tr('username'),
+                              border: const OutlineInputBorder(),
+                            ),
+                            textInputAction: TextInputAction.next,
+                            autocorrect: false,
+                            validator: (v) =>
+                                v == null || v.trim().isEmpty ? context.tr('enter_username') : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _password,
+                            decoration: InputDecoration(
+                              labelText: context.tr('password'),
+                              border: const OutlineInputBorder(),
+                            ),
+                            obscureText: true,
+                            onFieldSubmitted: (_) => _submit(),
+                            validator: (v) =>
+                                v == null || v.isEmpty ? context.tr('enter_password') : null,
+                          ),
+                          if (_error != null) ...[
+                            const SizedBox(height: 16),
+                            Text(
+                              _error!,
+                              style: TextStyle(color: Theme.of(context).colorScheme.error),
+                            ),
+                          ],
+                          const SizedBox(height: 24),
+                          FilledButton(
+                            onPressed: _loading
+                                ? null
+                                : () {
+                                    if (_formKey.currentState!.validate()) _submit();
+                                  },
+                            child: _loading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  )
+                                : Text(context.tr('login_btn')),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: _loading
+                                ? null
+                                : () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => const ForgotPasswordScreen(),
+                                      ),
+                                    );
+                                  },
+                            child: Text(context.tr('forgot_password')),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const RegisterScreen(),
+                                ),
+                              );
+                            },
+                            child: Text(context.tr('no_account_register')),
+                          ),
+                        ],
+                      ),
                     ),
-                    textInputAction: TextInputAction.next,
-                    autocorrect: false,
-                    validator: (v) =>
-                        v == null || v.trim().isEmpty ? 'Введите имя' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _password,
-                    decoration: const InputDecoration(
-                      labelText: 'Пароль',
-                      border: OutlineInputBorder(),
-                    ),
-                    obscureText: true,
-                    onFieldSubmitted: (_) => _submit(),
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Введите пароль' : null,
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 16),
-                    Text(
-                      _error!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  FilledButton(
-                    onPressed: _loading
-                        ? null
-                        : () {
-                            if (_formKey.currentState!.validate()) _submit();
-                          },
-                    child: _loading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Войти'),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: _loading
-                        ? null
-                        : () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const ForgotPasswordScreen(),
-                              ),
-                            );
-                          },
-                    child: const Text('Забыли пароль?'),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const RegisterScreen(),
-                        ),
-                      );
-                    },
-                    child: const Text('Нет аккаунта? Зарегистрироваться'),
                   ),
                 ],
                 ),

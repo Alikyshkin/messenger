@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../models/friend_request.dart';
 import '../services/api.dart';
@@ -7,6 +8,8 @@ import '../services/auth_service.dart';
 import '../widgets/skeleton.dart';
 import 'add_contact_screen.dart';
 import 'chat_screen.dart';
+import 'possible_friends_screen.dart';
+import 'user_profile_screen.dart';
 
 class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key});
@@ -43,7 +46,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e is ApiException ? e.message : 'Ошибка загрузки';
+        _error = e is ApiException ? e.message : context.tr('load_error');
         _loading = false;
       });
     }
@@ -59,10 +62,26 @@ class _ContactsScreenState extends State<ContactsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Друзья'),
+        title: Text(context.tr('contacts')),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
+        actionsIconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
+            icon: const Icon(Icons.people_alt_outlined),
+            tooltip: context.tr('possible_friends'),
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const PossibleFriendsScreen(),
+                ),
+              );
+              _load();
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.add),
+            tooltip: context.tr('add_by_username'),
             onPressed: () async {
               await Navigator.of(context).push(
                 MaterialPageRoute(
@@ -76,90 +95,162 @@ class _ContactsScreenState extends State<ContactsScreen> {
       ),
       body: _loading
           ? ListView.builder(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
               itemCount: 12,
-              itemBuilder: (_, __) => const SkeletonContactTile(),
+              itemBuilder: (_, __) => const Card(child: SkeletonContactTile()),
             )
           : _error != null
               ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                      const SizedBox(height: 16),
-                      TextButton(onPressed: _load, child: const Text('Повторить')),
-                    ],
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error), textAlign: TextAlign.center),
+                        const SizedBox(height: 20),
+                        FilledButton.icon(onPressed: _load, icon: const Icon(Icons.refresh, size: 20), label: Text(context.tr('retry'))),
+                      ],
+                    ),
                   ),
                 )
               : _contacts.isEmpty && _requests.isEmpty
-                  ? const Center(child: Text('Нет друзей.\nНажмите + чтобы добавить или отправить заявку.', textAlign: TextAlign.center))
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Text(
+                          context.tr('no_friends_add_hint'),
+                          textAlign: TextAlign.center,
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        ),
+                      ),
+                    )
                   : RefreshIndicator(
                       onRefresh: _load,
                       child: ListView(
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
                         children: [
-                          if (_requests.isNotEmpty) ...[
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                              child: Text(
-                                'Заявки в друзья',
-                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
+                          Card(
+                            child: ListTile(
+                              leading: CircleAvatar(
+                                radius: 24,
+                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                child: Icon(Icons.people_alt_outlined, color: Theme.of(context).colorScheme.onPrimaryContainer),
                               ),
+                              title: Text(context.tr('possible_friends'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                              subtitle: Text(
+                                context.tr('possible_friends_subtitle'),
+                                style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () async {
+                                await Navigator.of(context).push(
+                                  MaterialPageRoute(builder: (_) => const PossibleFriendsScreen()),
+                                );
+                                _load();
+                              },
                             ),
-                            ..._requests.map((req) => ListTile(
-                              title: Text(req.displayName),
-                              subtitle: Text('@${req.username}'),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
+                          ),
+                          const SizedBox(height: 12),
+                          if (_requests.isNotEmpty) ...[
+                            Card(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  TextButton(
-                                    onPressed: () => _reject(req.id),
-                                    child: const Text('Отклонить'),
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                                    child: Text(
+                                      context.tr('friend_requests'),
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                    ),
                                   ),
-                                  const SizedBox(width: 8),
-                                  FilledButton(
-                                    onPressed: () => _accept(req.id),
-                                    child: const Text('Принять'),
-                                  ),
+                                  ..._requests.map((req) => ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    leading: CircleAvatar(
+                                      radius: 24,
+                                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                      child: Text(
+                                        req.displayName.isNotEmpty ? req.displayName[0].toUpperCase() : '?',
+                                        style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer, fontWeight: FontWeight.w600),
+                                      ),
+                                    ),
+                                    title: Text(req.displayName, style: const TextStyle(fontWeight: FontWeight.w500)),
+                                    subtitle: Text('@${req.username}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        TextButton(onPressed: () => _reject(req.id), child: Text(context.tr('reject'))),
+                                        const SizedBox(width: 8),
+                                        FilledButton(onPressed: () => _accept(req.id), child: Text(context.tr('accept'))),
+                                      ],
+                                    ),
+                                  )),
                                 ],
                               ),
-                            )),
-                            const Divider(height: 24),
+                            ),
+                            const SizedBox(height: 12),
                           ],
                           if (_contacts.isNotEmpty) ...[
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                              child: Text(
-                                'Друзья',
-                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                            ..._contacts.map((u) => ListTile(
-                              title: Text(u.displayName),
-                              subtitle: Text('@${u.username}'),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
+                            Card(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.message),
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) => ChatScreen(peer: u),
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                                    child: Text(
+                                      context.tr('friends'),
+                                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context).colorScheme.primary,
+                                      ),
+                                    ),
+                                  ),
+                                  ..._contacts.map((u) => ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    leading: CircleAvatar(
+                                      radius: 24,
+                                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                      backgroundImage: u.avatarUrl != null && u.avatarUrl!.isNotEmpty ? NetworkImage(u.avatarUrl!) : null,
+                                      child: (u.avatarUrl == null || u.avatarUrl!.isEmpty)
+                                          ? Text(
+                                              u.displayName.isNotEmpty ? u.displayName[0].toUpperCase() : '?',
+                                              style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer, fontWeight: FontWeight.w600),
+                                            )
+                                          : null,
+                                    ),
+                                    title: Text(u.displayName, style: const TextStyle(fontWeight: FontWeight.w500)),
+                                    subtitle: Text('@${u.username}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
+                                    onTap: () => Navigator.of(context).push(
+                                      MaterialPageRoute(builder: (_) => UserProfileScreen(user: u)),
+                                    ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.person_outline),
+                                          onPressed: () => Navigator.of(context).push(
+                                            MaterialPageRoute(builder: (_) => UserProfileScreen(user: u)),
+                                          ),
+                                          tooltip: context.tr('profile_tooltip'),
                                         ),
-                                      );
-                                    },
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.person_remove_outlined),
-                                    tooltip: 'Удалить из друзей',
-                                    onPressed: () => _confirmRemove(context, u),
-                                  ),
+                                        IconButton(
+                                          icon: const Icon(Icons.message_outlined),
+                                          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChatScreen(peer: u))),
+                                          tooltip: context.tr('write'),
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.person_remove_outlined),
+                                          tooltip: context.tr('remove_friend_tooltip'),
+                                          onPressed: () => _confirmRemove(context, u),
+                                        ),
+                                      ],
+                                    ),
+                                  )),
                                 ],
                               ),
-                            )),
+                            ),
                           ],
                         ],
                       ),
@@ -190,16 +281,16 @@ class _ContactsScreenState extends State<ContactsScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Удалить из друзей?'),
-        content: Text('Удалить ${u.displayName} из друзей?'),
+        title: Text(context.tr('remove_friend_title')),
+        content: Text(context.tr('remove_friend_body').replaceFirst('%s', u.displayName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Отмена'),
+            child: Text(context.tr('cancel')),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Удалить'),
+            child: Text(context.tr('delete')),
           ),
         ],
       ),

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import '../database/local_db.dart';
+import '../l10n/app_localizations.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../services/attachment_cache.dart';
+import '../services/locale_service.dart';
+import '../services/theme_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -18,12 +21,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _usernameController = TextEditingController();
   final _bioController = TextEditingController();
   final _emailController = TextEditingController();
+  final _phoneController = TextEditingController();
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _loading = false;
   String? _error;
   int _cacheSizeBytes = 0;
+  /// День рождения в формате YYYY-MM-DD или null если не указан.
+  String? _birthday;
 
   @override
   void initState() {
@@ -34,8 +40,48 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _usernameController.text = u.username;
       _bioController.text = u.bio ?? '';
       _emailController.text = u.email ?? '';
+      _phoneController.text = u.phone ?? '';
+      _birthday = u.birthday;
     }
     _loadCacheSize();
+  }
+
+  /// Форматирует YYYY-MM-DD в "15 марта 1990" (или по локали).
+  static String _formatBirthday(BuildContext context, String iso) {
+    final parts = iso.split('-');
+    if (parts.length != 3) return iso;
+    final months = [
+      context.tr('jan'), context.tr('feb'), context.tr('mar'), context.tr('apr'),
+      context.tr('may'), context.tr('jun'), context.tr('jul'), context.tr('aug'),
+      context.tr('sep'), context.tr('oct'), context.tr('nov'), context.tr('dec'),
+    ];
+    final day = int.tryParse(parts[2]) ?? 0;
+    final month = int.tryParse(parts[1]);
+    final year = parts[0];
+    if (month == null || month < 1 || month > 12) return iso;
+    return '$day ${months[month - 1]} $year';
+  }
+
+  Future<void> _pickBirthday() async {
+    DateTime initial = DateTime.now();
+    if (_birthday != null && _birthday!.isNotEmpty) {
+      final p = _birthday!.split('-');
+      if (p.length == 3) {
+        final y = int.tryParse(p[0]);
+        final m = int.tryParse(p[1]);
+        final d = int.tryParse(p[2]);
+        if (y != null && m != null && d != null) initial = DateTime(y, m, d);
+      }
+    }
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+      helpText: context.tr('birthday_help'),
+    );
+    if (picked == null || !mounted) return;
+    setState(() => _birthday = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}');
   }
 
   Future<void> _loadCacheSize() async {
@@ -48,15 +94,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final newPw = _newPasswordController.text;
     final confirm = _confirmPasswordController.text;
     if (current.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Введите текущий пароль')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('enter_current_password'))));
       return;
     }
     if (newPw.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Новый пароль минимум 6 символов')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('new_password_min'))));
       return;
     }
     if (newPw != confirm) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Пароли не совпадают')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('passwords_dont_match'))));
       return;
     }
     setState(() => _loading = true);
@@ -68,7 +114,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _confirmPasswordController.clear();
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Пароль изменён')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('password_changed'))));
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
@@ -76,7 +122,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ошибка соединения')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('connection_error'))));
     }
   }
 
@@ -86,6 +132,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _usernameController.dispose();
     _bioController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
@@ -105,16 +152,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         username: _usernameController.text.trim().isEmpty ? null : _usernameController.text.trim(),
         bio: _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
         email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+        phone: _phoneController.text.trim().replaceAll(RegExp(r'\D'), ''),
+        birthday: _birthday ?? '',
       );
       await auth.refreshUser();
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Профиль сохранён')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('profile_saved'))));
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e is ApiException ? e.message : 'Ошибка сохранения';
+        _error = e is ApiException ? e.message : context.tr('save_error');
       });
     }
   }
@@ -137,12 +186,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await auth.refreshUser();
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Фото обновлено')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('photo_updated'))));
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e is ApiException ? e.message : 'Ошибка загрузки фото';
+        _error = e is ApiException ? e.message : context.tr('upload_photo_error');
       });
     }
   }
@@ -151,11 +200,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final u = auth.user;
-    if (u == null) return const Scaffold(body: Center(child: Text('Не авторизован')));
+    if (u == null) return Scaffold(body: Center(child: Text(context.tr('not_authorized'))));
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Настройки'),
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.of(context).pop(),
+                tooltip: context.tr('back'),
+              )
+            : null,
+        title: Text(context.tr('settings')),
         actions: [
           if (_loading)
             const Padding(
@@ -169,7 +225,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           else
             TextButton(
               onPressed: _saveProfile,
-              child: const Text('Сохранить'),
+              child: Text(context.tr('save')),
             ),
         ],
       ),
@@ -212,7 +268,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 8),
           Center(
             child: Text(
-              'Нажмите, чтобы сменить фото',
+              context.tr('tap_to_change_photo'),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -229,28 +285,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           TextField(
             controller: _displayNameController,
-            decoration: const InputDecoration(
-              labelText: 'Имя (как отображается)',
-              hintText: 'Имя',
+            decoration: InputDecoration(
+              labelText: context.tr('display_name_label'),
+              hintText: context.tr('display_name_hint'),
             ),
             textCapitalization: TextCapitalization.words,
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _usernameController,
-            decoration: const InputDecoration(
-              labelText: 'Имя пользователя (@username)',
-              hintText: 'username',
-              helperText: 'По нему вас находят и добавляют в друзья',
+            decoration: InputDecoration(
+              labelText: context.tr('username_label'),
+              hintText: context.tr('username_hint'),
+              helperText: context.tr('username_helper'),
             ),
             autocorrect: false,
           ),
           const SizedBox(height: 16),
           TextField(
             controller: _bioController,
-            decoration: const InputDecoration(
-              labelText: 'О себе',
-              hintText: 'Краткое описание профиля',
+            decoration: InputDecoration(
+              labelText: context.tr('bio_label'),
+              hintText: context.tr('bio_hint'),
               alignLabelWithHint: true,
             ),
             maxLines: 3,
@@ -259,18 +315,86 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 16),
           TextField(
             controller: _emailController,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              hintText: 'Для восстановления пароля',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.tr('email_label'),
+              hintText: context.tr('email_hint_recovery'),
+              border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.emailAddress,
             autocorrect: false,
           ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _phoneController,
+            decoration: InputDecoration(
+              labelText: context.tr('phone_label'),
+              hintText: context.tr('phone_hint'),
+              helperText: context.tr('phone_helper'),
+            ),
+            keyboardType: TextInputType.phone,
+            autocorrect: false,
+          ),
+          const SizedBox(height: 16),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(context.tr('birthday')),
+            subtitle: Text(
+              _birthday != null && _birthday!.isNotEmpty ? _formatBirthday(context, _birthday!) : context.tr('birthday_not_set'),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_birthday != null && _birthday!.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: _loading ? null : () => setState(() => _birthday = ''),
+                    tooltip: context.tr('reset'),
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.calendar_today_outlined),
+                  onPressed: _loading ? null : _pickBirthday,
+                  tooltip: context.tr('pick_date'),
+                ),
+              ],
+            ),
+            onTap: _loading ? null : _pickBirthday,
+          ),
           const SizedBox(height: 32),
           const Divider(),
           Text(
-            'Изменить пароль',
+            context.tr('appearance'),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            value: context.watch<ThemeService>().isDark,
+            onChanged: _loading
+                ? null
+                : (value) => context.read<ThemeService>().setDark(value),
+            title: Text(context.tr('dark_theme')),
+            subtitle: Text(context.tr('dark_theme_subtitle')),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          ),
+          ListTile(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            leading: const Icon(Icons.language),
+            title: Text(context.tr('language')),
+            subtitle: Text(
+              (context.watch<LocaleService>().locale?.languageCode == 'en')
+                  ? context.tr('language_en')
+                  : context.tr('language_ru'),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _loading ? null : _showLanguagePicker,
+          ),
+          const SizedBox(height: 32),
+          const Divider(),
+          Text(
+            context.tr('change_password_section'),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
@@ -278,9 +402,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 8),
           TextField(
             controller: _currentPasswordController,
-            decoration: const InputDecoration(
-              labelText: 'Текущий пароль',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.tr('current_password'),
+              border: const OutlineInputBorder(),
             ),
             obscureText: true,
             autocorrect: false,
@@ -288,9 +412,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           TextField(
             controller: _newPasswordController,
-            decoration: const InputDecoration(
-              labelText: 'Новый пароль (мин. 6 символов)',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.tr('new_password'),
+              border: const OutlineInputBorder(),
             ),
             obscureText: true,
             autocorrect: false,
@@ -298,9 +422,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 12),
           TextField(
             controller: _confirmPasswordController,
-            decoration: const InputDecoration(
-              labelText: 'Повторите новый пароль',
-              border: OutlineInputBorder(),
+            decoration: InputDecoration(
+              labelText: context.tr('confirm_password'),
+              border: const OutlineInputBorder(),
             ),
             obscureText: true,
             autocorrect: false,
@@ -309,20 +433,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
           FilledButton.tonalIcon(
             onPressed: _loading ? null : _changePassword,
             icon: const Icon(Icons.lock_reset, size: 20),
-            label: const Text('Изменить пароль'),
+            label: Text(context.tr('change_password_btn')),
           ),
           const SizedBox(height: 32),
           const Divider(),
           const SizedBox(height: 8),
           Text(
-            'Кэш вложений',
+            context.tr('cache_section'),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'Скачанные файлы, голосовые и видео хранятся в полноразмерном виде на устройстве.',
+            context.tr('cache_description'),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -342,18 +466,109 @@ class _SettingsScreenState extends State<SettingsScreen> {
               FilledButton.tonalIcon(
                 onPressed: _loading ? null : _showClearCacheByChat,
                 icon: const Icon(Icons.chat_bubble_outline, size: 20),
-                label: const Text('Очистить по чату'),
+                label: Text(context.tr('clear_cache_by_chat')),
               ),
               FilledButton.tonalIcon(
                 onPressed: _loading ? null : _clearAllCache,
                 icon: const Icon(Icons.delete_sweep, size: 20),
-                label: const Text('Очистить весь кэш'),
+                label: Text(context.tr('clear_all_cache')),
               ),
             ],
+          ),
+          const SizedBox(height: 40),
+          const Divider(),
+          Text(
+            context.tr('account_section'),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: _loading ? null : _deleteAccount,
+            icon: const Icon(Icons.person_remove, size: 20),
+            label: Text(context.tr('delete_account')),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Theme.of(context).colorScheme.error,
+              side: BorderSide(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  void _showLanguagePicker() {
+    final localeService = context.read<LocaleService>();
+    final isEn = localeService.locale?.languageCode == 'en';
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.check, color: !isEn ? Theme.of(ctx).colorScheme.primary : Colors.transparent),
+              title: Text(context.tr('language_ru')),
+              onTap: () {
+                localeService.setLocale(const Locale('ru'));
+                Navigator.pop(ctx);
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.check, color: isEn ? Theme.of(ctx).colorScheme.primary : Colors.transparent),
+              title: Text(context.tr('language_en')),
+              onTap: () {
+                localeService.setLocale(const Locale('en'));
+                Navigator.pop(ctx);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _deleteAccount() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.tr('delete_account_confirm_title')),
+        content: Text(context.tr('delete_account_confirm_body')),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(context.tr('cancel')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(context.tr('delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true || !mounted) return;
+    setState(() => _loading = true);
+    try {
+      final auth = context.read<AuthService>();
+      await Api(auth.token).deleteAccount();
+      if (!mounted) return;
+      await auth.logout();
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('account_deleted'))));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('connection_error'))));
+    }
   }
 
   String _formatBytes(int bytes) {
@@ -375,7 +590,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'Очистить кэш вложений для чата',
+                context.tr('clear_cache_for_chat_title'),
                 style: Theme.of(ctx).textTheme.titleMedium,
               ),
             ),
@@ -403,7 +618,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       await _loadCacheSize();
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Кэш для ${peer.displayName.isNotEmpty ? peer.displayName : peer.username} очищен')),
+                          SnackBar(content: Text(context.tr('cache_cleared_for').replaceFirst('%s', peer.displayName.isNotEmpty ? peer.displayName : peer.username)),
                         );
                       }
                     },
@@ -421,7 +636,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await clearAllAttachmentCache();
     await _loadCacheSize();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Весь кэш вложений очищен')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('all_cache_cleared'))));
     }
   }
 }

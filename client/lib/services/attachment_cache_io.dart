@@ -5,7 +5,7 @@ import 'package:path_provider/path_provider.dart';
 const _cacheDirName = 'messenger_attachment_cache';
 
 String _safeFilename(String name) {
-  if (name.isEmpty) return 'file';
+  if (name.isEmpty) return 'файл';
   return name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_').replaceAll(RegExp(r'_+'), '_');
 }
 

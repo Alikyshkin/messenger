@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
@@ -48,7 +49,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = e is ApiException ? e.message : 'Ошибка';
+        _error = e is ApiException ? e.message : context.tr('error');
         _searching = false;
       });
     }
@@ -61,7 +62,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
       if (!mounted) return;
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заявка отправлена. Можете написать сообщение.')),
+        SnackBar(content: Text(context.tr('request_sent'))),
       );
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -77,7 +78,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Добавить друга')),
+      appBar: AppBar(title: Text(context.tr('add_friend'))),
       body: Column(
         children: [
           Padding(
@@ -85,7 +86,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
             child: TextField(
               controller: _query,
               decoration: InputDecoration(
-                labelText: 'Имя пользователя',
+                labelText: context.tr('username'),
                 border: const OutlineInputBorder(),
                 suffixIcon: _searching
                     ? const Padding(
@@ -114,7 +115,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
             ),
           Expanded(
             child: _results.isEmpty
-                ? const Center(child: Text('Введите имя и нажмите поиск'))
+                ? Center(child: Text(context.tr('search_hint')))
                 : ListView.builder(
                     itemCount: _results.length,
                     itemBuilder: (context, i) {
@@ -124,7 +125,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
                         subtitle: Text('@${u.username}'),
                         trailing: FilledButton(
                           onPressed: () => _add(u),
-                          child: const Text('Добавить'),
+                          child: Text(context.tr('add')),
                         ),
                       );
                     },

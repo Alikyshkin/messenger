@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../services/api.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -23,7 +24,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _submit() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      setState(() => _error = 'Введите email');
+      setState(() => _error = context.tr('enter_email'));
       return;
     }
     setState(() {
@@ -47,7 +48,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Ошибка соединения';
+        _error = context.tr('connection_error');
         _loading = false;
       });
     }
@@ -56,7 +57,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Восстановление пароля')),
+      appBar: AppBar(title: Text(context.tr('forgot_password_title'))),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -67,27 +68,27 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 Icon(Icons.mark_email_read_outlined, size: 64, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(height: 16),
                 Text(
-                  'Если аккаунт с таким email есть, на него отправлена ссылка для сброса пароля. Проверьте почту и перейдите по ссылке.',
+                  context.tr('forgot_email_sent'),
                   style: Theme.of(context).textTheme.bodyLarge,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Вернуться ко входу'),
+                  child: Text(context.tr('back_to_login')),
                 ),
               ] else ...[
                 Text(
-                  'Введите email, указанный при регистрации. Мы отправим ссылку для сброса пароля.',
+                  context.tr('forgot_email_prompt'),
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 const SizedBox(height: 24),
                 TextField(
                   controller: _emailController,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    hintText: 'example@mail.com',
-                    border: OutlineInputBorder(),
+                  decoration: InputDecoration(
+                    labelText: context.tr('email_label'),
+                    hintText: context.tr('email_hint_example'),
+                    border: const OutlineInputBorder(),
                   ),
                   keyboardType: TextInputType.emailAddress,
                   autocorrect: false,
@@ -110,7 +111,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Отправить ссылку'),
+                      : Text(context.tr('send_reset_link')),
                 ),
               ],
             ],
