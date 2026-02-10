@@ -760,18 +760,15 @@ class _ChatScreenState extends State<ChatScreen> {
             padding: const EdgeInsets.all(8),
             child: Row(
               children: [
-                PopupMenuButton<String>(
-                  enabled: !_sending,
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'file', child: Row(children: [Icon(Icons.attach_file), SizedBox(width: 12), Text('Файл')])),
-                    const PopupMenuItem(value: 'poll', child: Row(children: [Icon(Icons.poll_outlined), SizedBox(width: 12), Text('Опрос')])),
-                  ],
-                  onSelected: (value) {
-                    if (value == 'file') _attachAndSend();
-                    if (value == 'poll') _createPoll();
-                  },
-                  tooltip: 'Прикрепить',
-                  icon: const Icon(Icons.attach_file),
+                IconButton(
+                  onPressed: _sending ? null : _attachAndSend,
+                  icon: const Icon(Icons.photo_library_outlined),
+                  tooltip: 'Фото или файл',
+                ),
+                IconButton(
+                  onPressed: _sending ? null : _createPoll,
+                  icon: const Icon(Icons.poll_outlined),
+                  tooltip: 'Опрос',
                 ),
                 GestureDetector(
                   onLongPressStart: (_) => _startVoiceRecord(),
