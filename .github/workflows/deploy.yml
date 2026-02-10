@@ -31,14 +31,6 @@ jobs:
           mkdir -p server/public
           cp -r client/build/web/* server/public/
 
-      - name: Prepare SSH key
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-        run: |
-          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$GITHUB_WORKSPACE/deploy_key"
-          chmod 644 "$GITHUB_WORKSPACE/deploy_key"
-          ssh-keygen -y -f "$GITHUB_WORKSPACE/deploy_key" > /dev/null || (echo 'Invalid SSH key in DEPLOY_SSH_KEY secret' && exit 1)
-
       - name: Deploy API via SSH
         uses: appleboy/ssh-action@v1.0.3
         env:
@@ -46,7 +38,7 @@ jobs:
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
-          key_path: /github/workspace/deploy_key
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           envs: DEPLOY_PATH
           script: |
             set -e
@@ -64,6 +56,6 @@ jobs:
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
-          key_path: /github/workspace/deploy_key
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
           source: "server/public"
           target: "${{ secrets.DEPLOY_PATH || '/opt/messenger' }}/server"

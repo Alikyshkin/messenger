@@ -84,6 +84,36 @@ pm2 startup   # выполните команду, которую выведет
 
 ---
 
+## 5.1. Ручное обновление (пока автодеплой не подключён)
+
+Пока GitHub Actions не подключается к серверу, можно подтягивать код вручную.
+
+**Зайдите на сервер по SSH** и выполните один из вариантов.
+
+**Вариант А — скрипт (из корня репозитория на сервере):**
+
+```bash
+cd /opt/messenger   # или ваш путь, если клонировали в другое место
+bash scripts/update-on-server.sh
+```
+
+**Вариант Б — те же команды вручную:**
+
+```bash
+cd /opt/messenger
+git fetch origin main
+git reset --hard origin/main
+cd server
+npm ci --omit=dev
+mkdir -p public
+pm2 restart messenger || (pm2 start index.js --name messenger)
+pm2 save
+```
+
+После этого код API и сервера обновлён. **Веб-клиент** (`server/public/`) при ручном обновлении не подтягивается из Git (его собирает CI). Если меняли папку `client/`, соберите локально: `cd client && flutter build web --release`, затем скопируйте на сервер: `scp -r build/web/* root@ВАШ_IP:/opt/messenger/server/public/` и на сервере выполните `pm2 restart messenger`.
+
+---
+
 ## 6. Проверка в браузере
 
 **Проверить, что API отвечает:**
