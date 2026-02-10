@@ -44,6 +44,8 @@ class _CallScreenState extends State<CallScreen> {
   String _state = 'init'; // init | calling | ringing | connected | ended
   String? _error;
   final List<Map<String, dynamic>> _pendingCandidates = [];
+  bool _cameraEnabled = true;
+  bool _micEnabled = true;
 
   @override
   void initState() {
@@ -105,38 +107,51 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _getUserMedia() async {
-    if (kIsWeb) {
-      try {
-        _localStream = await navigator.mediaDevices.getUserMedia({
-          'audio': true,
-          'video': {
-            'mandatory': {
-              'minWidth': '320',
-              'minHeight': '240',
-              'minFrameRate': '15',
+    final Map<String, dynamic> mediaConstraints = kIsWeb
+        ? {
+            'audio': true,
+            'video': {
+              'mandatory': {
+                'minWidth': '320',
+                'minHeight': '240',
+                'minFrameRate': '15',
+              },
+              'facingMode': 'user',
+              'optional': [],
             },
-            'facingMode': 'user',
-            'optional': [],
-          },
-        });
-      } catch (e) {
-        throw Exception(_mediaErrorMessage(e));
-      }
-    } else {
-      _localStream = await navigator.mediaDevices.getUserMedia({
-        'audio': true,
-        'video': {
-          'mandatory': {
-            'minWidth': '320',
-            'minHeight': '240',
-            'minFrameRate': '15',
-          },
-          'facingMode': 'user',
-          'optional': [],
-        },
-      });
+          }
+        : {
+            'audio': true,
+            'video': {
+              'facingMode': 'user',
+              'width': {'ideal': 640},
+              'height': {'ideal': 480},
+            },
+          };
+    try {
+      _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+    } catch (e) {
+      throw Exception(_mediaErrorMessage(e));
     }
     if (_renderersInitialized && _localStream != null) _localRenderer.srcObject = _localStream;
+  }
+
+  void _toggleCamera() {
+    if (_localStream == null) return;
+    final videoTracks = _localStream!.getVideoTracks();
+    for (final t in videoTracks) {
+      t.enabled = !t.enabled;
+    }
+    setState(() => _cameraEnabled = !_cameraEnabled);
+  }
+
+  void _toggleMic() {
+    if (_localStream == null) return;
+    final audioTracks = _localStream!.getAudioTracks();
+    for (final t in audioTracks) {
+      t.enabled = !t.enabled;
+    }
+    setState(() => _micEnabled = !_micEnabled);
   }
 
   void _setupPeerConnection() {
@@ -405,16 +420,37 @@ class _CallScreenState extends State<CallScreen> {
                 left: 0,
                 right: 0,
                 bottom: 48,
-                child: Center(
-                  child: IconButton.filled(
-                    onPressed: _hangUp,
-                    icon: const Icon(Icons.call_end),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.all(24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton.filled(
+                      onPressed: _toggleMic,
+                      icon: Icon(_micEnabled ? Icons.mic : Icons.mic_off),
+                      style: IconButton.styleFrom(
+                        backgroundColor: _micEnabled ? Colors.grey.shade700 : Colors.red.shade700,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 12),
+                    IconButton.filled(
+                      onPressed: _toggleCamera,
+                      icon: Icon(_cameraEnabled ? Icons.videocam : Icons.videocam_off),
+                      style: IconButton.styleFrom(
+                        backgroundColor: _cameraEnabled ? Colors.grey.shade700 : Colors.red.shade700,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    IconButton.filled(
+                      onPressed: _hangUp,
+                      icon: const Icon(Icons.call_end),
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.all(24),
+                      ),
+                    ),
+                  ],
                 ),
               ),
           ],

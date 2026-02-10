@@ -54,6 +54,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Message? _replyingTo;
   PendingAttachment? _pendingAttachment;
   List<PendingFile>? _pendingMultipleFiles;
+  final Map<String, Future<Uint8List?>> _attachmentFutureCache = {};
 
   @override
   void initState() {
@@ -244,6 +245,31 @@ class _ChatScreenState extends State<ChatScreen> {
       final idx = _messages.indexWhere((msg) => msg.id == m.id);
       if (idx >= 0) setState(() => _messages[idx] = _messages[idx].copyWith(reactions: reactions));
     } catch (_) {}
+  }
+
+  List<Widget> _reactionAvatars(BuildContext context, MessageReaction r) {
+    final auth = context.read<AuthService>().user;
+    final myId = auth?.id;
+    final theme = Theme.of(context);
+    return r.userIds.take(3).map((userId) {
+      String? avatarUrl;
+      if (userId == widget.peer.id) avatarUrl = widget.peer.avatarUrl;
+      else if (userId == myId) avatarUrl = auth?.avatarUrl;
+      return Padding(
+        padding: const EdgeInsets.only(right: 2),
+        child: CircleAvatar(
+          radius: 8,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+          child: avatarUrl == null || avatarUrl.isEmpty
+              ? Text(
+                  userId == myId ? (auth?.displayName.isNotEmpty == true ? auth!.displayName[0].toUpperCase() : '?') : (widget.peer.displayName.isNotEmpty ? widget.peer.displayName[0].toUpperCase() : '?'),
+                  style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                )
+              : null,
+        ),
+      );
+    }).toList();
   }
 
   void _showMessageActions(Message m, [Offset? position]) {
@@ -991,15 +1017,30 @@ class _ChatScreenState extends State<ChatScreen> {
                                       spacing: 6,
                                       runSpacing: 4,
                                       children: m.reactions.map((r) {
-                                        return Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: (m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.surface).withOpacity(0.2),
-                                            borderRadius: BorderRadius.circular(12),
+                                        final myId = context.read<AuthService>().user?.id;
+                                        final hasMine = myId != null && r.userIds.contains(myId);
+                                        return InkWell(
+                                          onTap: () {
+                                            if (hasMine) _setReaction(m, r.emoji);
+                                          },
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: (m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.surface).withOpacity(0.2),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                ..._reactionAvatars(context, r),
+                                                const SizedBox(width: 4),
+                                                Text('${r.emoji} ${r.count > 1 ? r.count : ''}', style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                  color: m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
+                                                )),
+                                              ],
+                                            ),
                                           ),
-                                          child: Text('${r.emoji} ${r.count > 1 ? r.count : ''}', style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                            color: m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
-                                          )),
                                         );
                                       }).toList(),
                                     ),
@@ -1354,8 +1395,10 @@ class _ChatScreenState extends State<ChatScreen> {
         ? Theme.of(context).colorScheme.onPrimary
         : Theme.of(context).colorScheme.onSurface;
     if (m.attachmentEncrypted) {
+      final cacheKey = '${widget.peer.id}_${m.id}_${m.attachmentFilename ?? ""}';
+      final future = _attachmentFutureCache.putIfAbsent(cacheKey, () => _getAttachmentBytes(m));
       return FutureBuilder<Uint8List?>(
-        future: _getAttachmentBytes(m),
+        future: future,
         builder: (context, snapshot) {
           if (!snapshot.hasData || snapshot.data == null) {
             return Row(

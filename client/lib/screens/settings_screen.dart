@@ -356,6 +356,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             onTap: _loading ? null : _pickBirthday,
           ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _loading ? null : _saveProfile,
+              icon: const Icon(Icons.save_outlined, size: 20),
+              label: Text(context.tr('save')),
+            ),
+          ),
           const SizedBox(height: 32),
           const Divider(),
           Text(

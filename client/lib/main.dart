@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'app_colors.dart';
 import 'services/auth_service.dart';
 import 'services/locale_service.dart';
 import 'services/theme_service.dart';
@@ -22,64 +23,64 @@ class MessengerApp extends StatelessWidget {
     return ThemeData(
       useMaterial3: true,
       colorScheme: ColorScheme.light(
-        primary: const Color(0xFF2AABEE),
-        onPrimary: Colors.white,
-        primaryContainer: const Color(0xFFE3F2FD),
-        onPrimaryContainer: const Color(0xFF1A1A1A),
-        secondary: const Color(0xFF6B6B6B),
-        onSecondary: Colors.white,
-        surface: Colors.white,
-        onSurface: const Color(0xFF1A1A1A),
-        surfaceContainerHighest: const Color(0xFFF5F5F5),
-        onSurfaceVariant: const Color(0xFF6B6B6B),
-        outline: const Color(0xFFE0E0E0),
-        error: const Color(0xFFE53935),
-        onError: Colors.white,
+        primary: AppColors.lightPrimary,
+        onPrimary: AppColors.lightOnPrimary,
+        primaryContainer: AppColors.lightPrimaryContainer,
+        onPrimaryContainer: AppColors.lightOnPrimaryContainer,
+        secondary: AppColors.lightOnSurfaceVariant,
+        onSecondary: AppColors.lightOnPrimary,
+        surface: AppColors.lightSurface,
+        onSurface: AppColors.lightOnSurface,
+        surfaceContainerHighest: AppColors.lightSurfaceContainerHighest,
+        onSurfaceVariant: AppColors.lightOnSurfaceVariant,
+        outline: AppColors.lightOutline,
+        error: AppColors.lightError,
+        onError: AppColors.lightOnError,
       ),
-      scaffoldBackgroundColor: const Color(0xFFE8EDF2),
+      scaffoldBackgroundColor: AppColors.lightScaffoldBackground,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF2AABEE),
-        foregroundColor: Colors.white,
+        backgroundColor: AppColors.lightPrimary,
+        foregroundColor: AppColors.lightOnPrimary,
         elevation: 0,
         scrolledUnderElevation: 2,
         centerTitle: false,
         leadingWidth: 56,
         titleTextStyle: TextStyle(
-          color: Colors.white,
+          color: AppColors.lightOnPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: IconThemeData(color: Colors.white, size: 24),
-        actionsIconTheme: IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: AppColors.lightOnPrimary, size: 24),
+        actionsIconTheme: IconThemeData(color: AppColors.lightOnPrimary),
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
+        color: AppColors.lightSurface,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.lightSurface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+          borderSide: const BorderSide(color: AppColors.lightOutline),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+          borderSide: const BorderSide(color: AppColors.lightOutline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF2AABEE), width: 1.5),
+          borderSide: const BorderSide(color: AppColors.lightPrimary, width: 1.5),
         ),
-        labelStyle: const TextStyle(color: Color(0xFF6B6B6B)),
+        labelStyle: const TextStyle(color: AppColors.lightOnSurfaceVariant),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFF2AABEE),
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.lightPrimary,
+          foregroundColor: AppColors.lightOnPrimary,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -87,12 +88,12 @@ class MessengerApp extends StatelessWidget {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: const Color(0xFF2AABEE),
+          foregroundColor: AppColors.lightPrimary,
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
-          foregroundColor: const Color(0xFF1A1A1A),
+          foregroundColor: AppColors.lightOnSurface,
         ),
       ),
       listTileTheme: const ListTileThemeData(
@@ -100,8 +101,8 @@ class MessengerApp extends StatelessWidget {
         minLeadingWidth: 56,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
       ),
-      dividerColor: const Color(0xFFE8E8E8),
-      dividerTheme: const DividerThemeData(color: Color(0xFFE8E8E8), thickness: 1, space: 1),
+      dividerColor: AppColors.lightOutline,
+      dividerTheme: const DividerThemeData(color: AppColors.lightOutline, thickness: 1, space: 1),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: CupertinoPageTransitionsBuilder(),
@@ -116,64 +117,64 @@ class MessengerApp extends StatelessWidget {
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: ColorScheme.dark(
-        primary: const Color(0xFF5EB3F6),
-        onPrimary: Colors.white,
-        primaryContainer: const Color(0xFF1B3A4B),
-        onPrimaryContainer: const Color(0xFFE0E6EB),
-        secondary: const Color(0xFF9E9E9E),
-        onSecondary: const Color(0xFFE0E0E0),
-        surface: const Color(0xFF1A1A1A),
-        onSurface: const Color(0xFFE8EDF2),
-        surfaceContainerHighest: const Color(0xFF2D2D2D),
-        onSurfaceVariant: const Color(0xFFB8B8B8),
-        outline: const Color(0xFF505050),
-        error: const Color(0xFFEF5350),
-        onError: Colors.white,
+        primary: AppColors.darkPrimary,
+        onPrimary: AppColors.darkOnPrimary,
+        primaryContainer: AppColors.darkPrimaryContainer,
+        onPrimaryContainer: AppColors.darkOnPrimaryContainer,
+        secondary: AppColors.darkOnSurfaceVariant,
+        onSecondary: AppColors.darkOnPrimary,
+        surface: AppColors.darkSurface,
+        onSurface: AppColors.darkOnSurface,
+        surfaceContainerHighest: AppColors.darkSurfaceContainerHighest,
+        onSurfaceVariant: AppColors.darkOnSurfaceVariant,
+        outline: AppColors.darkOutline,
+        error: AppColors.darkError,
+        onError: AppColors.darkOnError,
       ),
-      scaffoldBackgroundColor: const Color(0xFF121212),
+      scaffoldBackgroundColor: AppColors.darkScaffoldBackground,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF1E1E1E),
-        foregroundColor: Color(0xFFE8EDF2),
+        backgroundColor: AppColors.darkSurfaceContainerHighest,
+        foregroundColor: AppColors.darkOnSurface,
         elevation: 0,
         scrolledUnderElevation: 2,
         centerTitle: false,
         leadingWidth: 56,
         titleTextStyle: TextStyle(
-          color: Color(0xFFE8EDF2),
+          color: AppColors.darkOnSurface,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: IconThemeData(color: Color(0xFFE8EDF2), size: 24),
-        actionsIconTheme: IconThemeData(color: Color(0xFFE8EDF2)),
+        iconTheme: IconThemeData(color: AppColors.darkOnSurface, size: 24),
+        actionsIconTheme: IconThemeData(color: AppColors.darkOnSurface),
       ),
       cardTheme: CardThemeData(
-        color: const Color(0xFF2D2D2D),
+        color: AppColors.darkSurfaceContainerHighest,
         elevation: 0,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFF2D2D2D),
+        fillColor: AppColors.darkSurfaceContainerHighest,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF404040)),
+          borderSide: const BorderSide(color: AppColors.darkOutline),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF404040)),
+          borderSide: const BorderSide(color: AppColors.darkOutline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF5EB3F6), width: 1.5),
+          borderSide: const BorderSide(color: AppColors.darkPrimary, width: 1.5),
         ),
-        labelStyle: const TextStyle(color: Color(0xFFB0B0B0)),
+        labelStyle: const TextStyle(color: AppColors.darkOnSurfaceVariant),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: const Color(0xFF5EB3F6),
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.darkPrimary,
+          foregroundColor: AppColors.darkOnPrimary,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -181,12 +182,12 @@ class MessengerApp extends StatelessWidget {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: const Color(0xFF7BC4FA),
+          foregroundColor: AppColors.darkPrimary,
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
-          foregroundColor: const Color(0xFFE8EDF2),
+          foregroundColor: AppColors.darkOnSurface,
         ),
       ),
       listTileTheme: const ListTileThemeData(
@@ -194,8 +195,8 @@ class MessengerApp extends StatelessWidget {
         minLeadingWidth: 56,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(8))),
       ),
-      dividerColor: const Color(0xFF404040),
-      dividerTheme: const DividerThemeData(color: Color(0xFF404040), thickness: 1, space: 1),
+      dividerColor: AppColors.darkOutline,
+      dividerTheme: const DividerThemeData(color: AppColors.darkOutline, thickness: 1, space: 1),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: CupertinoPageTransitionsBuilder(),
@@ -274,9 +275,8 @@ class _AppLoadingScreen extends StatelessWidget {
                     theme.colorScheme.surfaceContainerHighest,
                   ]
                 : [
-                    const Color(0xFFE8EDF2),
-                    const Color(0xFFdae4ec),
-                    const Color(0xFFc9d9e8),
+                    AppColors.lightScaffoldBackground,
+                    AppColors.lightSurfaceContainerHighest,
                   ],
           ),
         ),

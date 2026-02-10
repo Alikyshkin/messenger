@@ -141,6 +141,9 @@ router.post('/', (req, res, next) => {
   let memberIds = req.body?.member_ids;
   if (!name) return res.status(400).json({ error: 'Укажите название группы' });
   if (name.length > 128) name = name.slice(0, 128);
+  if (typeof memberIds === 'string') {
+    try { memberIds = JSON.parse(memberIds); } catch { memberIds = []; }
+  }
   if (!Array.isArray(memberIds)) memberIds = [];
   memberIds = [...new Set(memberIds.map((id) => parseInt(id, 10)).filter((id) => !Number.isNaN(id) && id !== me))];
   const avatarPath = req.file?.filename ?? null;

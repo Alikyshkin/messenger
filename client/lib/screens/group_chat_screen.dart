@@ -76,6 +76,36 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     } catch (_) {}
   }
 
+  List<Widget> _reactionAvatars(BuildContext context, MessageReaction r) {
+    final members = widget.group.members;
+    final theme = Theme.of(context);
+    return r.userIds.take(3).map((userId) {
+      String? avatarUrl;
+      String initial = '?';
+      if (members != null) {
+        GroupMember? member;
+        for (final m in members) {
+          if (m.id == userId) { member = m; break; }
+        }
+        if (member != null) {
+          avatarUrl = member.avatarUrl;
+          initial = member.displayName.isNotEmpty ? member.displayName[0].toUpperCase() : (member.username.isNotEmpty ? member.username[0].toUpperCase() : '?');
+        }
+      }
+      return Padding(
+        padding: const EdgeInsets.only(right: 2),
+        child: CircleAvatar(
+          radius: 8,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+          child: avatarUrl == null || avatarUrl.isEmpty
+              ? Text(initial, style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant))
+              : null,
+        ),
+      );
+    }).toList();
+  }
+
   Future<void> _load() async {
     final auth = context.read<AuthService>();
     if (!auth.isLoggedIn) return;
@@ -509,15 +539,30 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             spacing: 6,
             runSpacing: 4,
             children: m.reactions.map((r) {
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${r.emoji} ${r.count > 1 ? r.count : ''}',
-                  style: Theme.of(context).textTheme.labelSmall,
+              final myId = context.read<AuthService>().user?.id;
+              final hasMine = myId != null && r.userIds.contains(myId);
+              return InkWell(
+                onTap: () {
+                  if (hasMine) _setGroupReaction(m, r.emoji);
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface.withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ..._reactionAvatars(context, r),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${r.emoji} ${r.count > 1 ? r.count : ''}',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ],
+                  ),
                 ),
               );
             }).toList(),
