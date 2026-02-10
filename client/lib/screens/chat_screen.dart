@@ -212,16 +212,36 @@ class _ChatScreenState extends State<ChatScreen> {
       final ws = _ws ?? context.read<WsService>();
       await _drainIncoming(ws);
       final myId = auth.user?.id;
+      final cachedById = {for (final m in cached) m.id: m};
       final decryptedList = <Message>[];
       for (final m in list) {
         final dec = await _decryptMessage(m, myId: myId);
-        decryptedList.add(dec);
-        await LocalDb.upsertMessage(dec, peerId);
+        Message toAdd = dec;
+        if (dec.content.startsWith('e2ee:')) {
+          final fromCache = cachedById[dec.id];
+          if (fromCache != null && !fromCache.content.startsWith('e2ee:')) {
+            toAdd = fromCache;
+          }
+        }
+        decryptedList.add(toAdd);
+        if (!toAdd.content.startsWith('e2ee:')) {
+          await LocalDb.upsertMessage(toAdd, peerId);
+        }
       }
       if (!mounted) return;
       final fromDb = await LocalDb.getMessages(peerId);
+      final merged = <Message>[...decryptedList];
+      final mergedIds = merged.map((m) => m.id).toSet();
+      for (final m in fromDb) {
+        if (!mergedIds.contains(m.id)) {
+          merged.add(m);
+          mergedIds.add(m.id);
+        }
+      }
+      merged.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+      if (!mounted) return;
       setState(() {
-        _messages = fromDb.isNotEmpty ? fromDb : decryptedList;
+        _messages = merged;
         _loading = false;
       });
       _scrollToBottom();
