@@ -11,6 +11,9 @@ client/.packages
 client/build
 client/*.iml
 
+# CI deploy key (created at runtime, never commit)
+deploy_key
+
 # IDE / OS
 .idea
 .DS_Store
