@@ -22,6 +22,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
   List<CameraDescription>? _cameras;
   CameraController? _controller;
   bool _recording = false;
+  bool _sending = false;
   bool _loading = true;
   String? _error;
   int _recordSeconds = 0;
@@ -96,9 +97,13 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
   }
 
   Future<void> _stopAndSend() async {
-    if (_controller == null || !_recording) return;
+    if (_controller == null || !_recording || _sending) return;
     _recordTimer?.cancel();
-    setState(() => _recording = false);
+    setState(() {
+      _recording = false;
+      _sending = true;
+      _error = null;
+    });
     try {
       final xFile = await _controller!.stopVideoRecording();
       var bytes = await xFile.readAsBytes();
@@ -121,7 +126,10 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
       Navigator.of(context).pop({'message': msg});
     } catch (e) {
       if (!mounted) return;
-      setState(() => _error = e is ApiException ? e.message : 'Ошибка отправки');
+      setState(() {
+        _error = e is ApiException ? e.message : 'Ошибка отправки';
+        _sending = false;
+      });
     }
   }
 
@@ -173,12 +181,32 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
                   foregroundColor: Colors.white,
                 ),
                 const Spacer(),
-                if (_recording)
+                if (_recording || _sending)
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      '$_recordSeconds сек',
+                      _sending ? 'Отправка…' : '$_recordSeconds сек',
                       style: const TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                  ),
+                if (_error != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Material(
+                      color: Colors.red.shade900,
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(_error!, style: const TextStyle(color: Colors.white))),
+                            TextButton(
+                              onPressed: () => setState(() => _error = null),
+                              child: const Text('Понятно', style: TextStyle(color: Colors.white)),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 Padding(
@@ -186,7 +214,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      if (!_recording)
+                      if (!_recording && !_sending)
                         GestureDetector(
                           onTap: _startRecording,
                           child: Container(
@@ -199,17 +227,35 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
                             child: const Icon(Icons.fiber_manual_record, color: Colors.red, size: 48),
                           ),
                         )
-                      else
-                        GestureDetector(
-                          onTap: _stopAndSend,
-                          child: Container(
-                            width: 72,
-                            height: 72,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 4),
+                      else if (_recording)
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: _stopAndSend,
+                              child: Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white, width: 4),
+                                ),
+                                child: const Icon(Icons.stop, color: Colors.white, size: 52),
+                              ),
                             ),
-                            child: const Icon(Icons.stop, color: Colors.white, size: 48),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Нажмите, чтобы остановить и отправить',
+                              style: TextStyle(color: Colors.white70, fontSize: 14),
+                            ),
+                          ],
+                        )
+                      else
+                        const SizedBox(
+                          width: 80,
+                          height: 80,
+                          child: Center(
+                            child: CircularProgressIndicator(color: Colors.white),
                           ),
                         ),
                     ],
