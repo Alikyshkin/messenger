@@ -53,7 +53,7 @@ router.get('/:peerId', (req, res) => {
   const baseUrl = getBaseUrl(req);
 
   let query = `
-    SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted
+    SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name
     FROM messages
     WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
   `;
@@ -84,7 +84,22 @@ router.get('/:peerId', (req, res) => {
       attachment_duration_sec: r.attachment_duration_sec ?? null,
       attachment_encrypted: !!(r.attachment_encrypted),
       sender_public_key: sender?.public_key ?? null,
+      reply_to_id: r.reply_to_id ?? null,
+      is_forwarded: !!(r.is_forwarded),
+      forward_from_sender_id: r.forward_from_sender_id ?? null,
+      forward_from_display_name: r.forward_from_display_name ?? null,
     };
+    if (r.reply_to_id) {
+      const replyRow = db.prepare('SELECT content, sender_id FROM messages WHERE id = ?').get(r.reply_to_id);
+      if (replyRow) {
+        const replySender = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(replyRow.sender_id);
+        const replyName = replySender?.display_name || replySender?.username || '?';
+        let snippet = replyRow.content || '';
+        if (snippet.length > 80) snippet = snippet.slice(0, 77) + '...';
+        msg.reply_to_content = snippet;
+        msg.reply_to_sender_name = replyName;
+      }
+    }
     if (r.poll_id) {
       const pollRow = db.prepare('SELECT id, question, options, multiple FROM polls WHERE id = ?').get(r.poll_id);
       if (pollRow) {
@@ -114,7 +129,7 @@ router.post('/', (req, res, next) => {
   }
   next();
 }, (req, res) => {
-  const { receiver_id, content, type, question, options: optArr, multiple } = req.body;
+  const { receiver_id, content, type, question, options: optArr, multiple, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name } = req.body;
   const rid = parseInt(receiver_id, 10);
   const isPoll = type === 'poll' && question && Array.isArray(optArr) && optArr.length >= 2;
   const text = (content ?? '').trim();
@@ -122,6 +137,10 @@ router.post('/', (req, res, next) => {
   if (!isPoll && !text && !req.file) return res.status(400).json({ error: 'content или файл обязательны' });
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
+  const replyToId = reply_to_id != null ? parseInt(reply_to_id, 10) : null;
+  const isFwd = is_forwarded === true || is_forwarded === 'true';
+  const fwdFromId = forward_from_sender_id != null ? parseInt(forward_from_sender_id, 10) : null;
+  const fwdFromName = typeof forward_from_display_name === 'string' ? forward_from_display_name.trim().slice(0, 128) : null;
 
   if (isPoll) {
     const options = optArr.slice(0, 10).map(o => String(o).trim()).filter(Boolean);
@@ -185,10 +204,10 @@ router.post('/', (req, res, next) => {
   const attachmentEncrypted = req.body?.attachment_encrypted === 'true' || req.body?.attachment_encrypted === true ? 1 : 0;
   const contentToStore = text || (attachmentKind === 'voice' ? 'Голосовое сообщение' : attachmentKind === 'video_note' ? 'Видеокружок' : '(файл)');
   const result = db.prepare(
-    `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted) VALUES (?, ?, ?, ?, ?, 'text', ?, ?, ?)`
-  ).run(me, rid, contentToStore, attachmentPath, attachmentFilename, attachmentKind, attachmentDurationSec, attachmentEncrypted);
+    `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name) VALUES (?, ?, ?, ?, ?, 'text', ?, ?, ?, ?, ?, ?, ?)`
+  ).run(me, rid, contentToStore, attachmentPath, attachmentFilename, attachmentKind, attachmentDurationSec, attachmentEncrypted, Number.isNaN(replyToId) ? null : replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
   const row = db.prepare(
-    'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted FROM messages WHERE id = ?'
+    'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
   ).get(result.lastInsertRowid);
   const meUser = db.prepare('SELECT public_key FROM users WHERE id = ?').get(me);
   const payload = {
@@ -203,7 +222,19 @@ router.post('/', (req, res, next) => {
     attachment_duration_sec: row.attachment_duration_sec ?? null,
     attachment_encrypted: !!(row.attachment_encrypted),
     sender_public_key: meUser?.public_key ?? null,
+    reply_to_id: row.reply_to_id ?? null,
+    is_forwarded: !!(row.is_forwarded),
+    forward_from_sender_id: row.forward_from_sender_id ?? null,
+    forward_from_display_name: row.forward_from_display_name ?? null,
   };
+  if (row.reply_to_id) {
+    const replyRow = db.prepare('SELECT content, sender_id FROM messages WHERE id = ?').get(row.reply_to_id);
+    if (replyRow) {
+      const replySender = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(replyRow.sender_id);
+      payload.reply_to_content = (replyRow.content || '').length > 80 ? (replyRow.content || '').slice(0, 77) + '...' : (replyRow.content || '');
+      payload.reply_to_sender_name = replySender?.display_name || replySender?.username || '?';
+    }
+  }
   notifyNewMessage(payload);
   res.status(201).json(payload);
 });
