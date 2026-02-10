@@ -49,5 +49,7 @@
 	<string>Микрофон нужен для голосовых звонков</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Камера для видеозвонков (опционально)</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Доступ к контактам для поиска друзей, зарегистрированных в мессенджере</string>
 </dict>
 </plist>
