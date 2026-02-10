@@ -39,17 +39,20 @@ function getBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
-function userToJson(user, baseUrl) {
-  return {
+function userToJson(user, baseUrl, options = {}) {
+  const j = {
     id: user.id,
     username: user.username,
     display_name: user.display_name || user.username,
-    bio: user.bio || null,
+    bio: user.bio ?? null,
     avatar_url: user.avatar_path ? `${baseUrl}/uploads/avatars/${user.avatar_path}` : null,
     created_at: user.created_at,
-    public_key: user.public_key || null,
-    email: user.email || null,
+    public_key: user.public_key ?? null,
+    email: options.includeEmail ? (user.email ?? null) : undefined,
   };
+  if (user.friends_count !== undefined) j.friends_count = user.friends_count;
+  if (j.email === undefined) delete j.email;
+  return j;
 }
 
 router.get('/me', (req, res) => {
@@ -57,7 +60,9 @@ router.get('/me', (req, res) => {
     'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email FROM users WHERE id = ?'
   ).get(req.user.userId);
   if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json(userToJson(user, getBaseUrl(req)));
+  const count = db.prepare('SELECT COUNT(*) as n FROM contacts WHERE user_id = ?').get(req.user.userId);
+  user.friends_count = count?.n ?? 0;
+  res.json(userToJson(user, getBaseUrl(req), { includeEmail: true }));
 });
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -95,7 +100,8 @@ router.patch('/me', (req, res) => {
   const sel = 'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email FROM users WHERE id = ?';
   if (updates.length === 0) {
     const user = db.prepare(sel).get(me);
-    return res.json(userToJson(user, getBaseUrl(req)));
+    user.friends_count = db.prepare('SELECT COUNT(*) as n FROM contacts WHERE user_id = ?').get(me)?.n ?? 0;
+    return res.json(userToJson(user, getBaseUrl(req), { includeEmail: true }));
   }
   params.push(me);
   try {
@@ -105,7 +111,8 @@ router.patch('/me', (req, res) => {
     throw e;
   }
   const user = db.prepare(sel).get(me);
-  res.json(userToJson(user, getBaseUrl(req)));
+  user.friends_count = db.prepare('SELECT COUNT(*) as n FROM contacts WHERE user_id = ?').get(me)?.n ?? 0;
+  res.json(userToJson(user, getBaseUrl(req), { includeEmail: true }));
 });
 
 router.post('/me/avatar', avatarUpload.single('avatar'), (req, res) => {
@@ -113,8 +120,9 @@ router.post('/me/avatar', avatarUpload.single('avatar'), (req, res) => {
   const me = req.user.userId;
   const avatarPath = req.file.filename;
   db.prepare('UPDATE users SET avatar_path = ? WHERE id = ?').run(avatarPath, me);
-  const user = db.prepare('SELECT id, username, display_name, bio, avatar_path, created_at, public_key FROM users WHERE id = ?').get(me);
-  res.json(userToJson(user, getBaseUrl(req)));
+  const user = db.prepare('SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email FROM users WHERE id = ?').get(me);
+  user.friends_count = db.prepare('SELECT COUNT(*) as n FROM contacts WHERE user_id = ?').get(me)?.n ?? 0;
+  res.json(userToJson(user, getBaseUrl(req), { includeEmail: true }));
 });
 
 router.get('/search', (req, res) => {
@@ -128,6 +136,19 @@ router.get('/search', (req, res) => {
     LIMIT 20
   `).all(me, `%${q}%`, `%${q}%`);
   res.json(rows.map(r => userToJson(r, baseUrl)));
+});
+
+/** Публичный профиль: только то, что могут видеть все (без email). Количество друзей — только число, не список. */
+router.get('/:id', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+  const user = db.prepare(
+    'SELECT id, username, display_name, bio, avatar_path, created_at, public_key FROM users WHERE id = ?'
+  ).get(id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const count = db.prepare('SELECT COUNT(*) as n FROM contacts WHERE user_id = ?').get(id);
+  user.friends_count = count?.n ?? 0;
+  res.json(userToJson(user, getBaseUrl(req)));
 });
 
 export default router;
