@@ -1,0 +1,32 @@
+# Автодеплой сервера мессенджера при пуше в main
+# Секреты: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY; опционально DEPLOY_PATH (по умолчанию /opt/messenger)
+
+name: Deploy server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/opt/messenger' }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          envs: DEPLOY_PATH
+          script: |
+            set -e
+            cd "$DEPLOY_PATH"
+            git fetch origin main
+            git reset --hard origin/main
+            cd server
+            npm ci --omit=dev
+            pm2 restart messenger || (pm2 start index.js --name messenger)
+            pm2 save

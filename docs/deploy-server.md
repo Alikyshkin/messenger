@@ -1,0 +1,177 @@
+# Развёртывание сервера мессенджера на VPS
+
+После аренды сервера выполните эти шаги **один раз**. Дальше при каждом пуше в `main` сервер будет обновляться автоматически.
+
+---
+
+## 1. Подключитесь к серверу по SSH
+
+```bash
+ssh root@ВАШ_IP
+# или
+ssh ubuntu@ВАШ_IP
+```
+
+(Используйте пользователя, который создали при заказе сервера.)
+
+---
+
+## 2. Установите Node.js, Git и PM2
+
+**Ubuntu / Debian:**
+
+```bash
+# Node.js 20 LTS
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Git
+sudo apt-get install -y git
+
+# PM2 (менеджер процессов, чтобы сервер перезапускался после обновлений)
+sudo npm install -g pm2
+```
+
+Проверьте: `node -v` (должно быть v20.x), `git --version`, `pm2 -v`.
+
+---
+
+## 3. Клонируйте репозиторий
+
+Если репозиторий **публичный**:
+
+```bash
+sudo mkdir -p /opt
+sudo git clone https://github.com/ВАШ_ЛОГИН/messenger.git /opt/messenger
+sudo chown -R $USER:$USER /opt/messenger
+```
+
+Если репозиторий **приватный**, настройте доступ по SSH-ключу или токену (см. раздел «Приватный репозиторий» ниже).
+
+---
+
+## 4. Настройте переменные окружения
+
+```bash
+cd /opt/messenger/server
+cp .env.example .env
+nano .env   # или vim
+```
+
+Заполните в `.env` минимум:
+
+- **JWT_SECRET** — длинная случайная строка (например, сгенерируйте: `openssl rand -base64 32`).
+- **PORT** — порт, на котором будет слушать приложение (например, 3000).
+- **APP_BASE_URL** — полный адрес вашего сервера (например, `https://api.ваш-домен.ru` или `https://ВАШ_IP`).
+
+По желанию настройте SMTP для писем сброса пароля (SMTP_HOST, SMTP_USER, SMTP_PASS, MAIL_FROM).
+
+Сохраните файл (в nano: Ctrl+O, Enter, Ctrl+X).
+
+---
+
+## 5. Установите зависимости и запустите сервер
+
+```bash
+cd /opt/messenger/server
+npm ci --omit=dev
+pm2 start index.js --name messenger
+pm2 save
+pm2 startup   # выполните команду, которую выведет pm2 (для автозапуска после перезагрузки)
+```
+
+Проверьте: `pm2 status` — процесс `messenger` должен быть в статусе `online`. Логи: `pm2 logs messenger`.
+
+---
+
+## 6. Проверка в браузере
+
+**Проверить, что API отвечает:**
+
+1. Откройте порт 3000 на сервере (см. шаг 7 ниже).
+2. В браузере откройте: **`http://ВАШ_IP:3000/health`**  
+   Должен открыться ответ вроде: `{"ok":true}`. Значит сервер доступен.
+
+**Открыть само приложение (логин, чаты) в браузере:**
+
+На своём компьютере в папке проекта выполните:
+
+```bash
+cd client
+flutter run -d chrome --dart-define=API_BASE_URL=http://ВАШ_IP:3000
+```
+
+Подставьте вместо `ВАШ_IP` реальный IP или домен сервера. Откроется Chrome с мессенджером, который уже ходит на ваш сервер — можно регистрироваться и проверять работу.
+
+(Позже можно собрать веб-клиент и выложить его на тот же сервер через nginx — тогда приложение будет открываться по адресу типа `http://ВАШ_IP` без этой команды.)
+
+---
+
+## 7. Откройте порт в файрволе
+
+Если на сервере включён ufw:
+
+```bash
+sudo ufw allow 3000/tcp   # или тот порт, что указали в .env
+sudo ufw allow 22/tcp    # SSH
+sudo ufw enable
+```
+
+---
+
+## 8. Настройте автодеплой из GitHub
+
+При пуше в ветку `main` сервер будет обновляться сам. Нужно один раз добавить секреты в репозитории.
+
+1. Откройте репозиторий на GitHub → **Settings** → **Secrets and variables** → **Actions**.
+2. Нажмите **New repository secret** и добавьте:
+
+| Имя              | Значение |
+|------------------|----------|
+| `DEPLOY_HOST`    | IP или домен вашего сервера (например, `123.45.67.89`) |
+| `DEPLOY_USER`    | Пользователь SSH (например, `root` или `ubuntu`) |
+| `DEPLOY_SSH_KEY` | **Приватный** SSH-ключ, которым вы подключаетесь к серверу |
+
+**Как получить приватный ключ:** на своём компьютере откройте файл ключа (например, `~/.ssh/id_rsa` или `~/.ssh/id_ed25519`) и скопируйте **весь** текст, включая строки `-----BEGIN ... KEY-----` и `-----END ... KEY-----`. Вставьте в секрет `DEPLOY_SSH_KEY`.
+
+3. (Необязательно.) Если клонировали репозиторий не в `/opt/messenger`, добавьте секрет `DEPLOY_PATH` с путём к папке (например, `/home/ubuntu/messenger`).
+
+После этого при каждом `git push origin main` workflow **Deploy server** подключится к серверу, выполнит `git pull`, `npm ci` и перезапустит приложение через PM2.
+
+---
+
+## 9. Приватный репозиторий
+
+Если репозиторий закрытый, на сервере нужен доступ к GitHub по SSH или по токену.
+
+**Вариант A — deploy-ключ (рекомендуется):**
+
+1. На своём компьютере: `ssh-keygen -t ed25519 -C "deploy" -f deploy_key` (пароль можно не ставить).
+2. Добавьте **публичный** ключ `deploy_key.pub` в GitHub: репозиторий → **Settings** → **Deploy keys** → Add deploy key.
+3. На сервере:
+   ```bash
+   mkdir -p ~/.ssh
+   nano ~/.ssh/id_ed25519   # вставьте содержимое файла deploy_key (приватный ключ)
+   chmod 600 ~/.ssh/id_ed25519
+   ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
+   git clone git@github.com:ВАШ_ЛОГИН/messenger.git /opt/messenger
+   ```
+
+**Вариант B — HTTPS с токеном:**
+
+```bash
+git clone https://ВАШ_ТОКЕН@github.com/ВАШ_ЛОГИН/messenger.git /opt/messenger
+```
+
+(Токен: GitHub → Settings → Developer settings → Personal access tokens, права `repo`.)
+
+---
+
+## Полезные команды на сервере
+
+- Статус: `pm2 status`
+- Логи: `pm2 logs messenger`
+- Перезапуск вручную: `pm2 restart messenger`
+- Остановка: `pm2 stop messenger`
+
+База данных и загруженные файлы: `server/messenger.db` и `server/uploads/`. Регулярно делайте бэкап этих данных.
