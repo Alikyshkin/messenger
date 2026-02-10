@@ -9,7 +9,7 @@ router.post('/:id/vote', (req, res) => {
   const pollId = parseInt(req.params.id, 10);
   const { option_index, option_indexes } = req.body;
   const me = req.user.userId;
-  if (Number.isNaN(pollId)) return res.status(400).json({ error: 'Invalid poll id' });
+  if (Number.isNaN(pollId)) return res.status(400).json({ error: 'Некорректный id опроса' });
 
   const poll = db.prepare('SELECT id, message_id, options, multiple FROM polls WHERE id = ?').get(pollId);
   if (!poll) return res.status(404).json({ error: 'Опрос не найден' });

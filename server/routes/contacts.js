@@ -24,27 +24,27 @@ router.get('/', (req, res) => {
 router.post('/', (req, res) => {
   const { username } = req.body;
   if (!username?.trim()) {
-    return res.status(400).json({ error: 'Username required' });
+    return res.status(400).json({ error: 'Укажите имя пользователя' });
   }
   const contact = db.prepare(
     'SELECT id, username, display_name FROM users WHERE username = ?'
   ).get(username.trim().toLowerCase());
   if (!contact) {
-    return res.status(404).json({ error: 'User not found' });
+    return res.status(404).json({ error: 'Пользователь не найден' });
   }
   if (contact.id === req.user.userId) {
-    return res.status(400).json({ error: 'Cannot add yourself' });
+    return res.status(400).json({ error: 'Нельзя добавить самого себя' });
   }
   const me = req.user.userId;
   const existingContact = db.prepare('SELECT 1 FROM contacts WHERE user_id = ? AND contact_id = ?').get(me, contact.id);
   if (existingContact) {
-    return res.status(409).json({ error: 'Already in contacts' });
+    return res.status(409).json({ error: 'Уже в друзьях' });
   }
   const existingReq = db.prepare(
     "SELECT id FROM friend_requests WHERE from_user_id = ? AND to_user_id = ? AND status = 'pending'"
   ).get(me, contact.id);
   if (existingReq) {
-    return res.status(409).json({ error: 'Request already sent' });
+    return res.status(409).json({ error: 'Заявка уже отправлена' });
   }
   try {
     db.prepare(
@@ -52,7 +52,7 @@ router.post('/', (req, res) => {
     ).run(me, contact.id);
   } catch (e) {
     if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      return res.status(409).json({ error: 'Request already sent' });
+      return res.status(409).json({ error: 'Заявка уже отправлена' });
     }
     throw e;
   }
@@ -61,6 +61,15 @@ router.post('/', (req, res) => {
     username: contact.username,
     display_name: contact.display_name || contact.username,
   });
+});
+
+// Исходящие заявки (кому я отправил заявку)
+router.get('/requests/outgoing', (req, res) => {
+  const rows = db.prepare(`
+    SELECT to_user_id as user_id FROM friend_requests
+    WHERE from_user_id = ? AND status = 'pending'
+  `).all(req.user.userId);
+  res.json(rows.map(r => ({ to_user_id: r.user_id })));
 });
 
 // Входящие заявки в друзья
@@ -85,12 +94,12 @@ router.get('/requests/incoming', (req, res) => {
 // Одобрить заявку: добавляем друг друга в contacts
 router.post('/requests/:id/accept', (req, res) => {
   const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'Некорректный id' });
   const row = db.prepare(
     "SELECT from_user_id, to_user_id FROM friend_requests WHERE id = ? AND to_user_id = ? AND status = 'pending'"
   ).get(id, req.user.userId);
   if (!row) {
-    return res.status(404).json({ error: 'Request not found' });
+    return res.status(404).json({ error: 'Заявка не найдена' });
   }
   db.prepare("UPDATE friend_requests SET status = 'accepted' WHERE id = ?").run(id);
   try {
@@ -106,12 +115,12 @@ router.post('/requests/:id/accept', (req, res) => {
 // Отклонить заявку
 router.post('/requests/:id/reject', (req, res) => {
   const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'Invalid id' });
+  if (Number.isNaN(id)) return res.status(400).json({ error: 'Некорректный id' });
   const result = db.prepare(
     "UPDATE friend_requests SET status = 'rejected' WHERE id = ? AND to_user_id = ? AND status = 'pending'"
   ).run(id, req.user.userId);
   if (result.changes === 0) {
-    return res.status(404).json({ error: 'Request not found' });
+    return res.status(404).json({ error: 'Заявка не найдена' });
   }
   res.status(204).send();
 });
@@ -119,13 +128,13 @@ router.post('/requests/:id/reject', (req, res) => {
 router.delete('/:id', (req, res) => {
   const contactId = parseInt(req.params.id, 10);
   if (Number.isNaN(contactId)) {
-    return res.status(400).json({ error: 'Invalid id' });
+    return res.status(400).json({ error: 'Некорректный id' });
   }
   const result = db.prepare(
     'DELETE FROM contacts WHERE user_id = ? AND contact_id = ?'
   ).run(req.user.userId, contactId);
   if (result.changes === 0) {
-    return res.status(404).json({ error: 'Contact not found' });
+    return res.status(404).json({ error: 'Контакт не найден' });
   }
   res.status(204).send();
 });

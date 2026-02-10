@@ -44,7 +44,7 @@ function getBaseUrl(req) {
 
 router.patch('/:peerId/read', (req, res) => {
   const peerId = parseInt(req.params.peerId, 10);
-  if (Number.isNaN(peerId)) return res.status(400).json({ error: 'Invalid peer id' });
+  if (Number.isNaN(peerId)) return res.status(400).json({ error: 'Некорректный id чата' });
   const me = req.user.userId;
   db.prepare(
     'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE receiver_id = ? AND sender_id = ? AND read_at IS NULL'
@@ -55,7 +55,7 @@ router.patch('/:peerId/read', (req, res) => {
 router.get('/:peerId', (req, res) => {
   const peerId = parseInt(req.params.peerId, 10);
   if (Number.isNaN(peerId)) {
-    return res.status(400).json({ error: 'Invalid peer id' });
+    return res.status(400).json({ error: 'Некорректный id чата' });
   }
   const limit = Math.min(parseInt(req.query.limit, 10) || 100, 200);
   const before = req.query.before ? parseInt(req.query.before, 10) : null;

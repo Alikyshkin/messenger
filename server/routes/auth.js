@@ -12,17 +12,17 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 router.post('/register', (req, res) => {
   const { username, password, displayName, email } = req.body;
   if (!username?.trim() || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
+    return res.status(400).json({ error: 'Укажите имя пользователя и пароль' });
   }
   if (username.length < 3) {
-    return res.status(400).json({ error: 'Username must be at least 3 characters' });
+    return res.status(400).json({ error: 'Имя пользователя минимум 3 символа' });
   }
   if (password.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    return res.status(400).json({ error: 'Пароль минимум 6 символов' });
   }
   const emailTrim = typeof email === 'string' ? email.trim().toLowerCase() : null;
   if (emailTrim && !EMAIL_RE.test(emailTrim)) {
-    return res.status(400).json({ error: 'Invalid email format' });
+    return res.status(400).json({ error: 'Некорректный формат email' });
   }
   const password_hash = bcrypt.hashSync(password, 10);
   try {
@@ -43,7 +43,7 @@ router.post('/register', (req, res) => {
     });
   } catch (e) {
     if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      return res.status(409).json({ error: 'Username already taken' });
+      return res.status(409).json({ error: 'Это имя пользователя уже занято' });
     }
     throw e;
   }
@@ -52,13 +52,13 @@ router.post('/register', (req, res) => {
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password required' });
+    return res.status(400).json({ error: 'Укажите имя пользователя и пароль' });
   }
   const user = db.prepare(
     'SELECT id, username, display_name, email, password_hash FROM users WHERE username = ?'
   ).get(username.trim().toLowerCase());
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
-    return res.status(401).json({ error: 'Invalid username or password' });
+    return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
   }
   const token = signToken(user.id, user.username);
   res.json({
@@ -77,7 +77,7 @@ router.post('/forgot-password', async (req, res) => {
   const { email } = req.body;
   const emailTrim = typeof email === 'string' ? email.trim().toLowerCase() : '';
   if (!emailTrim) {
-    return res.status(400).json({ error: 'Email required' });
+    return res.status(400).json({ error: 'Укажите email' });
   }
   const user = db.prepare('SELECT id FROM users WHERE email = ?').get(emailTrim);
   if (user) {
@@ -90,47 +90,47 @@ router.post('/forgot-password', async (req, res) => {
     ).run(user.id, tokenHash, expiresAt);
     await sendPasswordResetEmail(emailTrim, token);
   }
-  res.json({ message: 'If an account with this email exists, you will receive a reset link.' });
+  res.json({ message: 'Если аккаунт с таким email существует, на него отправлена ссылка для сброса пароля.' });
 });
 
 // Сброс пароля по токену из ссылки
 router.post('/reset-password', (req, res) => {
   const { token, newPassword } = req.body;
   if (!token || typeof token !== 'string' || !newPassword) {
-    return res.status(400).json({ error: 'Token and new password required' });
+    return res.status(400).json({ error: 'Укажите токен и новый пароль' });
   }
   if (newPassword.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    return res.status(400).json({ error: 'Пароль минимум 6 символов' });
   }
   const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
   const row = db.prepare(
     'SELECT id, user_id FROM password_reset_tokens WHERE token_hash = ? AND expires_at > datetime(\'now\')'
   ).get(tokenHash);
   if (!row) {
-    return res.status(400).json({ error: 'Invalid or expired reset link' });
+    return res.status(400).json({ error: 'Ссылка недействительна или истекла' });
   }
   const password_hash = bcrypt.hashSync(newPassword, 10);
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(password_hash, row.user_id);
   db.prepare('DELETE FROM password_reset_tokens WHERE id = ?').run(row.id);
-  res.json({ message: 'Password updated. You can now log in.' });
+  res.json({ message: 'Пароль обновлён. Теперь можно войти.' });
 });
 
 // Смена пароля (авторизованный пользователь)
 router.post('/change-password', authMiddleware, (req, res) => {
   const { currentPassword, newPassword } = req.body;
   if (!currentPassword || !newPassword) {
-    return res.status(400).json({ error: 'Current and new password required' });
+    return res.status(400).json({ error: 'Укажите текущий и новый пароль' });
   }
   if (newPassword.length < 6) {
-    return res.status(400).json({ error: 'New password must be at least 6 characters' });
+    return res.status(400).json({ error: 'Новый пароль минимум 6 символов' });
   }
   const user = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user.userId);
   if (!user || !bcrypt.compareSync(currentPassword, user.password_hash)) {
-    return res.status(401).json({ error: 'Current password is wrong' });
+    return res.status(401).json({ error: 'Неверный текущий пароль' });
   }
   const password_hash = bcrypt.hashSync(newPassword, 10);
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(password_hash, req.user.userId);
-  res.json({ message: 'Password changed' });
+  res.json({ message: 'Пароль изменён' });
 });
 
 export default router;
