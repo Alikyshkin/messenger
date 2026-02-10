@@ -17,8 +17,10 @@ import '../services/auth_service.dart';
 import '../services/attachment_cache.dart';
 import '../services/e2ee_service.dart';
 import '../services/ws_service.dart';
-import '../utils/temp_file.dart';
+import '../utils/app_page_route.dart';
+import '../utils/download_file.dart';
 import '../utils/voice_file_io.dart';
+import '../widgets/app_back_button.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/voice_message_bubble.dart';
 import '../widgets/video_note_bubble.dart';
@@ -51,6 +53,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final E2EEService _e2ee = E2EEService();
   Message? _replyingTo;
   PendingAttachment? _pendingAttachment;
+  List<PendingFile>? _pendingMultipleFiles;
 
   @override
   void initState() {
@@ -66,6 +69,8 @@ class _ChatScreenState extends State<ChatScreen> {
     ws.addListener(onUpdate);
     _drainIncoming(ws);
   }
+
+  static const List<String> _reactionEmojis = ['👍', '👎', '❤️', '🔥', '😂', '😮', '😢'];
 
   Future<void> _drainIncoming(WsService ws) async {
     final myId = context.read<AuthService>().user?.id;
@@ -96,12 +101,18 @@ class _ChatScreenState extends State<ChatScreen> {
           isForwarded: decrypted.isForwarded,
           forwardFromSenderId: decrypted.forwardFromSenderId,
           forwardFromDisplayName: decrypted.forwardFromDisplayName,
+          reactions: decrypted.reactions,
         );
       }
       await LocalDb.upsertMessage(decrypted, widget.peer.id);
       await LocalDb.updateChatLastMessage(widget.peer.id, decrypted);
       if (!mounted) return;
       setState(() => _messages.add(decrypted));
+    }
+    ReactionUpdate? ru;
+    while ((ru = ws.takeReactionUpdateFor(widget.peer.id)) != null) {
+      final idx = _messages.indexWhere((msg) => msg.id == ru!.messageId);
+      if (idx >= 0 && mounted) setState(() => _messages[idx] = _messages[idx].copyWith(reactions: ru!.reactions));
     }
   }
 
@@ -132,6 +143,7 @@ class _ChatScreenState extends State<ChatScreen> {
       isForwarded: m.isForwarded,
       forwardFromSenderId: m.forwardFromSenderId,
       forwardFromDisplayName: m.forwardFromDisplayName,
+      reactions: m.reactions,
     );
   }
 
@@ -217,7 +229,60 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  Future<void> _setReaction(Message m, String emoji) async {
+    try {
+      final reactions = await Api(context.read<AuthService>().token).setMessageReaction(m.id, emoji);
+      if (!mounted) return;
+      final idx = _messages.indexWhere((msg) => msg.id == m.id);
+      if (idx >= 0) setState(() => _messages[idx] = _messages[idx].copyWith(reactions: reactions));
+    } catch (_) {}
+  }
+
   void _showMessageActions(Message m, [Offset? position]) {
+    void openSheet() {
+      showModalBottomSheet<void>(
+        context: context,
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: _reactionEmojis.map((emoji) {
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _setReaction(m, emoji);
+                      },
+                      child: Text(emoji, style: const TextStyle(fontSize: 28)),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.reply),
+                title: const Text('Ответить'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() => _replyingTo = m);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.forward),
+                title: const Text('Переслать'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _showForwardPicker(m);
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     if (position != null) {
       final screen = MediaQuery.sizeOf(context);
       final menuPosition = RelativeRect.fromLTRB(
@@ -230,6 +295,17 @@ class _ChatScreenState extends State<ChatScreen> {
         context: context,
         position: menuPosition,
         items: [
+          PopupMenuItem(
+            onTap: () {
+              if (!mounted) return;
+              openSheet();
+            },
+            child: const ListTile(
+              contentPadding: EdgeInsets.symmetric(horizontal: 8),
+              leading: Icon(Icons.emoji_emotions_outlined),
+              title: Text('Реакция'),
+            ),
+          ),
           PopupMenuItem(
             onTap: () {
               if (!mounted) return;
@@ -255,32 +331,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       );
     } else {
-      showModalBottomSheet<void>(
-        context: context,
-        builder: (ctx) => SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.reply),
-                title: const Text('Ответить'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  setState(() => _replyingTo = m);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.forward),
-                title: const Text('Переслать'),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _showForwardPicker(m);
-                },
-              ),
-            ],
-          ),
-        ),
-      );
+      openSheet();
     }
   }
 
@@ -354,6 +405,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_sending) return false;
     if (_text.text.trim().isNotEmpty) return true;
     if (_pendingAttachment != null) return true;
+    if (_pendingMultipleFiles != null && _pendingMultipleFiles!.isNotEmpty) return true;
     return false;
   }
 
@@ -362,13 +414,49 @@ class _ChatScreenState extends State<ChatScreen> {
     final content = _text.text.trim();
     final replyToId = _replyingTo?.id;
     final pending = _pendingAttachment;
+    final pendingMulti = _pendingMultipleFiles;
     setState(() {
       _sending = true;
       _replyingTo = null;
       _text.clear();
       _pendingAttachment = null;
+      _pendingMultipleFiles = null;
     });
     final api = Api(context.read<AuthService>().token);
+
+    if (pendingMulti != null && pendingMulti.isNotEmpty) {
+      try {
+        final list = pendingMulti
+            .map((f) => (bytes: f.bytes.toList(), filename: f.filename))
+            .toList();
+        final encrypted = pendingMulti.first.encrypted;
+        final messages = await api.sendMessageWithMultipleFiles(
+          widget.peer.id,
+          content,
+          list,
+          attachmentEncrypted: encrypted,
+        );
+        if (!mounted) return;
+        for (final msg in messages) {
+          await LocalDb.upsertMessage(msg, widget.peer.id);
+        }
+        if (messages.isNotEmpty) {
+          await LocalDb.updateChatLastMessage(widget.peer.id, messages.last);
+        }
+        setState(() {
+          _messages.addAll(messages);
+          _sending = false;
+        });
+        _scrollToBottom();
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _sending = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка отправки')),
+        );
+      }
+      return;
+    }
 
     if (pending != null) {
       try {
@@ -447,6 +535,7 @@ class _ChatScreenState extends State<ChatScreen> {
               isForwarded: msg.isForwarded,
               forwardFromSenderId: msg.forwardFromSenderId,
               forwardFromDisplayName: msg.forwardFromDisplayName,
+              reactions: msg.reactions,
             )
           : msg;
       await LocalDb.upsertMessage(toShow, widget.peer.id);
@@ -468,24 +557,60 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
+  static const int _maxMultipleFiles = 10;
+
   Future<void> _attachFile() async {
     if (_sending) return;
-    final result = await FilePicker.platform.pickFiles(allowMultiple: false, withData: true);
-    if (result == null || result.files.isEmpty || result.files.single.bytes == null) return;
-    final file = result.files.single;
-    var bytes = Uint8List.fromList(file.bytes!);
-    var encrypted = false;
-    if (widget.peer.publicKey != null) {
-      final enc = await _e2ee.encryptBytes(bytes, widget.peer.publicKey);
-      if (enc != null) {
-        bytes = enc;
-        encrypted = true;
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      withData: true,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final files = result.files
+        .where((f) => f.bytes != null && f.bytes!.isNotEmpty)
+        .take(_maxMultipleFiles)
+        .toList();
+    if (files.isEmpty) return;
+    if (files.length == 1) {
+      final file = files.single;
+      var bytes = Uint8List.fromList(file.bytes!);
+      var encrypted = false;
+      if (widget.peer.publicKey != null) {
+        final enc = await _e2ee.encryptBytes(bytes, widget.peer.publicKey);
+        if (enc != null) {
+          bytes = enc;
+          encrypted = true;
+        }
       }
+      final name = file.name.toLowerCase();
+      final isImage = name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.webp');
+      if (!mounted) return;
+      setState(() {
+        _pendingAttachment = PendingFile(bytes: bytes, filename: file.name, isImage: isImage, encrypted: encrypted);
+        _pendingMultipleFiles = null;
+      });
+      return;
     }
-    final name = file.name.toLowerCase();
-    final isImage = name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.webp');
+    final list = <PendingFile>[];
+    for (final file in files) {
+      var bytes = Uint8List.fromList(file.bytes!);
+      var encrypted = false;
+      if (widget.peer.publicKey != null) {
+        final enc = await _e2ee.encryptBytes(bytes, widget.peer.publicKey);
+        if (enc != null) {
+          bytes = enc;
+          encrypted = true;
+        }
+      }
+      final name = file.name.toLowerCase();
+      final isImage = name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.webp');
+      list.add(PendingFile(bytes: bytes, filename: file.name, isImage: isImage, encrypted: encrypted));
+    }
     if (!mounted) return;
-    setState(() => _pendingAttachment = PendingFile(bytes: bytes, filename: file.name, isImage: isImage, encrypted: encrypted));
+    setState(() {
+      _pendingAttachment = null;
+      _pendingMultipleFiles = list;
+    });
   }
 
   Future<void> _createPoll() async {
@@ -546,6 +671,7 @@ class _ChatScreenState extends State<ChatScreen> {
       isForwarded: m.isForwarded,
       forwardFromSenderId: m.forwardFromSenderId,
       forwardFromDisplayName: m.forwardFromDisplayName,
+      reactions: m.reactions,
     );
     setState(() => _messages[idx] = newMsg);
   }
@@ -624,7 +750,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _openRecordVideoNote() async {
     if (_sending) return;
     final result = await Navigator.of(context).push<Map<String, dynamic>>(
-      MaterialPageRoute(
+      AppPageRoute(
         builder: (_) => RecordVideoNoteScreen(peerId: widget.peer.id, peerPublicKey: widget.peer.publicKey),
       ),
     );
@@ -640,6 +766,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: const AppBackButton(),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         title: Row(
@@ -690,9 +817,7 @@ class _ChatScreenState extends State<ChatScreen> {
             tooltip: 'Профиль',
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => UserProfileScreen(user: widget.peer),
-                ),
+                AppPageRoute(builder: (_) => UserProfileScreen(user: widget.peer)),
               );
             },
           ),
@@ -701,9 +826,7 @@ class _ChatScreenState extends State<ChatScreen> {
             tooltip: 'Видеозвонок',
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => CallScreen(peer: widget.peer, isIncoming: false),
-                ),
+                AppPageRoute(builder: (_) => CallScreen(peer: widget.peer, isIncoming: false)),
               );
             },
           ),
@@ -842,6 +965,25 @@ class _ChatScreenState extends State<ChatScreen> {
                                       _buildAttachment(m),
                                     ],
                                   ],
+                                  if (m.reactions.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 4,
+                                      children: m.reactions.map((r) {
+                                        return Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: (m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.surface).withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text('${r.emoji} ${r.count > 1 ? r.count : ''}', style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                            color: m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
+                                          )),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ],
                                   const SizedBox(height: 4),
                                   Row(
                                     mainAxisSize: MainAxisSize.min,
@@ -921,6 +1063,41 @@ class _ChatScreenState extends State<ChatScreen> {
                     icon: const Icon(Icons.close),
                     onPressed: () => setState(() => _replyingTo = null),
                     tooltip: 'Отмена',
+                  ),
+                ],
+              ),
+            ),
+          if (_pendingMultipleFiles != null && _pendingMultipleFiles!.isNotEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  if (_pendingMultipleFiles!.length == 1)
+                    Icon(Icons.insert_drive_file, color: Theme.of(context).colorScheme.primary, size: 40)
+                  else
+                    Icon(Icons.photo_library, color: Theme.of(context).colorScheme.primary, size: 40),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _pendingMultipleFiles!.length == 1
+                          ? _pendingMultipleFiles!.first.filename
+                          : '${_pendingMultipleFiles!.length} файлов',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => setState(() => _pendingMultipleFiles = null),
+                    tooltip: 'Убрать вложения',
                   ),
                 ],
               ),
@@ -1178,9 +1355,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
                   Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => ImagePreviewScreen(imageBytes: bytes, filename: name),
-                    ),
+                    AppPageRoute(builder: (_) => ImagePreviewScreen(imageBytes: bytes, filename: name)),
                   );
                 },
                 child: Image.memory(
@@ -1227,7 +1402,7 @@ class _ChatScreenState extends State<ChatScreen> {
           behavior: HitTestBehavior.opaque,
           onTap: () {
             Navigator.of(context).push(
-              MaterialPageRoute(
+              AppPageRoute(
                 builder: (_) => ImagePreviewScreen(
                   imageUrl: url,
                   filename: name,
@@ -1288,9 +1463,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _openDecryptedFile(Uint8List bytes, String filename) async {
     try {
-      final path = await writeTempBytes(bytes, filename);
-      final uri = Uri.file(path);
-      if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+      await saveOrDownloadFile(bytes, filename);
+      if (mounted && kIsWeb) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Файл сохранён в загрузки')));
+      }
     } catch (_) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Не удалось открыть файл')));
     }
