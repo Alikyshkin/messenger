@@ -2,7 +2,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-import 'l10n/app_localizations.dart';
 import 'services/auth_service.dart';
 import 'services/locale_service.dart';
 import 'services/theme_service.dart';
@@ -236,23 +235,7 @@ class MessengerApp extends StatelessWidget {
               '/': (context) {
                 final auth = context.watch<AuthService>();
                 if (!auth.loaded) {
-                  return Scaffold(
-                    body: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircularProgressIndicator(),
-                          const SizedBox(height: 16),
-                          Text(
-                            context.tr('loading'),
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
+                  return const _AppLoadingScreen();
                 }
                 return auth.isLoggedIn
                     ? const WsCallListener(child: HomeScreen())
@@ -262,6 +245,93 @@ class MessengerApp extends StatelessWidget {
             },
           );
         },
+      ),
+    );
+  }
+}
+
+/// Красивый экран загрузки вместо белого — в одном стиле с загрузкой в index.html.
+class _AppLoadingScreen extends StatelessWidget {
+  const _AppLoadingScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primary = theme.colorScheme.primary;
+    final surface = theme.scaffoldBackgroundColor;
+    return Scaffold(
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? [
+                    surface,
+                    theme.colorScheme.surfaceContainerHighest,
+                  ]
+                : [
+                    const Color(0xFFE8EDF2),
+                    const Color(0xFFdae4ec),
+                    const Color(0xFFc9d9e8),
+                  ],
+          ),
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      primary,
+                      primary.withValues(alpha: 0.85),
+                    ],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: primary.withValues(alpha: 0.35),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  size: 44,
+                  color: theme.colorScheme.onPrimary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Мессенджер',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  valueColor: AlwaysStoppedAnimation<Color>(primary),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

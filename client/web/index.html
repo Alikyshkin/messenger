@@ -41,8 +41,82 @@
       }
     })();
   </script>
+  <style>
+    #loading-screen {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(160deg, #E8EDF2 0%, #dae4ec 50%, #c9d9e8 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+    #loading-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    #loading-screen .logo-wrap {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      background: linear-gradient(145deg, #2AABEE 0%, #1e8bc9 100%);
+      box-shadow: 0 8px 24px rgba(42, 171, 238, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    #loading-screen .logo-wrap svg {
+      width: 44px;
+      height: 44px;
+      color: #fff;
+    }
+    #loading-screen .title {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: #1A1A1A;
+      margin-bottom: 28px;
+      letter-spacing: -0.02em;
+    }
+    #loading-screen .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(42, 171, 238, 0.25);
+      border-top-color: #2AABEE;
+      border-radius: 50%;
+      animation: loading-spin 0.9s linear infinite;
+    }
+    @keyframes loading-spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
+  <div id="loading-screen" aria-hidden="false">
+    <div class="logo-wrap" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+    </div>
+    <div class="title">Мессенджер</div>
+    <div class="spinner" role="progressbar" aria-label="Загрузка"></div>
+  </div>
+  <script>
+    function hideLoading() {
+      var el = document.getElementById('loading-screen');
+      if (el && !el.classList.contains('hidden')) {
+        el.classList.add('hidden');
+        el.setAttribute('aria-hidden', 'true');
+        setTimeout(function() { el.remove(); }, 450);
+      }
+    }
+    window.addEventListener('flutter-first-frame', hideLoading);
+    setTimeout(hideLoading, 12000); /* fallback если событие не пришло */
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

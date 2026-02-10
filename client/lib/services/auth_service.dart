@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../database/local_db.dart';
 import '../models/user.dart';
-import 'api.dart';
+import 'api.dart' show Api, ApiException;
 import 'e2ee_service.dart';
 
 class AuthService extends ChangeNotifier {
@@ -42,7 +42,12 @@ class AuthService extends ChangeNotifier {
         await prefs.setString(_keyUsername, u.username);
         await prefs.setString(_keyDisplayName, u.displayName);
         await _ensureE2EEKeys();
-      } catch (_) {}
+      } catch (e) {
+        // После долгого отсутствия токен может быть недействителен — выходим, чтобы данные подтянулись заново после входа
+        if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
+          await clear();
+        }
+      }
     }
     _loaded = true;
     notifyListeners();
