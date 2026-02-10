@@ -15,10 +15,13 @@ class WsService extends ChangeNotifier {
   Timer? _reconnectTimer;
   final List<Message> _incoming = [];
   final StreamController<CallSignal> _callSignalController = StreamController<CallSignal>.broadcast();
+  final StreamController<void> _newMessageController = StreamController<void>.broadcast();
 
   bool get connected => _connected;
   List<Message> get pendingIncoming => List.unmodifiable(_incoming);
   Stream<CallSignal> get callSignals => _callSignalController.stream;
+  /// Срабатывает при получении любого нового сообщения (чтобы обновить список чатов и счётчик непрочитанных).
+  Stream<void> get onNewMessage => _newMessageController.stream;
 
   void connect(String token) {
     if (_token == token && _connected) return;
@@ -78,6 +81,14 @@ class WsService extends ChangeNotifier {
         final msg = Message.fromJson(map['message'] as Map<String, dynamic>);
         _incoming.add(msg);
         notifyListeners();
+        if (!_newMessageController.isClosed) _newMessageController.add(null);
+      } else if (map['type'] == 'new_group_message' && map['group_id'] != null && map['message'] != null) {
+        final msgMap = map['message'] as Map<String, dynamic>;
+        msgMap['group_id'] = map['group_id'];
+        final msg = Message.fromJson(msgMap);
+        _incoming.add(msg);
+        notifyListeners();
+        if (!_newMessageController.isClosed) _newMessageController.add(null);
       } else if (map['type'] == 'call_signal' && map['fromUserId'] != null && map['signal'] != null) {
         _callSignalController.add(CallSignal.fromJson(map));
       }
@@ -97,7 +108,13 @@ class WsService extends ChangeNotifier {
   }
 
   Message? takeIncomingFor(int peerId) {
-    final i = _incoming.indexWhere((m) => m.senderId == peerId);
+    final i = _incoming.indexWhere((m) => m.groupId == null && (m.senderId == peerId || m.receiverId == peerId));
+    if (i < 0) return null;
+    return _incoming.removeAt(i);
+  }
+
+  Message? takeIncomingGroupFor(int groupId) {
+    final i = _incoming.indexWhere((m) => m.groupId == groupId);
     if (i < 0) return null;
     return _incoming.removeAt(i);
   }

@@ -1,4 +1,5 @@
 import 'user.dart';
+import 'group.dart';
 
 class LastMessage {
   final int id;
@@ -6,6 +7,7 @@ class LastMessage {
   final String createdAt;
   final bool isMine;
   final String messageType;
+  final String? senderDisplayName;
 
   LastMessage({
     required this.id,
@@ -13,6 +15,7 @@ class LastMessage {
     required this.createdAt,
     required this.isMine,
     this.messageType = 'text',
+    this.senderDisplayName,
   });
 
   static LastMessage? fromJson(Map<String, dynamic>? json) {
@@ -23,6 +26,7 @@ class LastMessage {
       createdAt: json['created_at'] as String,
       isMine: json['is_mine'] as bool? ?? false,
       messageType: json['message_type'] as String? ?? 'text',
+      senderDisplayName: json['sender_display_name'] as String?,
     );
   }
 
@@ -30,15 +34,27 @@ class LastMessage {
 }
 
 class ChatPreview {
-  final User peer;
+  final User? peer;
+  final Group? group;
   final LastMessage? lastMessage;
   final int unreadCount;
 
-  ChatPreview({required this.peer, this.lastMessage, this.unreadCount = 0});
+  ChatPreview({this.peer, this.group, this.lastMessage, this.unreadCount = 0});
+
+  bool get isGroup => group != null;
 
   factory ChatPreview.fromJson(Map<String, dynamic> json) {
+    User? peer;
+    Group? group;
+    if (json['peer'] != null) {
+      peer = User.fromJson(json['peer'] as Map<String, dynamic>);
+    }
+    if (json['group'] != null) {
+      group = Group.fromJson(json['group'] as Map<String, dynamic>);
+    }
     return ChatPreview(
-      peer: User.fromJson(json['peer'] as Map<String, dynamic>),
+      peer: peer,
+      group: group,
       lastMessage: LastMessage.fromJson(json['last_message'] as Map<String, dynamic>?),
       unreadCount: json['unread_count'] as int? ?? 0,
     );

@@ -2,6 +2,7 @@ class Message {
   final int id;
   final int senderId;
   final int receiverId;
+  final int? groupId;
   final String content;
   final String createdAt;
   final String? readAt;
@@ -14,6 +15,7 @@ class Message {
   final String attachmentKind;
   final int? attachmentDurationSec;
   final String? senderPublicKey;
+  final String? senderDisplayName;
   final bool attachmentEncrypted;
   final int? replyToId;
   final String? replyToContent;
@@ -26,6 +28,7 @@ class Message {
     required this.id,
     required this.senderId,
     required this.receiverId,
+    this.groupId,
     required this.content,
     required this.createdAt,
     this.readAt,
@@ -38,6 +41,7 @@ class Message {
     this.attachmentKind = 'file',
     this.attachmentDurationSec,
     this.senderPublicKey,
+    this.senderDisplayName,
     this.attachmentEncrypted = false,
     this.replyToId,
     this.replyToContent,
@@ -46,6 +50,8 @@ class Message {
     this.forwardFromSenderId,
     this.forwardFromDisplayName,
   });
+
+  bool get isGroupMessage => groupId != null;
 
   factory Message.fromJson(Map<String, dynamic> json) {
     PollData? poll;
@@ -69,7 +75,8 @@ class Message {
     return Message(
       id: json['id'] as int,
       senderId: json['sender_id'] as int,
-      receiverId: json['receiver_id'] as int,
+      receiverId: json['receiver_id'] as int? ?? 0,
+      groupId: json['group_id'] as int?,
       content: json['content'] as String? ?? '',
       createdAt: json['created_at'] as String,
       readAt: json['read_at'] as String?,
@@ -82,6 +89,7 @@ class Message {
       attachmentKind: json['attachment_kind'] as String? ?? 'file',
       attachmentDurationSec: json['attachment_duration_sec'] as int?,
       senderPublicKey: json['sender_public_key'] as String?,
+      senderDisplayName: json['sender_display_name'] as String?,
       attachmentEncrypted: json['attachment_encrypted'] as bool? ?? false,
       replyToId: json['reply_to_id'] as int?,
       replyToContent: json['reply_to_content'] as String?,
