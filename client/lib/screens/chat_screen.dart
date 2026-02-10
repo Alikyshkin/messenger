@@ -129,7 +129,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (!m.content.startsWith('e2ee:')) return m;
     String? keyToUse = m.senderPublicKey;
     if (keyToUse == null && myId != null && m.senderId == myId) {
-      keyToUse = await _e2ee.ensureKeyPair();
+      keyToUse = widget.peer.publicKey;
     }
     if (keyToUse == null || keyToUse.isEmpty) return m;
     final decrypted = await _e2ee.decrypt(m.content, keyToUse);
