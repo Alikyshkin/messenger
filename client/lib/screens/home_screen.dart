@@ -9,6 +9,7 @@ import '../services/ws_service.dart';
 import 'chat_screen.dart';
 import 'contacts_screen.dart';
 import 'profile_screen.dart';
+import 'start_chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -99,6 +100,17 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Чаты'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Новый чат',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const StartChatScreen(),
+                ),
+              ).then((_) => _load());
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.group_outlined),
             tooltip: 'Друзья',

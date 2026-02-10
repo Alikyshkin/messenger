@@ -5,14 +5,15 @@ import '../services/api.dart';
 import '../services/auth_service.dart';
 import 'chat_screen.dart';
 
-class AddContactScreen extends StatefulWidget {
-  const AddContactScreen({super.key});
+/// Поиск пользователя и открытие чата (без добавления в друзья).
+class StartChatScreen extends StatefulWidget {
+  const StartChatScreen({super.key});
 
   @override
-  State<AddContactScreen> createState() => _AddContactScreenState();
+  State<StartChatScreen> createState() => _StartChatScreenState();
 }
 
-class _AddContactScreenState extends State<AddContactScreen> {
+class _StartChatScreenState extends State<StartChatScreen> {
   final _query = TextEditingController();
   List<User> _results = [];
   bool _searching = false;
@@ -54,30 +55,19 @@ class _AddContactScreenState extends State<AddContactScreen> {
     }
   }
 
-  Future<void> _add(User u) async {
-    setState(() => _error = null);
-    try {
-      final added = await Api(context.read<AuthService>().token).addContact(u.username);
-      if (!mounted) return;
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заявка отправлена. Можете написать сообщение.')),
-      );
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ChatScreen(peer: added),
-        ),
-      );
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() => _error = e.message);
-    }
+  void _openChat(User u) {
+    Navigator.of(context).pop();
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(peer: u),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Добавить друга')),
+      appBar: AppBar(title: const Text('Новый чат')),
       body: Column(
         children: [
           Padding(
@@ -122,10 +112,8 @@ class _AddContactScreenState extends State<AddContactScreen> {
                       return ListTile(
                         title: Text(u.displayName),
                         subtitle: Text('@${u.username}'),
-                        trailing: FilledButton(
-                          onPressed: () => _add(u),
-                          child: const Text('Добавить'),
-                        ),
+                        trailing: const Icon(Icons.message),
+                        onTap: () => _openChat(u),
                       );
                     },
                   ),

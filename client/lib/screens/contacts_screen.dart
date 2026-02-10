@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
+import '../models/friend_request.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import 'add_contact_screen.dart';
@@ -15,6 +16,7 @@ class ContactsScreen extends StatefulWidget {
 
 class _ContactsScreenState extends State<ContactsScreen> {
   List<User> _contacts = [];
+  List<FriendRequest> _requests = [];
   bool _loading = true;
   String? _error;
 
@@ -27,10 +29,14 @@ class _ContactsScreenState extends State<ContactsScreen> {
     });
     try {
       final api = Api(auth.token);
-      final list = await api.getContacts();
+      final results = await Future.wait([
+        api.getContacts(),
+        api.getFriendRequestsIncoming(),
+      ]);
       if (!mounted) return;
       setState(() {
-        _contacts = list;
+        _contacts = results[0] as List<User>;
+        _requests = results[1] as List<FriendRequest>;
         _loading = false;
       });
     } catch (e) {
@@ -80,30 +86,90 @@ class _ContactsScreenState extends State<ContactsScreen> {
                     ],
                   ),
                 )
-              : _contacts.isEmpty
-                  ? const Center(child: Text('Нет друзей.\nНажмите + чтобы добавить.', textAlign: TextAlign.center))
-                  : ListView.builder(
-                      itemCount: _contacts.length,
-                      itemBuilder: (context, i) {
-                        final u = _contacts[i];
-                        return ListTile(
-                          title: Text(u.displayName),
-                          subtitle: Text('@${u.username}'),
-                          trailing: IconButton(
-                            icon: const Icon(Icons.message),
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => ChatScreen(peer: u),
+              : _contacts.isEmpty && _requests.isEmpty
+                  ? const Center(child: Text('Нет друзей.\nНажмите + чтобы добавить или отправить заявку.', textAlign: TextAlign.center))
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView(
+                        children: [
+                          if (_requests.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                              child: Text(
+                                'Заявки в друзья',
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
-                              );
-                            },
-                          ),
-                          onLongPress: () => _confirmRemove(context, u),
-                        );
-                      },
+                              ),
+                            ),
+                            ..._requests.map((req) => ListTile(
+                              title: Text(req.displayName),
+                              subtitle: Text('@${req.username}'),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextButton(
+                                    onPressed: () => _reject(req.id),
+                                    child: const Text('Отклонить'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  FilledButton(
+                                    onPressed: () => _accept(req.id),
+                                    child: const Text('Принять'),
+                                  ),
+                                ],
+                              ),
+                            )),
+                            const Divider(height: 24),
+                          ],
+                          if (_contacts.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                              child: Text(
+                                'Друзья',
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
+                            ),
+                            ..._contacts.map((u) => ListTile(
+                              title: Text(u.displayName),
+                              subtitle: Text('@${u.username}'),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.message),
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => ChatScreen(peer: u),
+                                    ),
+                                  );
+                                },
+                              ),
+                              onLongPress: () => _confirmRemove(context, u),
+                            )),
+                          ],
+                        ],
+                      ),
                     ),
     );
+  }
+
+  Future<void> _accept(int requestId) async {
+    final auth = context.read<AuthService>();
+    try {
+      await Api(auth.token).acceptFriendRequest(requestId);
+      if (!mounted) return;
+      _load();
+    } catch (_) {}
+  }
+
+  Future<void> _reject(int requestId) async {
+    final auth = context.read<AuthService>();
+    try {
+      await Api(auth.token).rejectFriendRequest(requestId);
+      if (!mounted) return;
+      _load();
+    } catch (_) {}
   }
 
   Future<void> _confirmRemove(BuildContext context, User u) async {

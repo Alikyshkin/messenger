@@ -45,6 +45,24 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_contacts_user ON contacts(user_id);
 `);
 
+// Заявки в друзья: после одобрения добавляем в contacts обе стороны
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS friend_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      from_user_id INTEGER NOT NULL,
+      to_user_id INTEGER NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(from_user_id, to_user_id),
+      FOREIGN KEY (from_user_id) REFERENCES users(id),
+      FOREIGN KEY (to_user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_friend_requests_to ON friend_requests(to_user_id);
+    CREATE INDEX IF NOT EXISTS idx_friend_requests_from ON friend_requests(from_user_id);
+  `);
+} catch (_) {}
+
 try { db.exec('ALTER TABLE messages ADD COLUMN attachment_path TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN attachment_filename TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN bio TEXT'); } catch (_) {}

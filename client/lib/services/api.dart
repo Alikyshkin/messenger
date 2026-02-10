@@ -5,6 +5,7 @@ import '../config.dart';
 import '../models/user.dart';
 import '../models/message.dart';
 import '../models/chat.dart';
+import '../models/friend_request.dart';
 
 class Api {
   final String token;
@@ -122,6 +123,7 @@ class Api {
     return list.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Отправить заявку в друзья (друг появится в списке после одобрения).
   Future<User> addContact(String username) async {
     final r = await http.post(
       Uri.parse('$base/contacts'),
@@ -130,6 +132,29 @@ class Api {
     );
     _checkResponse(r);
     return User.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
+  }
+
+  Future<List<FriendRequest>> getFriendRequestsIncoming() async {
+    final r = await http.get(Uri.parse('$base/contacts/requests/incoming'), headers: _headers);
+    _checkResponse(r);
+    final list = jsonDecode(r.body) as List<dynamic>;
+    return list.map((e) => FriendRequest.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> acceptFriendRequest(int requestId) async {
+    final r = await http.post(
+      Uri.parse('$base/contacts/requests/$requestId/accept'),
+      headers: _headers,
+    );
+    _checkResponse(r);
+  }
+
+  Future<void> rejectFriendRequest(int requestId) async {
+    final r = await http.post(
+      Uri.parse('$base/contacts/requests/$requestId/reject'),
+      headers: _headers,
+    );
+    _checkResponse(r);
   }
 
   Future<void> removeContact(int userId) async {
