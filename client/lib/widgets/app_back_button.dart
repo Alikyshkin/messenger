@@ -19,25 +19,11 @@ class AppBackButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: () => Navigator.of(context).pop(),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.arrow_back_rounded,
-                  size: 22,
-                  color: theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Назад',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary,
-                  ),
-                ),
-              ],
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: Icon(
+              Icons.arrow_back_rounded,
+              size: 24,
+              color: theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary,
             ),
           ),
         ),

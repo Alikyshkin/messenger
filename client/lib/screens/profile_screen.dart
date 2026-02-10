@@ -51,12 +51,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final u = auth.user;
     if (u == null) return Scaffold(body: Center(child: Text(context.tr('not_authorized'))));
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: Text(context.tr('profile')),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
-        actionsIconTheme: const IconThemeData(color: Colors.white),
+        backgroundColor: isDark ? theme.colorScheme.surfaceContainerHighest : theme.colorScheme.primary,
+        foregroundColor: isDark ? theme.colorScheme.onSurface : Colors.white,
+        actionsIconTheme: IconThemeData(color: isDark ? theme.colorScheme.onSurface : Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),

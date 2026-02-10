@@ -118,34 +118,34 @@ class MessengerApp extends StatelessWidget {
       brightness: Brightness.dark,
       colorScheme: ColorScheme.dark(
         primary: const Color(0xFF5EB3F6),
-        onPrimary: const Color(0xFF0D1B2A),
+        onPrimary: Colors.white,
         primaryContainer: const Color(0xFF1B3A4B),
-        onPrimaryContainer: const Color(0xFFE8EDF2),
+        onPrimaryContainer: const Color(0xFFE0E6EB),
         secondary: const Color(0xFF9E9E9E),
-        onSecondary: const Color(0xFF1A1A1A),
+        onSecondary: const Color(0xFFE0E0E0),
         surface: const Color(0xFF1A1A1A),
         onSurface: const Color(0xFFE8EDF2),
         surfaceContainerHighest: const Color(0xFF2D2D2D),
-        onSurfaceVariant: const Color(0xFFB0B0B0),
-        outline: const Color(0xFF404040),
+        onSurfaceVariant: const Color(0xFFB8B8B8),
+        outline: const Color(0xFF505050),
         error: const Color(0xFFEF5350),
         onError: Colors.white,
       ),
       scaffoldBackgroundColor: const Color(0xFF121212),
       appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF1E3A5F),
-        foregroundColor: Colors.white,
+        backgroundColor: Color(0xFF1E1E1E),
+        foregroundColor: Color(0xFFE8EDF2),
         elevation: 0,
         scrolledUnderElevation: 2,
         centerTitle: false,
         leadingWidth: 56,
         titleTextStyle: TextStyle(
-          color: Colors.white,
+          color: Color(0xFFE8EDF2),
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
-        iconTheme: IconThemeData(color: Colors.white, size: 24),
-        actionsIconTheme: IconThemeData(color: Colors.white),
+        iconTheme: IconThemeData(color: Color(0xFFE8EDF2), size: 24),
+        actionsIconTheme: IconThemeData(color: Color(0xFFE8EDF2)),
       ),
       cardTheme: CardThemeData(
         color: const Color(0xFF2D2D2D),
@@ -174,7 +174,7 @@ class MessengerApp extends StatelessWidget {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: const Color(0xFF5EB3F6),
-          foregroundColor: const Color(0xFF0D1B2A),
+          foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -182,7 +182,7 @@ class MessengerApp extends StatelessWidget {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: const Color(0xFF5EB3F6),
+          foregroundColor: const Color(0xFF7BC4FA),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
