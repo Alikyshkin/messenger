@@ -229,6 +229,21 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               ),
             );
           }),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _loading ? null : _create,
+              child: _loading
+                  ? const SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(context.tr('create_group')),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
