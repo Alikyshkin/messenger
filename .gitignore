@@ -4,6 +4,7 @@ server/messenger.db
 server/node_modules
 server/uploads
 server/public
+data
 
 # Client
 client/.dart_tool

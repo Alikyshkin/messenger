@@ -59,6 +59,7 @@ jobs:
             cd $PATH_TO_DEPLOY
             git fetch origin main
             git reset --hard origin/main
+            mkdir -p data
             cd server
             npm ci --omit=dev
             mkdir -p public
