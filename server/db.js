@@ -1,9 +1,12 @@
 import Database from 'better-sqlite3';
+import { mkdirSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dbPath = process.env.MESSENGER_DB_PATH || join(__dirname, 'messenger.db');
+const dbDir = dirname(dbPath);
+if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
 const db = new Database(dbPath);
 
 db.exec(`
@@ -52,6 +55,10 @@ try { db.exec('ALTER TABLE messages ADD COLUMN poll_id INTEGER'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN attachment_kind TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN attachment_duration_sec INTEGER'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN attachment_encrypted INTEGER'); } catch (_) {}
+try { db.exec('ALTER TABLE messages ADD COLUMN reply_to_id INTEGER'); } catch (_) {}
+try { db.exec('ALTER TABLE messages ADD COLUMN is_forwarded INTEGER'); } catch (_) {}
+try { db.exec('ALTER TABLE messages ADD COLUMN forward_from_sender_id INTEGER'); } catch (_) {}
+try { db.exec('ALTER TABLE messages ADD COLUMN forward_from_display_name TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN email TEXT'); } catch (_) {}
 
 db.exec(`
