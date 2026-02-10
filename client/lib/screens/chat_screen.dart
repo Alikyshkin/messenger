@@ -348,7 +348,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
     if (!mounted) return;
     final peerId = widget.peer.id;
-    final others = chats.where((c) => c.peer.id != peerId).toList();
+    final others = chats.where((c) => c.peer?.id != null && c.peer!.id != peerId).toList();
     if (others.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Нет других чатов для пересылки')));
       return;
@@ -363,16 +363,22 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: EdgeInsets.all(16),
               child: Text('Переслать в чат', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
             ),
-            ...others.map((chat) => ListTile(
-              title: Text(chat.peer.displayName),
-              subtitle: Text('@${chat.peer.username}'),
-              onTap: () => Navigator.pop(ctx, chat),
-            )),
+            ...others.map((chat) {
+              final p = chat.peer;
+              if (p == null) return const SizedBox.shrink();
+              return ListTile(
+                title: Text(p.displayName),
+                subtitle: Text('@${p.username}'),
+                onTap: () => Navigator.pop(ctx, chat),
+              );
+            }),
           ],
         ),
       ),
     );
     if (selected == null || !mounted) return;
+    final selectedPeer = selected.peer;
+    if (selectedPeer == null) return;
     final content = m.content;
     if (content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Переслать можно только текстовые сообщения')));
@@ -383,14 +389,14 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final api = Api(auth.token);
       await api.sendMessage(
-        selected.peer.id,
+        selectedPeer.id,
         content,
         isForwarded: true,
         forwardFromSenderId: m.senderId,
         forwardFromDisplayName: fromName,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Переслано в чат с ${selected.peer.displayName}')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Переслано в чат с ${selectedPeer.displayName}')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

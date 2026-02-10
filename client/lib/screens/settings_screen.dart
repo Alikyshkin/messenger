@@ -651,6 +651,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 itemBuilder: (_, i) {
                   final chat = chats[i];
                   final peer = chat.peer;
+                  if (peer == null) return const SizedBox.shrink();
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundImage: peer.avatarUrl != null && peer.avatarUrl!.isNotEmpty
@@ -668,7 +669,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       await _loadCacheSize();
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(context.tr('cache_cleared_for').replaceFirst('%s', peer.displayName.isNotEmpty ? peer.displayName : peer.username)),
+                          SnackBar(content: Text(context.tr('cache_cleared_for').replaceFirst('%s', peer.displayName.isNotEmpty ? peer.displayName : peer.username))),
                         );
                       }
                     },
