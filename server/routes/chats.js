@@ -15,6 +15,7 @@ function getBaseUrl(req) {
 router.get('/', (req, res) => {
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
+  // 1-1 чаты
   const lastIds = db.prepare(`
     SELECT MAX(id) as mid, 
       CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END AS peer_id
@@ -41,6 +42,7 @@ router.get('/', (req, res) => {
         avatar_url: user.avatar_path ? `${baseUrl}/uploads/avatars/${user.avatar_path}` : null,
         public_key: user.public_key ?? null,
       },
+      group: null,
       last_message: {
         id: msg.id,
         content: decryptIfLegacy(msg.content),
@@ -51,6 +53,38 @@ router.get('/', (req, res) => {
       unread_count: unreadMap[peer_id] ?? 0,
     };
   });
+
+  // Групповые чаты
+  const myGroups = db.prepare('SELECT group_id FROM group_members WHERE user_id = ?').all(me);
+  for (const { group_id } of myGroups) {
+    const lastRow = db.prepare('SELECT id, sender_id, content, created_at, message_type FROM group_messages WHERE group_id = ? ORDER BY id DESC LIMIT 1').get(group_id);
+    if (!lastRow) continue;
+    const group = db.prepare('SELECT id, name, avatar_path, created_by_user_id, created_at FROM groups WHERE id = ?').get(group_id);
+    const readRow = db.prepare('SELECT last_read_message_id FROM group_read WHERE group_id = ? AND user_id = ?').get(group_id, me);
+    const lastRead = readRow?.last_read_message_id ?? 0;
+    const unreadCnt = db.prepare('SELECT COUNT(*) AS c FROM group_messages WHERE group_id = ? AND id > ?').get(group_id, lastRead)?.c ?? 0;
+    const sender = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(lastRow.sender_id);
+    result.push({
+      peer: null,
+      group: {
+        id: group.id,
+        name: group.name,
+        avatar_url: group.avatar_path ? `${baseUrl}/uploads/group_avatars/${group.avatar_path}` : null,
+        created_by_user_id: group.created_by_user_id,
+        created_at: group.created_at,
+      },
+      last_message: {
+        id: lastRow.id,
+        content: decryptIfLegacy(lastRow.content),
+        created_at: lastRow.created_at,
+        is_mine: lastRow.sender_id === me,
+        message_type: lastRow.message_type || 'text',
+        sender_display_name: sender?.display_name || sender?.username || '?',
+      },
+      unread_count: unreadCnt,
+    });
+  }
+
   result.sort((a, b) => new Date(b.last_message.created_at) - new Date(a.last_message.created_at));
   res.json(result);
 });

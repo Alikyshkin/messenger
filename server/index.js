@@ -14,6 +14,7 @@ import contactsRoutes from './routes/contacts.js';
 import messagesRoutes from './routes/messages.js';
 import usersRoutes from './routes/users.js';
 import chatsRoutes from './routes/chats.js';
+import groupsRoutes from './routes/groups.js';
 import pollsRoutes from './routes/polls.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -27,12 +28,22 @@ const server = createServer(app);
 
 app.use(cors());
 app.use(express.json());
+// Явно указываем UTF-8 для всех JSON-ответов API (корректное отображение кириллицы).
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = function (body) {
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    return originalJson(body);
+  };
+  next();
+});
 app.use('/uploads', express.static(uploadsDir));
 
 app.use('/auth', authRoutes);
 app.use('/contacts', contactsRoutes);
 app.use('/messages', messagesRoutes);
 app.use('/chats', chatsRoutes);
+app.use('/groups', groupsRoutes);
 app.use('/users', usersRoutes);
 app.use('/polls', pollsRoutes);
 

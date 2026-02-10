@@ -11,5 +11,16 @@ export function broadcastToUser(userId, data) {
 }
 
 export function notifyNewMessage(message) {
-  broadcastToUser(message.receiver_id, { type: 'new_message', message });
+  const forReceiver = { ...message, is_mine: false };
+  broadcastToUser(message.receiver_id, { type: 'new_message', message: forReceiver });
+}
+
+/** Уведомить всех участников группы о новом сообщении (кроме отправителя — он получит от API). */
+export function notifyNewGroupMessage(memberUserIds, senderId, message) {
+  const forOthers = { ...message, is_mine: false };
+  memberUserIds.forEach((userId) => {
+    if (Number(userId) !== Number(senderId)) {
+      broadcastToUser(userId, { type: 'new_group_message', group_id: message.group_id, message: forOthers });
+    }
+  });
 }
