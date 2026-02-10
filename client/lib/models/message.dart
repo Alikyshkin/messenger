@@ -15,6 +15,12 @@ class Message {
   final int? attachmentDurationSec;
   final String? senderPublicKey;
   final bool attachmentEncrypted;
+  final int? replyToId;
+  final String? replyToContent;
+  final String? replyToSenderName;
+  final bool isForwarded;
+  final int? forwardFromSenderId;
+  final String? forwardFromDisplayName;
 
   Message({
     required this.id,
@@ -33,6 +39,12 @@ class Message {
     this.attachmentDurationSec,
     this.senderPublicKey,
     this.attachmentEncrypted = false,
+    this.replyToId,
+    this.replyToContent,
+    this.replyToSenderName,
+    this.isForwarded = false,
+    this.forwardFromSenderId,
+    this.forwardFromDisplayName,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) {
@@ -71,6 +83,12 @@ class Message {
       attachmentDurationSec: json['attachment_duration_sec'] as int?,
       senderPublicKey: json['sender_public_key'] as String?,
       attachmentEncrypted: json['attachment_encrypted'] as bool? ?? false,
+      replyToId: json['reply_to_id'] as int?,
+      replyToContent: json['reply_to_content'] as String?,
+      replyToSenderName: json['reply_to_sender_name'] as String?,
+      isForwarded: json['is_forwarded'] as bool? ?? false,
+      forwardFromSenderId: json['forward_from_sender_id'] as int?,
+      forwardFromDisplayName: json['forward_from_display_name'] as String?,
     );
   }
 

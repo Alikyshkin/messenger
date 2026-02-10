@@ -9,6 +9,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../database/local_db.dart';
+import '../models/chat.dart';
 import '../models/message.dart';
 import '../models/user.dart';
 import '../services/api.dart';
@@ -22,6 +23,7 @@ import '../widgets/voice_message_bubble.dart';
 import '../widgets/video_note_bubble.dart';
 import 'call_screen.dart';
 import 'record_video_note_screen.dart';
+import 'user_profile_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final User peer;
@@ -45,6 +47,7 @@ class _ChatScreenState extends State<ChatScreen> {
   WsService? _ws;
   VoidCallback? _wsUnsub;
   final E2EEService _e2ee = E2EEService();
+  Message? _replyingTo;
 
   @override
   void initState() {
@@ -93,6 +96,12 @@ class _ChatScreenState extends State<ChatScreen> {
       attachmentDurationSec: m.attachmentDurationSec,
       senderPublicKey: m.senderPublicKey,
       attachmentEncrypted: m.attachmentEncrypted,
+      replyToId: m.replyToId,
+      replyToContent: m.replyToContent,
+      replyToSenderName: m.replyToSenderName,
+      isForwarded: m.isForwarded,
+      forwardFromSenderId: m.forwardFromSenderId,
+      forwardFromDisplayName: m.forwardFromDisplayName,
     );
   }
 
@@ -177,11 +186,110 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  void _showMessageActions(Message m) {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.reply),
+              title: const Text('Ответить'),
+              onTap: () {
+                Navigator.pop(ctx);
+                setState(() => _replyingTo = m);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.forward),
+              title: const Text('Переслать'),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showForwardPicker(m);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showForwardPicker(Message m) async {
+    final auth = context.read<AuthService>();
+    if (!auth.isLoggedIn) return;
+    List<ChatPreview> chats;
+    try {
+      chats = await Api(auth.token).getChats();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ошибка загрузки чатов')));
+      return;
+    }
+    if (!mounted) return;
+    final peerId = widget.peer.id;
+    final others = chats.where((c) => c.peer.id != peerId).toList();
+    if (others.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Нет других чатов для пересылки')));
+      return;
+    }
+    final selected = await showModalBottomSheet<ChatPreview>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: ListView(
+          shrinkWrap: true,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('Переслать в чат', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            ),
+            ...others.map((chat) => ListTile(
+              title: Text(chat.peer.displayName),
+              subtitle: Text('@${chat.peer.username}'),
+              onTap: () => Navigator.pop(ctx, chat),
+            )),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    final content = m.content;
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Переслать можно только текстовые сообщения')));
+      return;
+    }
+    final fromName = m.isMine ? (auth.user?.displayName ?? auth.user?.username ?? 'Я') : widget.peer.displayName;
+    setState(() => _sending = true);
+    try {
+      final api = Api(auth.token);
+      await api.sendMessage(
+        selected.peer.id,
+        content,
+        isForwarded: true,
+        forwardFromSenderId: m.senderId,
+        forwardFromDisplayName: fromName,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Переслано в чат с ${selected.peer.displayName}')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка пересылки')),
+      );
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
   Future<void> _send() async {
     final content = _text.text.trim();
     if (content.isEmpty || _sending) return;
+    final replyToId = _replyingTo?.id;
     _text.clear();
-    setState(() => _sending = true);
+    setState(() {
+      _sending = true;
+      _replyingTo = null;
+    });
     String toSend = content;
     try {
       if (widget.peer.publicKey != null) {
@@ -189,7 +297,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (encrypted != null) toSend = encrypted;
       }
       final api = Api(context.read<AuthService>().token);
-      final msg = await api.sendMessage(widget.peer.id, toSend);
+      final msg = await api.sendMessage(widget.peer.id, toSend, replyToId: replyToId);
       if (!mounted) return;
       final toShow = toSend != content
           ? Message(
@@ -209,6 +317,12 @@ class _ChatScreenState extends State<ChatScreen> {
               attachmentDurationSec: msg.attachmentDurationSec,
               senderPublicKey: msg.senderPublicKey,
               attachmentEncrypted: msg.attachmentEncrypted,
+              replyToId: msg.replyToId,
+              replyToContent: msg.replyToContent,
+              replyToSenderName: msg.replyToSenderName,
+              isForwarded: msg.isForwarded,
+              forwardFromSenderId: msg.forwardFromSenderId,
+              forwardFromDisplayName: msg.forwardFromDisplayName,
             )
           : msg;
       await LocalDb.upsertMessage(toShow, widget.peer.id);
@@ -323,6 +437,12 @@ class _ChatScreenState extends State<ChatScreen> {
       attachmentDurationSec: m.attachmentDurationSec,
       senderPublicKey: m.senderPublicKey,
       attachmentEncrypted: m.attachmentEncrypted,
+      replyToId: m.replyToId,
+      replyToContent: m.replyToContent,
+      replyToSenderName: m.replyToSenderName,
+      isForwarded: m.isForwarded,
+      forwardFromSenderId: m.forwardFromSenderId,
+      forwardFromDisplayName: m.forwardFromDisplayName,
     );
     setState(() => _messages[idx] = newMsg);
   }
@@ -438,6 +558,17 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'Профиль',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => UserProfileScreen(user: widget.peer),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.videocam),
             tooltip: 'Видеозвонок',
             onPressed: () {
@@ -480,35 +611,85 @@ class _ChatScreenState extends State<ChatScreen> {
                           final m = _messages[i];
                           return Align(
                             alignment: m.isMine ? Alignment.centerRight : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                              constraints: BoxConstraints(
-                                maxWidth: MediaQuery.of(context).size.width * 0.75,
-                              ),
-                              decoration: BoxDecoration(
-                                color: m.isMine
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context).colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  if (m.isPoll && m.poll != null)
-                                    _buildPollBubble(m)
-                                  else if (m.isVoice)
-                                    VoiceMessageBubble(
-                                      audioUrl: m.attachmentEncrypted ? null : m.attachmentUrl,
-                                      audioBytesFuture: m.attachmentEncrypted
-                                          ? _getAttachmentBytes(m).then((b) => b?.toList() ?? <int>[])
-                                          : null,
-                                      durationSec: m.attachmentDurationSec ?? 0,
-                                      isMine: m.isMine,
-                                    )
-                                  else if (m.isVideoNote)
-                                    _buildVideoNoteBubble(m)
-                                  else ...[
+                            child: GestureDetector(
+                              onLongPress: () => _showMessageActions(m),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                constraints: BoxConstraints(
+                                  maxWidth: MediaQuery.of(context).size.width * 0.75,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: m.isMine
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    if (m.isForwarded) ...[
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.forward, size: 14, color: (m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface).withOpacity(0.8)),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            'От ${m.forwardFromDisplayName ?? '?'}',
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              color: (m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface).withOpacity(0.8),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 6),
+                                    ],
+                                    if (m.replyToId != null && (m.replyToContent != null || m.replyToSenderName != null)) ...[
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: (m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface).withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            if (m.replyToSenderName != null)
+                                              Text(
+                                                m.replyToSenderName!,
+                                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                                  color: m.isMine ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.primary,
+                                                ),
+                                              ),
+                                            if (m.replyToContent != null && m.replyToContent!.isNotEmpty)
+                                              Text(
+                                                m.replyToContent!,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  color: (m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface).withOpacity(0.9),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                    ],
+                                    if (m.isPoll && m.poll != null)
+                                      _buildPollBubble(m)
+                                    else if (m.isVoice)
+                                      VoiceMessageBubble(
+                                        audioUrl: m.attachmentEncrypted ? null : m.attachmentUrl,
+                                        audioBytesFuture: m.attachmentEncrypted
+                                            ? _getAttachmentBytes(m).then((b) => b?.toList() ?? <int>[])
+                                            : null,
+                                        durationSec: m.attachmentDurationSec ?? 0,
+                                        isMine: m.isMine,
+                                      )
+                                    else if (m.isVideoNote)
+                                      _buildVideoNoteBubble(m)
+                                    else ...[
                                     if (m.content.isNotEmpty)
                                       Text(
                                         m.content,
@@ -533,29 +714,69 @@ class _ChatScreenState extends State<ChatScreen> {
                                 ],
                               ),
                             ),
+                          ),
                           );
                         },
                       ),
           ),
+          if (_replyingTo != null)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Ответ на ${_replyingTo!.isMine ? 'ваше сообщение' : widget.peer.displayName}',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        if (_replyingTo!.content.isNotEmpty)
+                          Text(
+                            _replyingTo!.content.length > 60 ? '${_replyingTo!.content.substring(0, 57)}...' : _replyingTo!.content,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => setState(() => _replyingTo = null),
+                    tooltip: 'Отмена',
+                  ),
+                ],
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(8),
             child: Row(
               children: [
-                IconButton(
-                  onPressed: _sending ? null : _attachAndSend,
+                PopupMenuButton<String>(
+                  enabled: !_sending,
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(value: 'file', child: Row(children: [Icon(Icons.attach_file), SizedBox(width: 12), Text('Файл')])),
+                    const PopupMenuItem(value: 'poll', child: Row(children: [Icon(Icons.poll_outlined), SizedBox(width: 12), Text('Опрос')])),
+                  ],
+                  onSelected: (value) {
+                    if (value == 'file') _attachAndSend();
+                    if (value == 'poll') _createPoll();
+                  },
+                  tooltip: 'Прикрепить',
                   icon: const Icon(Icons.attach_file),
-                  tooltip: 'Прикрепить файл',
-                ),
-                IconButton(
-                  onPressed: _sending ? null : _createPoll,
-                  icon: const Icon(Icons.poll_outlined),
-                  tooltip: 'Создать опрос',
                 ),
                 GestureDetector(
                   onLongPressStart: (_) => _startVoiceRecord(),
                   onLongPressEnd: (_) => _stopVoiceRecord(),
                   child: IconButton(
-                    onPressed: null,
+                    onPressed: () {}, // запись только по долгому нажатию
                     icon: _isRecording
                         ? const Icon(Icons.stop_circle, color: Colors.red)
                         : const Icon(Icons.mic_none),
@@ -579,16 +800,33 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton.filled(
-                  onPressed: _sending ? null : _send,
-                  icon: _sending
-                      ? const SizedBox(
+                if (_sending)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.send),
-                ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Отправка…',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  IconButton(
+                    onPressed: _send,
+                    icon: const Icon(Icons.send),
+                    tooltip: 'Отправить',
+                  ),
               ],
             ),
           ),

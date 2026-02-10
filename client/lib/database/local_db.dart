@@ -13,7 +13,7 @@ class LocalDb {
   static Database? _db;
   static bool _failed = false;
   static const _dbName = 'messenger_local.db';
-  static const _version = 3;
+  static const _version = 4;
 
   static Future<Database?> _getDb() async {
     if (_db != null) return _db;
@@ -81,6 +81,14 @@ class LocalDb {
             try {
               await db.execute('ALTER TABLE messages ADD COLUMN attachment_encrypted INTEGER');
             } catch (_) {}
+          }
+          if (oldVersion < 4) {
+            try { await db.execute('ALTER TABLE messages ADD COLUMN reply_to_id INTEGER'); } catch (_) {}
+            try { await db.execute('ALTER TABLE messages ADD COLUMN reply_to_content TEXT'); } catch (_) {}
+            try { await db.execute('ALTER TABLE messages ADD COLUMN reply_to_sender_name TEXT'); } catch (_) {}
+            try { await db.execute('ALTER TABLE messages ADD COLUMN is_forwarded INTEGER'); } catch (_) {}
+            try { await db.execute('ALTER TABLE messages ADD COLUMN forward_from_sender_id INTEGER'); } catch (_) {}
+            try { await db.execute('ALTER TABLE messages ADD COLUMN forward_from_display_name TEXT'); } catch (_) {}
           }
         },
       );
@@ -198,6 +206,12 @@ class LocalDb {
       attachmentDurationSec: r['attachment_duration_sec'] as int?,
       senderPublicKey: r['sender_public_key'] as String?,
       attachmentEncrypted: (r['attachment_encrypted'] as int?) == 1,
+      replyToId: r['reply_to_id'] as int?,
+      replyToContent: r['reply_to_content'] as String?,
+      replyToSenderName: r['reply_to_sender_name'] as String?,
+      isForwarded: (r['is_forwarded'] as int?) == 1,
+      forwardFromSenderId: r['forward_from_sender_id'] as int?,
+      forwardFromDisplayName: r['forward_from_display_name'] as String?,
     );
   }
 
@@ -223,6 +237,12 @@ class LocalDb {
         'attachment_duration_sec': m.attachmentDurationSec,
         'sender_public_key': m.senderPublicKey,
         'attachment_encrypted': m.attachmentEncrypted ? 1 : 0,
+        'reply_to_id': m.replyToId,
+        'reply_to_content': m.replyToContent,
+        'reply_to_sender_name': m.replyToSenderName,
+        'is_forwarded': m.isForwarded ? 1 : 0,
+        'forward_from_sender_id': m.forwardFromSenderId,
+        'forward_from_display_name': m.forwardFromDisplayName,
         'poll_json': m.poll != null ? jsonEncode({
           'id': m.poll!.id,
           'question': m.poll!.question,
