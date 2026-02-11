@@ -81,32 +81,38 @@ router.get('/', validatePagination, (req, res) => {
   const peerIds = lastIds.map(({ peer_id }) => peer_id);
   const peersMap = getUsersByIds(peerIds);
   
-  const result = lastIds.map(({ mid, peer_id }) => {
-    const msg = db.prepare('SELECT id, content, created_at, sender_id, message_type FROM messages WHERE id = ?').get(mid);
-    const user = peersMap.get(peer_id);
-    const isOnline = !!(user.is_online);
-    return {
-      peer: {
-        id: user.id,
-        username: user.username,
-        display_name: user.display_name || user.username,
-        bio: user.bio ?? null,
-        avatar_url: user.avatar_path ? `${baseUrl}/uploads/avatars/${user.avatar_path}` : null,
-        public_key: user.public_key ?? null,
-        is_online: isOnline,
-        last_seen: user.last_seen || null,
-      },
-      group: null,
-      last_message: {
-        id: msg.id,
-        content: decryptIfLegacy(msg.content),
-        created_at: msg.created_at,
-        is_mine: msg.sender_id === me,
-        message_type: msg.message_type || 'text',
-      },
-      unread_count: unreadMap[peer_id] ?? 0,
-    };
-  });
+  const result = lastIds
+    .map(({ mid, peer_id }) => {
+      const msg = db.prepare('SELECT id, content, created_at, sender_id, message_type FROM messages WHERE id = ?').get(mid);
+      if (!msg) return null; // Сообщение не найдено
+      
+      const user = peersMap.get(peer_id);
+      if (!user) return null; // Пользователь не найден
+      
+      const isOnline = !!(user.is_online);
+      return {
+        peer: {
+          id: user.id,
+          username: user.username,
+          display_name: user.display_name || user.username,
+          bio: user.bio ?? null,
+          avatar_url: user.avatar_path ? `${baseUrl}/uploads/avatars/${user.avatar_path}` : null,
+          public_key: user.public_key ?? null,
+          is_online: isOnline,
+          last_seen: user.last_seen || null,
+        },
+        group: null,
+        last_message: {
+          id: msg.id,
+          content: decryptIfLegacy(msg.content),
+          created_at: msg.created_at,
+          is_mine: msg.sender_id === me,
+          message_type: msg.message_type || 'text',
+        },
+        unread_count: unreadMap[peer_id] ?? 0,
+      };
+    })
+    .filter(Boolean); // Удаляем null значения
 
   // Групповые чаты
   const myGroups = db.prepare('SELECT group_id FROM group_members WHERE user_id = ?').all(me);
@@ -125,6 +131,8 @@ router.get('/', validatePagination, (req, res) => {
   
   for (const { group_id, lastRow } of groupLastRows) {
     const group = db.prepare('SELECT id, name, avatar_path, created_by_user_id, created_at FROM groups WHERE id = ?').get(group_id);
+    if (!group) continue; // Группа не найдена
+    
     const readRow = db.prepare('SELECT last_read_message_id FROM group_read WHERE group_id = ? AND user_id = ?').get(group_id, me);
     const lastRead = readRow?.last_read_message_id ?? 0;
     const unreadCnt = db.prepare('SELECT COUNT(*) AS c FROM group_messages WHERE group_id = ? AND id > ?').get(group_id, lastRead)?.c ?? 0;

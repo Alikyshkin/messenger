@@ -148,7 +148,11 @@ class Api {
   Future<List<User>> getContacts() async {
     final r = await http.get(Uri.parse('$base/contacts'), headers: _headers);
     _checkResponse(r);
-    final list = jsonDecode(_utf8Body(r)) as List<dynamic>;
+    final json = jsonDecode(_utf8Body(r));
+    // API возвращает { data: [...], pagination: {...} } или просто массив
+    final list = json is Map<String, dynamic> 
+        ? (json['data'] as List<dynamic>? ?? [])
+        : (json as List<dynamic>);
     return list.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
   }
 
@@ -218,7 +222,11 @@ class Api {
   Future<List<ChatPreview>> getChats() async {
     final r = await http.get(Uri.parse('$base/chats'), headers: _headers);
     _checkResponse(r);
-    final list = jsonDecode(_utf8Body(r)) as List<dynamic>;
+    final json = jsonDecode(_utf8Body(r));
+    // API возвращает { data: [...], pagination: {...} } или просто массив
+    final list = json is Map<String, dynamic> 
+        ? (json['data'] as List<dynamic>? ?? [])
+        : (json as List<dynamic>);
     return list.map((e) => ChatPreview.fromJson(e as Map<String, dynamic>)).toList();
   }
 
