@@ -8,6 +8,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { verifyToken } from './auth.js';
 import { clients, broadcastToUser } from './realtime.js';
+import { apiLimiter } from './middleware/rateLimit.js';
 
 import authRoutes from './routes/auth.js';
 import contactsRoutes from './routes/contacts.js';
@@ -28,6 +29,7 @@ const server = createServer(app);
 
 app.use(cors());
 app.use(express.json());
+app.use('/api', apiLimiter); // Общий лимит для всех API запросов
 // Явно указываем UTF-8 для всех JSON-ответов API (корректное отображение кириллицы).
 app.use((req, res, next) => {
   const originalJson = res.json.bind(res);

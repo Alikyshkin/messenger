@@ -9,6 +9,7 @@ import db from '../db.js';
 import { authMiddleware } from '../auth.js';
 import { notifyNewMessage, notifyReaction } from '../realtime.js';
 import { decryptIfLegacy } from '../cipher.js';
+import { messageLimiter, uploadLimiter } from '../middleware/rateLimit.js';
 
 const ALLOWED_EMOJIS = new Set(['👍', '👎', '❤️', '🔥', '😂', '😮', '😢']);
 function getMessageReactions(messageId) {
@@ -167,7 +168,7 @@ router.get('/:peerId', (req, res) => {
   res.json(list);
 });
 
-router.post('/', (req, res, next) => {
+router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   if (req.get('Content-Type')?.startsWith('multipart/form-data')) {
     return upload.array('file', 20)(req, res, (err) => {
       if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки файла' });

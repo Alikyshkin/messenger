@@ -10,6 +10,7 @@ import db from '../db.js';
 import { authMiddleware } from '../auth.js';
 import { notifyNewGroupMessage, notifyGroupReaction } from '../realtime.js';
 import { decryptIfLegacy } from '../cipher.js';
+import { messageLimiter, uploadLimiter } from '../middleware/rateLimit.js';
 
 const ALLOWED_EMOJIS = new Set(['👍', '👎', '❤️', '🔥', '😂', '😮', '😢']);
 function getGroupMessageReactions(groupMessageId) {
@@ -411,7 +412,7 @@ router.patch('/:id/read', (req, res) => {
 });
 
 // Отправить сообщение в группу (текст, файл/несколько файлов, опрос)
-router.post('/:id/messages', (req, res, next) => {
+router.post('/:id/messages', messageLimiter, uploadLimiter, (req, res, next) => {
   if (req.get('Content-Type')?.startsWith('multipart/form-data')) {
     return fileUpload.array('file', 20)(req, res, (err) => {
       if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки файла' });

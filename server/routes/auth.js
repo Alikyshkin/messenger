@@ -4,12 +4,13 @@ import crypto from 'crypto';
 import db from '../db.js';
 import { signToken, authMiddleware } from '../auth.js';
 import { sendPasswordResetEmail } from '../mailer.js';
+import { authLimiter, registerLimiter, passwordResetLimiter } from '../middleware/rateLimit.js';
 
 const router = Router();
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-router.post('/register', (req, res) => {
+router.post('/register', registerLimiter, (req, res) => {
   const { username, password, displayName, email } = req.body;
   if (!username?.trim() || !password) {
     return res.status(400).json({ error: 'Укажите имя пользователя и пароль' });
@@ -49,7 +50,7 @@ router.post('/register', (req, res) => {
   }
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', authLimiter, (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: 'Укажите имя пользователя и пароль' });
@@ -73,7 +74,7 @@ router.post('/login', (req, res) => {
 });
 
 // Восстановление пароля: запрос письма со ссылкой
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', passwordResetLimiter, async (req, res) => {
   const { email } = req.body;
   const emailTrim = typeof email === 'string' ? email.trim().toLowerCase() : '';
   if (!emailTrim) {
@@ -94,7 +95,7 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 // Сброс пароля по токену из ссылки
-router.post('/reset-password', (req, res) => {
+router.post('/reset-password', passwordResetLimiter, (req, res) => {
   const { token, newPassword } = req.body;
   if (!token || typeof token !== 'string' || !newPassword) {
     return res.status(400).json({ error: 'Укажите токен и новый пароль' });
