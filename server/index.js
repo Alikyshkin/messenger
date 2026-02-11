@@ -9,6 +9,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { verifyToken } from './auth.js';
 import { clients, broadcastToUser } from './realtime.js';
+import db from './db.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { log } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -250,6 +251,18 @@ wss.on('connection', (ws, req) => {
   if (!clients.has(userId)) clients.set(userId, new Set());
   clients.get(userId).add(ws);
   ws.userId = userId;
+  
+  // Обновляем статус пользователя на онлайн
+  db.prepare('UPDATE users SET is_online = 1 WHERE id = ?').run(userId);
+  // Уведомляем контакты об изменении статуса
+  const contacts = db.prepare('SELECT contact_id FROM contacts WHERE user_id = ?').all(userId).map(r => r.contact_id);
+  contacts.forEach(contactId => {
+    broadcastToUser(contactId, {
+      type: 'user_status',
+      user_id: userId,
+      is_online: true,
+    });
+  });
 
   ws.on('message', (raw) => {
     try {
@@ -273,7 +286,21 @@ wss.on('connection', (ws, req) => {
     const set = clients.get(userId);
     if (set) {
       set.delete(ws);
-      if (set.size === 0) clients.delete(userId);
+      if (set.size === 0) {
+        clients.delete(userId);
+        // Обновляем статус пользователя на офлайн
+        db.prepare('UPDATE users SET is_online = 0, last_seen = datetime(\'now\') WHERE id = ?').run(userId);
+        // Уведомляем контакты об изменении статуса
+        const contacts = db.prepare('SELECT contact_id FROM contacts WHERE user_id = ?').all(userId).map(r => r.contact_id);
+        contacts.forEach(contactId => {
+          broadcastToUser(contactId, {
+            type: 'user_status',
+            user_id: userId,
+            is_online: false,
+            last_seen: new Date().toISOString(),
+          });
+        });
+      }
     }
   });
 

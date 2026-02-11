@@ -55,21 +55,27 @@ function userToJson(user, baseUrl, options = {}) {
     email: options.includeEmail ? (user.email ?? null) : undefined,
     birthday: user.birthday ?? null,
     phone: options.includePhone ? (user.phone ?? null) : undefined,
+    is_online: user.is_online !== undefined ? !!(user.is_online) : undefined,
+    last_seen: user.last_seen || null,
   };
   if (user.friends_count !== undefined) j.friends_count = user.friends_count;
   if (j.email === undefined) delete j.email;
   if (j.phone === undefined) delete j.phone;
+  if (j.is_online === undefined) delete j.is_online;
   return j;
 }
 
 router.get('/me', (req, res) => {
   const user = db.prepare(
-    'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email, birthday, phone FROM users WHERE id = ?'
+    'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email, birthday, phone, is_online, last_seen FROM users WHERE id = ?'
   ).get(req.user.userId);
   if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
   const count = db.prepare('SELECT COUNT(*) as n FROM contacts WHERE user_id = ?').get(req.user.userId);
   user.friends_count = count?.n ?? 0;
-  res.json(userToJson(user, getBaseUrl(req), { includeEmail: true, includePhone: true }));
+  const json = userToJson(user, getBaseUrl(req), { includeEmail: true, includePhone: true });
+  json.is_online = !!(user.is_online);
+  json.last_seen = user.last_seen || null;
+  res.json(json);
 });
 
 router.patch('/me', validate(updateUserSchema), (req, res) => {
@@ -221,12 +227,15 @@ router.get('/search', (req, res) => {
 router.get('/:id', validateParams(idParamSchema), (req, res) => {
   const id = req.validatedParams.id;
   const user = db.prepare(
-    'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, birthday FROM users WHERE id = ?'
+    'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, birthday, is_online, last_seen FROM users WHERE id = ?'
   ).get(id);
   if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
   const count = db.prepare('SELECT COUNT(*) as n FROM contacts WHERE user_id = ?').get(id);
   user.friends_count = count?.n ?? 0;
-  res.json(userToJson(user, getBaseUrl(req)));
+  const json = userToJson(user, getBaseUrl(req));
+  json.is_online = !!(user.is_online);
+  json.last_seen = user.last_seen || null;
+  res.json(json);
 });
 
 export default router;

@@ -43,7 +43,8 @@ router.get('/', validatePagination, (req, res) => {
   const unreadMap = Object.fromEntries(unreadCounts.map((r) => [r.peer_id, r.cnt]));
   const result = lastIds.map(({ mid, peer_id }) => {
     const msg = db.prepare('SELECT id, content, created_at, sender_id, message_type FROM messages WHERE id = ?').get(mid);
-    const user = db.prepare('SELECT id, username, display_name, bio, avatar_path, public_key FROM users WHERE id = ?').get(peer_id);
+    const user = db.prepare('SELECT id, username, display_name, bio, avatar_path, public_key, is_online, last_seen FROM users WHERE id = ?').get(peer_id);
+    const isOnline = !!(user.is_online);
     return {
       peer: {
         id: user.id,
@@ -52,6 +53,8 @@ router.get('/', validatePagination, (req, res) => {
         bio: user.bio ?? null,
         avatar_url: user.avatar_path ? `${baseUrl}/uploads/avatars/${user.avatar_path}` : null,
         public_key: user.public_key ?? null,
+        is_online: isOnline,
+        last_seen: user.last_seen || null,
       },
       group: null,
       last_message: {

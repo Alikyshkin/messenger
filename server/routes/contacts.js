@@ -14,7 +14,7 @@ router.get('/', validatePagination, (req, res) => {
   const total = db.prepare('SELECT COUNT(*) as cnt FROM contacts WHERE user_id = ?').get(userId)?.cnt || 0;
   
   const rows = db.prepare(`
-    SELECT u.id, u.username, u.display_name
+    SELECT u.id, u.username, u.display_name, u.is_online, u.last_seen
     FROM contacts c
     JOIN users u ON u.id = c.contact_id
     WHERE c.user_id = ?
@@ -27,6 +27,8 @@ router.get('/', validatePagination, (req, res) => {
       id: r.id,
       username: r.username,
       display_name: r.display_name || r.username,
+      is_online: !!(r.is_online),
+      last_seen: r.last_seen || null,
     })),
     pagination: createPaginationMeta(total, limit, offset),
   });
