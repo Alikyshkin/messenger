@@ -7,7 +7,7 @@ let messaging = null;
 /**
  * Инициализация Firebase Cloud Messaging
  */
-export function initFCM() {
+export async function initFCM() {
   const serviceAccountPath = process.env.FCM_SERVICE_ACCOUNT_PATH;
   const serviceAccountJson = process.env.FCM_SERVICE_ACCOUNT_JSON;
   

@@ -362,7 +362,9 @@ if (config.nodeEnv !== 'test') {
 initCache();
 
 // Инициализация FCM для push-уведомлений
-initFCM();
+initFCM().catch(err => {
+  log.error({ error: err }, 'Ошибка инициализации FCM');
+});
 
 server.listen(config.port, () => {
     log.info(`Server running at http://localhost:${config.port}`, { port: config.port, env: config.nodeEnv });
