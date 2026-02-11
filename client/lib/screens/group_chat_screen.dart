@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import '../services/ws_service.dart';
 import '../utils/app_page_route.dart';
 import '../widgets/app_back_button.dart';
+import 'media_gallery_screen.dart';
 import 'group_profile_screen.dart';
 
 class GroupChatScreen extends StatefulWidget {

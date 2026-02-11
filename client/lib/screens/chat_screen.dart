@@ -28,6 +28,7 @@ import 'call_screen.dart';
 import 'record_video_note_screen.dart';
 import 'user_profile_screen.dart';
 import 'image_preview_screen.dart';
+import 'media_gallery_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final User peer;

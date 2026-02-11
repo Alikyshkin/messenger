@@ -222,6 +222,30 @@ class Api {
     return list.map((e) => ChatPreview.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Получить медиа файлы из чата
+  Future<Map<String, dynamic>> getMedia(int peerId, {String type = 'all', int limit = 50, int offset = 0}) async {
+    final uri = Uri.parse('$base/media/$peerId').replace(queryParameters: {
+      'type': type,
+      'limit': limit.toString(),
+      'offset': offset.toString(),
+    });
+    final r = await http.get(uri, headers: _headers);
+    _checkResponse(r);
+    return jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+  }
+
+  /// Получить медиа файлы из группового чата
+  Future<Map<String, dynamic>> getGroupMedia(int groupId, {String type = 'all', int limit = 50, int offset = 0}) async {
+    final uri = Uri.parse('$base/media/groups/$groupId').replace(queryParameters: {
+      'type': type,
+      'limit': limit.toString(),
+      'offset': offset.toString(),
+    });
+    final r = await http.get(uri, headers: _headers);
+    _checkResponse(r);
+    return jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+  }
+
   Future<void> markMessagesRead(int peerId) async {
     final r = await http.patch(
       Uri.parse('$base/messages/$peerId/read'),
