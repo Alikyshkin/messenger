@@ -54,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthService>();
+    final auth = context.read<AuthService>();
     final u = auth.user;
     if (u == null) return Scaffold(body: Center(child: Text(context.tr('not_authorized'))));
 

@@ -53,8 +53,11 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _isRefreshing = false;
+
   Future<void> refreshUser() async {
-    if (_token.isEmpty) return;
+    if (_token.isEmpty || _isRefreshing) return;
+    _isRefreshing = true;
     try {
       final u = await Api(_token).me();
       _user = u;
@@ -64,6 +67,7 @@ class AuthService extends ChangeNotifier {
       await prefs.setString(_keyDisplayName, u.displayName);
       notifyListeners();
     } catch (_) {}
+    _isRefreshing = false;
   }
 
   Future<void> _save(User u, String t) async {

@@ -24,7 +24,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMixin {
   List<ChatPreview> _chats = [];
   bool _loading = true;
   String? _error;
@@ -32,6 +32,9 @@ class _HomeScreenState extends State<HomeScreen> {
   StreamSubscription<Message>? _newMessagePayloadSub;
 
   bool _initialized = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
