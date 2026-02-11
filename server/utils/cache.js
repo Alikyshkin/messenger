@@ -2,6 +2,7 @@ import Redis from 'ioredis';
 import { log } from './logger.js';
 import config from '../config/index.js';
 import { retryOrNull } from './retry.js';
+import { executeWithCircuitBreaker } from './circuitBreaker.js';
 
 let redis = null;
 let cacheEnabled = false;
@@ -62,11 +63,18 @@ export async function get(key) {
   }
   
   try {
-    const value = await retryOrNull(
-      () => redis.get(key),
+    const value = await executeWithCircuitBreaker(
+      'redis',
+      () => retryOrNull(
+        () => redis.get(key),
+        {
+          maxAttempts: 2,
+          initialDelay: 100,
+        }
+      ),
       {
-        maxAttempts: 2,
-        initialDelay: 100,
+        failureThreshold: 10,
+        resetTimeout: 30000,
       }
     );
     

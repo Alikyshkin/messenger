@@ -34,6 +34,7 @@ import { initFCM } from './utils/pushNotifications.js';
 import { securityHeaders } from './middleware/security.js';
 import { csrfProtect, csrfTokenRoute } from './middleware/csrf.js';
 import { auditMiddleware } from './utils/auditLog.js';
+import { getAllCircuitBreakerStates } from './utils/circuitBreaker.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const uploadsDir = join(__dirname, 'uploads');
@@ -142,6 +143,29 @@ app.get('/metrics', async (req, res) => {
 
 // Health checks
 app.get('/health', (req, res) => {
+  const circuitBreakers = getAllCircuitBreakerStates();
+  
+  // Проверяем состояние circuit breakers
+  const openCircuits = Object.entries(circuitBreakers)
+    .filter(([_, state]) => state.state === 'OPEN')
+    .map(([name, _]) => name);
+  
+  if (openCircuits.length > 0) {
+    return res.status(503).json({
+      status: 'degraded',
+      message: 'Some services are unavailable',
+      openCircuits,
+      circuitBreakers,
+    });
+  }
+  
+  res.json({
+    status: 'ok',
+    circuitBreakers,
+  });
+  
+  // Старая логика health check
+  try {
   try {
     // Проверка базы данных
     const dbCheck = db.prepare('SELECT 1').get();

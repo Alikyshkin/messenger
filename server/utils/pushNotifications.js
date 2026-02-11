@@ -1,6 +1,7 @@
 import admin from 'firebase-admin';
 import { log } from './logger.js';
 import { retry } from './retry.js';
+import { executeWithCircuitBreaker } from './circuitBreaker.js';
 
 let fcmEnabled = false;
 let messaging = null;
@@ -87,12 +88,19 @@ export async function sendToDevice(token, notification, data = {}) {
       },
     };
     
-    const response = await retry(
-      () => messaging.send(message),
+    const response = await executeWithCircuitBreaker(
+      'fcm',
+      () => retry(
+        () => messaging.send(message),
+        {
+          maxAttempts: 3,
+          initialDelay: 1000,
+          retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
+        }
+      ),
       {
-        maxAttempts: 3,
-        initialDelay: 1000,
-        retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
+        failureThreshold: 5,
+        resetTimeout: 60000,
       }
     );
     
@@ -162,15 +170,22 @@ export async function sendToDevices(tokens, notification, data = {}) {
       },
     };
     
-    const response = await retry(
-      () => messaging.sendEachForMulticast({
-        tokens: uniqueTokens,
-        ...message,
-      }),
+    const response = await executeWithCircuitBreaker(
+      'fcm',
+      () => retry(
+        () => messaging.sendEachForMulticast({
+          tokens: uniqueTokens,
+          ...message,
+        }),
+        {
+          maxAttempts: 3,
+          initialDelay: 1000,
+          retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
+        }
+      ),
       {
-        maxAttempts: 3,
-        initialDelay: 1000,
-        retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
+        failureThreshold: 5,
+        resetTimeout: 60000,
       }
     );
     
