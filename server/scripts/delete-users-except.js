@@ -80,14 +80,20 @@ try {
       db.prepare('DELETE FROM group_poll_votes WHERE user_id = ?').run(userId);
 
       // Удаляем опросы, созданные пользователем (через сообщения)
+      // Сначала получаем ID сообщений
       const msgIds = db.prepare('SELECT id FROM messages WHERE sender_id = ? OR receiver_id = ?').all(userId, userId).map(r => r.id);
       if (msgIds.length > 0) {
         const msgPlaceholders = msgIds.map(() => '?').join(',');
-        const pollIds = db.prepare(`SELECT id FROM polls WHERE message_id IN (${msgPlaceholders})`).all(...msgIds).map(r => r.id);
-        if (pollIds.length > 0) {
-          const pollPlaceholders = pollIds.map(() => '?').join(',');
-          db.prepare(`DELETE FROM poll_votes WHERE poll_id IN (${pollPlaceholders})`).run(...pollIds);
-          db.prepare(`DELETE FROM polls WHERE id IN (${pollPlaceholders})`).run(...pollIds);
+        try {
+          const pollIds = db.prepare(`SELECT id FROM polls WHERE message_id IN (${msgPlaceholders})`).all(...msgIds).map(r => r.id);
+          if (pollIds.length > 0) {
+            const pollPlaceholders = pollIds.map(() => '?').join(',');
+            db.prepare(`DELETE FROM poll_votes WHERE poll_id IN (${pollPlaceholders})`).run(...pollIds);
+            db.prepare(`DELETE FROM polls WHERE id IN (${pollPlaceholders})`).run(...pollIds);
+          }
+        } catch (err) {
+          // Игнорируем ошибки при удалении опросов (возможно таблица не существует)
+          console.log(`  ⚠ Предупреждение при удалении опросов: ${err.message}`);
         }
       }
 
@@ -95,11 +101,16 @@ try {
       const groupMsgIds = db.prepare('SELECT id FROM group_messages WHERE sender_id = ?').all(userId).map(r => r.id);
       if (groupMsgIds.length > 0) {
         const groupMsgPlaceholders = groupMsgIds.map(() => '?').join(',');
-        const groupPollIds = db.prepare(`SELECT id FROM group_polls WHERE group_message_id IN (${groupMsgPlaceholders})`).all(...groupMsgIds).map(r => r.id);
-        if (groupPollIds.length > 0) {
-          const groupPollPlaceholders = groupPollIds.map(() => '?').join(',');
-          db.prepare(`DELETE FROM group_poll_votes WHERE group_poll_id IN (${groupPollPlaceholders})`).run(...groupPollIds);
-          db.prepare(`DELETE FROM group_polls WHERE id IN (${groupPollPlaceholders})`).run(...groupPollIds);
+        try {
+          const groupPollIds = db.prepare(`SELECT id FROM group_polls WHERE group_message_id IN (${groupMsgPlaceholders})`).all(...groupMsgIds).map(r => r.id);
+          if (groupPollIds.length > 0) {
+            const groupPollPlaceholders = groupPollIds.map(() => '?').join(',');
+            db.prepare(`DELETE FROM group_poll_votes WHERE group_poll_id IN (${groupPollPlaceholders})`).run(...groupPollIds);
+            db.prepare(`DELETE FROM group_polls WHERE id IN (${groupPollPlaceholders})`).run(...groupPollIds);
+          }
+        } catch (err) {
+          // Игнорируем ошибки при удалении групповых опросов
+          console.log(`  ⚠ Предупреждение при удалении групповых опросов: ${err.message}`);
         }
       }
 
@@ -166,14 +177,8 @@ try {
     }
   }
 
-  // Очищаем FTS индексы для удаленных сообщений
-  console.log('\nОчистка FTS индексов...');
-  try {
-    db.prepare('DELETE FROM messages_fts WHERE rowid NOT IN (SELECT id FROM messages)').run();
-    db.prepare('DELETE FROM group_messages_fts WHERE rowid NOT IN (SELECT id FROM group_messages)').run();
-  } catch (err) {
-    console.log(`  ⚠ Ошибка при очистке FTS индексов: ${err.message}`);
-  }
+  // FTS индексы очищаются автоматически триггерами при удалении сообщений
+  // Дополнительная очистка не требуется
 
   // Включаем foreign keys обратно
   db.pragma('foreign_keys = ON');

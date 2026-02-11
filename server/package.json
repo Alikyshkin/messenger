@@ -7,6 +7,7 @@
   "scripts": {
     "reset-db": "node scripts/reset-db.js",
     "delete-users-except": "node scripts/delete-users-except.js",
+    "delete-user": "node scripts/delete-user.js",
     "migrate": "node scripts/migrate.js",
     "start": "node index.js",
     "dev": "node --watch index.js",
