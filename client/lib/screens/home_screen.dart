@@ -388,26 +388,69 @@ class _HomeScreenState extends State<HomeScreen>
                         margin: EdgeInsets.only(bottom: AppSpacing.sm),
                         child: ListTile(
                           contentPadding: AppSpacing.cardPadding,
-                          leading: CircleAvatar(
-                            radius: AppSizes.avatarLG,
-                            backgroundColor: Theme.of(
-                              context,
-                            ).colorScheme.primaryContainer,
-                            backgroundImage:
-                                avatarUrl != null && avatarUrl.isNotEmpty
-                                ? NetworkImage(avatarUrl)
-                                : null,
-                            child: avatarUrl == null || avatarUrl.isEmpty
-                                ? Icon(
-                                    isGroup ? Icons.group : Icons.person,
-                                    size: AppSizes.iconXXL,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onPrimaryContainer
-                                        .withValues(alpha:0.7),
-                                  )
-                                : null,
-                          ),
+                          leading: isGroup
+                              ? CircleAvatar(
+                                  radius: AppSizes.avatarLG,
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.primaryContainer,
+                                  backgroundImage:
+                                      avatarUrl != null && avatarUrl.isNotEmpty
+                                      ? NetworkImage(avatarUrl)
+                                      : null,
+                                  child: avatarUrl == null || avatarUrl.isEmpty
+                                      ? Icon(
+                                          Icons.group,
+                                          size: AppSizes.iconXXL,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onPrimaryContainer
+                                              .withValues(alpha:0.7),
+                                        )
+                                      : null,
+                                )
+                              : Stack(
+                                  clipBehavior: Clip.none,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: AppSizes.avatarLG,
+                                      backgroundColor: Theme.of(
+                                        context,
+                                      ).colorScheme.primaryContainer,
+                                      backgroundImage:
+                                          avatarUrl != null && avatarUrl.isNotEmpty
+                                          ? NetworkImage(avatarUrl)
+                                          : null,
+                                      child: avatarUrl == null || avatarUrl.isEmpty
+                                          ? Icon(
+                                              Icons.person,
+                                              size: AppSizes.iconXXL,
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onPrimaryContainer
+                                                  .withValues(alpha:0.7),
+                                            )
+                                          : null,
+                                    ),
+                                    if (c.peer?.isOnline == true)
+                                      Positioned(
+                                        right: -2,
+                                        bottom: -2,
+                                        child: Container(
+                                          width: 14,
+                                          height: 14,
+                                          decoration: BoxDecoration(
+                                            color: Colors.green,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Theme.of(context).colorScheme.surface,
+                                              width: 2,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                           title: Row(
                             children: [
                               Expanded(

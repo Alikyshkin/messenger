@@ -1159,25 +1159,47 @@ class _ChatScreenState extends State<ChatScreen> {
         foregroundColor: appBarFg,
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: isDark
-                  ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
-                  : Colors.white24,
-              backgroundImage:
-                  widget.peer.avatarUrl != null &&
-                      widget.peer.avatarUrl!.isNotEmpty
-                  ? NetworkImage(widget.peer.avatarUrl!)
-                  : null,
-              child:
-                  widget.peer.avatarUrl == null ||
-                      widget.peer.avatarUrl!.isEmpty
-                  ? Icon(
-                      Icons.person,
-                      color: appBarFg.withValues(alpha: 0.8),
-                      size: 24,
-                    )
-                  : null,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor: isDark
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
+                      : Colors.white24,
+                  backgroundImage:
+                      widget.peer.avatarUrl != null &&
+                          widget.peer.avatarUrl!.isNotEmpty
+                      ? NetworkImage(widget.peer.avatarUrl!)
+                      : null,
+                  child:
+                      widget.peer.avatarUrl == null ||
+                          widget.peer.avatarUrl!.isEmpty
+                      ? Icon(
+                          Icons.person,
+                          color: appBarFg.withValues(alpha: 0.8),
+                          size: 24,
+                        )
+                      : null,
+                ),
+                if (widget.peer.isOnline == true)
+                  Positioned(
+                    right: -2,
+                    bottom: -2,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: appBarBg,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 12),
             Expanded(

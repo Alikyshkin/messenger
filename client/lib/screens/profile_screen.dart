@@ -124,6 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             context,
                           ).colorScheme.onPrimaryContainer,
                         ),
+                    showOnlineIndicator: true,
                   ),
                   const SizedBox(height: 16),
                   Text(

@@ -171,6 +171,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         ?.copyWith(
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
+                    showOnlineIndicator: true,
                   ),
                 ),
                 const SizedBox(height: 16),

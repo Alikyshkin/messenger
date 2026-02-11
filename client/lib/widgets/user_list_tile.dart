@@ -33,6 +33,7 @@ class UserListTile extends StatelessWidget {
           color: Theme.of(context).colorScheme.onPrimaryContainer,
           fontWeight: FontWeight.w600,
         ),
+        showOnlineIndicator: true,
       ),
       title: Text(
         user.displayName,

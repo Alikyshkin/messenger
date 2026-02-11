@@ -136,6 +136,7 @@ class _ProfileContentState extends State<ProfileContent> {
                                     context,
                                   ).colorScheme.onPrimaryContainer,
                                 ),
+                            showOnlineIndicator: true,
                           ),
                           AppSpacing.spacingVerticalLG,
                           Text(

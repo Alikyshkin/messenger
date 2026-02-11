@@ -8,6 +8,7 @@ class UserAvatar extends StatelessWidget {
   final Color? backgroundColor;
   final TextStyle? textStyle;
   final String? fallbackText;
+  final bool showOnlineIndicator;
 
   const UserAvatar({
     super.key,
@@ -16,6 +17,7 @@ class UserAvatar extends StatelessWidget {
     this.backgroundColor,
     this.textStyle,
     this.fallbackText,
+    this.showOnlineIndicator = false,
   });
 
   /// Создает аватар из URL аватара или имени пользователя
@@ -43,7 +45,7 @@ class UserAvatar extends StatelessWidget {
           fontWeight: FontWeight.w600,
         );
 
-    return CircleAvatar(
+    final avatar = CircleAvatar(
       radius: radius,
       backgroundColor: bgColor,
       backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
@@ -55,6 +57,34 @@ class UserAvatar extends StatelessWidget {
               style: style,
             )
           : null,
+    );
+
+    if (!showOnlineIndicator || user?.isOnline != true) {
+      return avatar;
+    }
+
+    // Индикатор онлайн - зеленая точка в правом нижнем углу
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        avatar,
+        Positioned(
+          right: -2,
+          bottom: -2,
+          child: Container(
+            width: radius * 0.35,
+            height: radius * 0.35,
+            decoration: BoxDecoration(
+              color: Colors.green,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Theme.of(context).colorScheme.surface,
+                width: 2,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

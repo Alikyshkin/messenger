@@ -16,6 +16,9 @@ class User {
   /// Количество друзей (контактов). Видно только число; список видит только владелец.
   final int? friendsCount;
 
+  /// Онлайн-статус пользователя
+  final bool? isOnline;
+
   User({
     required this.id,
     required this.username,
@@ -27,6 +30,7 @@ class User {
     this.birthday,
     this.phone,
     this.friendsCount,
+    this.isOnline,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -41,6 +45,7 @@ class User {
       birthday: json['birthday'] as String?,
       phone: json['phone'] as String?,
       friendsCount: json['friends_count'] as int?,
+      isOnline: json['is_online'] as bool?,
     );
   }
 
@@ -55,6 +60,7 @@ class User {
     String? birthday,
     String? phone,
     int? friendsCount,
+    bool? isOnline,
   }) {
     return User(
       id: id ?? this.id,
@@ -67,6 +73,7 @@ class User {
       birthday: birthday ?? this.birthday,
       phone: phone ?? this.phone,
       friendsCount: friendsCount ?? this.friendsCount,
+      isOnline: isOnline ?? this.isOnline,
     );
   }
 }
