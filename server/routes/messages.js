@@ -355,4 +355,44 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   return res.status(201).json({ messages: payloads });
 });
 
+// Удаление сообщения (для всех участников)
+router.delete('/:messageId', validateParams(messageIdParamSchema), asyncHandler(async (req, res) => {
+  const messageId = req.validatedParams.messageId;
+  const me = req.user.userId;
+  
+  // Проверяем, что сообщение существует и принадлежит пользователю
+  const message = db.prepare('SELECT id, sender_id, receiver_id FROM messages WHERE id = ?').get(messageId);
+  if (!message) {
+    return res.status(404).json({ error: 'Сообщение не найдено' });
+  }
+  
+  // Проверяем, что пользователь является отправителем или получателем
+  if (message.sender_id !== me && message.receiver_id !== me) {
+    return res.status(403).json({ error: 'Нет доступа к сообщению' });
+  }
+  
+  // Удаляем сообщение из БД
+  db.prepare('DELETE FROM messages WHERE id = ?').run(messageId);
+  
+  // Удаляем связанные данные (реакции, опросы)
+  db.prepare('DELETE FROM message_reactions WHERE message_id = ?').run(messageId);
+  const poll = db.prepare('SELECT id FROM polls WHERE message_id = ?').get(messageId);
+  if (poll) {
+    db.prepare('DELETE FROM poll_votes WHERE poll_id = ?').run(poll.id);
+    db.prepare('DELETE FROM polls WHERE id = ?').run(poll.id);
+  }
+  
+  // Удаляем из FTS индекса
+  try {
+    db.prepare('DELETE FROM messages_fts WHERE rowid = ?').run(messageId);
+  } catch (_) {}
+  
+  // Уведомляем другого участника чата об удалении
+  const otherUserId = message.sender_id === me ? message.receiver_id : message.sender_id;
+  const { notifyMessageDeleted } = await import('../realtime.js');
+  notifyMessageDeleted(otherUserId, messageId);
+  
+  res.status(204).send();
+}));
+
 export default router;

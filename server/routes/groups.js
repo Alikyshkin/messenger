@@ -729,4 +729,50 @@ router.post('/:id/polls/:pollId/vote', validateParams(groupIdAndPollIdParamSchem
   });
 });
 
+// Удаление сообщения в группе (для всех участников)
+router.delete('/:id/messages/:messageId', validateParams(groupIdAndMessageIdParamSchema), asyncHandler(async (req, res) => {
+  const groupId = req.validatedParams.id;
+  const messageId = req.validatedParams.messageId;
+  const me = req.user.userId;
+  
+  // Проверяем, что пользователь является участником группы
+  if (!isMember(me, groupId)) {
+    return res.status(404).json({ error: 'Группа не найдена' });
+  }
+  
+  // Проверяем, что сообщение существует и принадлежит группе
+  const message = db.prepare('SELECT id, sender_id, group_id FROM group_messages WHERE id = ? AND group_id = ?').get(messageId, groupId);
+  if (!message) {
+    return res.status(404).json({ error: 'Сообщение не найдено' });
+  }
+  
+  // Проверяем, что пользователь является отправителем или админом группы
+  const isAdminUser = isAdmin(me, groupId);
+  if (message.sender_id !== me && !isAdminUser) {
+    return res.status(403).json({ error: 'Можно удалить только свои сообщения или быть администратором' });
+  }
+  
+  // Удаляем сообщение из БД
+  db.prepare('DELETE FROM group_messages WHERE id = ?').run(messageId);
+  
+  // Удаляем связанные данные (реакции, опросы)
+  db.prepare('DELETE FROM group_message_reactions WHERE group_message_id = ?').run(messageId);
+  const poll = db.prepare('SELECT id FROM group_polls WHERE group_message_id = ?').get(messageId);
+  if (poll) {
+    db.prepare('DELETE FROM group_poll_votes WHERE group_poll_id = ?').run(poll.id);
+    db.prepare('DELETE FROM group_polls WHERE id = ?').run(poll.id);
+  }
+  
+  // Удаляем из FTS индекса
+  try {
+    db.prepare('DELETE FROM group_messages_fts WHERE rowid = ?').run(messageId);
+  } catch (_) {}
+  
+  // Уведомляем всех участников группы об удалении
+  const { notifyGroupMessageDeleted } = await import('../realtime.js');
+  notifyGroupMessageDeleted(groupId, messageId);
+  
+  res.status(204).send();
+}));
+
 export default router;
