@@ -52,13 +52,17 @@ class WsService extends ChangeNotifier {
       _newMessagePayloadController.stream;
 
   void connect(String token) {
-    if (_token == token && _connected) return;
+    if (_token == token && _connected) {
+      return;
+    }
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
     disconnect();
     _token = token;
     _allowReconnect = token.isNotEmpty;
-    if (token.isEmpty) return;
+    if (token.isEmpty) {
+      return;
+    }
     _doConnect();
   }
 
@@ -99,7 +103,9 @@ class WsService extends ChangeNotifier {
   }
 
   void _scheduleReconnect() {
-    if (!_allowReconnect || _token.isEmpty) return;
+    if (!_allowReconnect || _token.isEmpty) {
+      return;
+    }
     _reconnectTimer?.cancel();
     // Экспоненциальный backoff: 3s, 6s, 12s, 24s, максимум 30s
     final delaySeconds = _reconnectAttempts == 0
@@ -110,13 +116,17 @@ class WsService extends ChangeNotifier {
               .clamp(3, _maxReconnectDelay);
     _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
       _reconnectTimer = null;
-      if (!_connected && _allowReconnect && _token.isNotEmpty) _doConnect();
+      if (!_connected && _allowReconnect && _token.isNotEmpty) {
+        _doConnect();
+      }
     });
   }
 
   /// Отправляет накопленные сигналы звонка после переподключения
   void _flushPendingCallSignals() {
-    if (!_connected || _channel == null || _pendingCallSignals.isEmpty) return;
+    if (!_connected || _channel == null || _pendingCallSignals.isEmpty) {
+      return;
+    }
     final signals = List<Map<String, dynamic>>.from(_pendingCallSignals);
     _pendingCallSignals.clear();
     for (final signal in signals) {

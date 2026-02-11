@@ -16,8 +16,12 @@ class LocalDb {
   static const _version = 4;
 
   static Future<Database?> _getDb() async {
-    if (_db != null) return _db;
-    if (_failed) return null;
+    if (_db != null) {
+      return _db;
+    }
+    if (_failed) {
+      return null;
+    }
     try {
       final dir = await getApplicationDocumentsDirectory();
       final path = join(dir.path, _dbName);
@@ -144,7 +148,9 @@ class LocalDb {
   /// Очистить все данные (при выходе).
   static Future<void> clearAll() async {
     final db = await _getDb();
-    if (db == null) return;
+    if (db == null) {
+      return;
+    }
     await db.delete('chats');
     await db.delete('messages');
     await db.delete('outbox');
@@ -154,9 +160,13 @@ class LocalDb {
 
   static Future<void> upsertChat(ChatPreview chat) async {
     final db = await _getDb();
-    if (db == null) return;
+    if (db == null) {
+      return;
+    }
     final peer = chat.peer;
-    if (peer == null) return;
+    if (peer == null) {
+      return;
+    }
     final last = chat.lastMessage;
     await db.insert('chats', {
       'peer_id': peer.id,
@@ -179,7 +189,9 @@ class LocalDb {
 
   static Future<List<ChatPreview>> getChats() async {
     final db = await _getDb();
-    if (db == null) return [];
+    if (db == null) {
+      return [];
+    }
     final rows = await db.query('chats', orderBy: 'updated_at DESC');
     return rows.map((r) {
       final peer = User.fromJson(
@@ -202,7 +214,9 @@ class LocalDb {
   /// Удалить чат и все сообщения с пользователем из локальной БД
   static Future<void> deleteChat(int peerId) async {
     final db = await _getDb();
-    if (db == null) return;
+    if (db == null) {
+      return;
+    }
     await db.delete('chats', where: 'peer_id = ?', whereArgs: [peerId]);
     await db.delete(
       'messages',
@@ -215,7 +229,9 @@ class LocalDb {
   /// Удалить групповой чат из локальной БД
   static Future<void> deleteGroupChat(int groupId) async {
     final db = await _getDb();
-    if (db == null) return;
+    if (db == null) {
+      return;
+    }
     // Для групповых чатов удаляем только из локального кэша
     // Сообщения остаются, так как они хранятся на сервере
     // В будущем можно добавить отдельную таблицу для групповых чатов
@@ -274,7 +290,9 @@ class LocalDb {
 
   static Future<void> upsertMessage(Message m, int peerId) async {
     final db = await _getDb();
-    if (db == null) return;
+    if (db == null) {
+      return;
+    }
     await db.insert('messages', {
       'id': m.id,
       'peer_id': peerId,
@@ -315,7 +333,9 @@ class LocalDb {
 
   static Future<List<Message>> getMessages(int peerId) async {
     final db = await _getDb();
-    if (db == null) return [];
+    if (db == null) {
+      return [];
+    }
     final rows = await db.query(
       'messages',
       where: 'peer_id = ?',
@@ -329,13 +349,17 @@ class LocalDb {
 
   static Future<void> updateChatLastMessage(int peerId, Message last) async {
     final db = await _getDb();
-    if (db == null) return;
+    if (db == null) {
+      return;
+    }
     final row = await db.query(
       'chats',
       where: 'peer_id = ?',
       whereArgs: [peerId],
     );
-    if (row.isEmpty) return;
+    if (row.isEmpty) {
+      return;
+    }
     await db.update(
       'chats',
       {
@@ -355,7 +379,9 @@ class LocalDb {
 
   static Future<List<OutboxItem>> getOutbox() async {
     final db = await _getDb();
-    if (db == null) return [];
+    if (db == null) {
+      return [];
+    }
     final rows = await db.query('outbox', orderBy: 'created_at ASC');
     return rows
         .map(
@@ -371,7 +397,9 @@ class LocalDb {
 
   static Future<int> addToOutbox(int peerId, String content) async {
     final db = await _getDb();
-    if (db == null) return 0;
+    if (db == null) {
+      return 0;
+    }
     return db.insert('outbox', {
       'peer_id': peerId,
       'content': content,
@@ -381,7 +409,9 @@ class LocalDb {
 
   static Future<void> removeFromOutbox(int id) async {
     final db = await _getDb();
-    if (db == null) return;
+    if (db == null) {
+      return;
+    }
     await db.delete('outbox', where: 'id = ?', whereArgs: [id]);
   }
 }

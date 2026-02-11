@@ -22,7 +22,9 @@ class E2EEService {
     final existing = await _storage.read(key: _storageKeyPair);
     if (existing != null && existing.isNotEmpty) {
       final parts = existing.split(':');
-      if (parts.length == 2) return parts[1];
+      if (parts.length == 2) {
+        return parts[1];
+      }
     }
     final keyPair = await _x25519.newKeyPair();
     final privBytes = await keyPair.extractPrivateKeyBytes();
@@ -35,10 +37,14 @@ class E2EEService {
 
   Future<SimpleKeyPair?> _loadKeyPair() async {
     final existing = await _storage.read(key: _storageKeyPair);
-    if (existing == null || existing.isEmpty) return null;
+    if (existing == null || existing.isEmpty) {
+      return null;
+    }
     try {
       final parts = existing.split(':');
-      if (parts.length != 2) return null;
+      if (parts.length != 2) {
+        return null;
+      }
       final privBytes = base64Decode(parts[0]);
       final pubBytes = base64Decode(parts[1]);
       return SimpleKeyPairData(

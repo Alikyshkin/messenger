@@ -19,7 +19,9 @@ class LastMessage {
   });
 
   static LastMessage? fromJson(Map<String, dynamic>? json) {
-    if (json == null) return null;
+    if (json == null) {
+      return null;
+    }
     return LastMessage(
       id: json['id'] as int,
       content: json['content'] as String? ?? '',

@@ -615,7 +615,7 @@ class _CallScreenState extends State<CallScreen> {
             ),
           );
         } catch (e) {
-          print('Error adding pending candidate: $e');
+          debugPrint('Error adding pending candidate: $e');
         }
       }
       _pendingCandidates.clear();

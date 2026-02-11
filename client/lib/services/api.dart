@@ -9,7 +9,9 @@ import '../models/group.dart';
 import '../models/friend_request.dart';
 
 List<MessageReaction> _parseReactions(dynamic v) {
-  if (v is! List) return [];
+  if (v is! List) {
+    return [];
+  }
   final list = <MessageReaction>[];
   for (final e in v) {
     if (e is! Map<String, dynamic>) continue;
@@ -113,7 +115,9 @@ class Api {
     String? phone,
   }) async {
     final body = <String, dynamic>{};
-    if (displayName != null) body['display_name'] = displayName;
+    if (displayName != null) {
+      body['display_name'] = displayName;
+    }
     if (username != null) body['username'] = username;
     if (bio != null) body['bio'] = bio;
     if (publicKey != null) body['public_key'] = publicKey;

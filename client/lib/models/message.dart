@@ -143,7 +143,9 @@ class Message {
   }
 
   static List<MessageReaction> _parseReactions(dynamic v) {
-    if (v is! List) return [];
+    if (v is! List) {
+      return [];
+    }
     final list = <MessageReaction>[];
     for (final e in v) {
       if (e is! Map<String, dynamic>) continue;

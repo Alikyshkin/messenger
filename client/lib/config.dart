@@ -6,7 +6,9 @@ import 'package:flutter/foundation.dart';
 /// На мобильных/десктопе — 127.0.0.1. Для эмулятора Android замените на 10.0.2.2:3000.
 String get apiBaseUrl {
   const fromEnv = String.fromEnvironment('API_BASE_URL', defaultValue: '');
-  if (fromEnv.isNotEmpty) return fromEnv;
+  if (fromEnv.isNotEmpty) {
+    return fromEnv;
+  }
   if (kIsWeb) {
     return Uri.base.origin;
   }
@@ -20,6 +22,8 @@ String get wsBaseUrl {
   final isDefaultPort =
       (scheme == 'wss' && port == 443) ||
       (scheme == 'ws' && (port == 80 || port == 3000));
-  if (isDefaultPort) return '$scheme://${uri.host}/ws';
+  if (isDefaultPort) {
+    return '$scheme://${uri.host}/ws';
+  }
   return '$scheme://${uri.host}:$port/ws';
 }

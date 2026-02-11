@@ -60,7 +60,9 @@ class _ChatScreenState extends State<ChatScreen> {
   void initState() {
     super.initState();
     _text.addListener(() {
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     });
     _load();
     final ws = context.read<WsService>();
@@ -156,9 +158,13 @@ class _ChatScreenState extends State<ChatScreen> {
     } else {
       keyToUse = m.senderPublicKey;
     }
-    if (keyToUse == null || keyToUse.isEmpty) return m;
+    if (keyToUse == null || keyToUse.isEmpty) {
+      return m;
+    }
     final decrypted = await _e2ee.decrypt(m.content, keyToUse);
-    if (decrypted == null) return m;
+    if (decrypted == null) {
+      return m;
+    }
     return Message(
       id: m.id,
       senderId: m.senderId,
@@ -188,7 +194,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   /// Скачивает вложение (из кэша или сети), при необходимости распаковывает и расшифровывает (E2EE).
   Future<Uint8List?> _getAttachmentBytes(Message m) async {
-    if (m.attachmentUrl == null || m.attachmentUrl!.isEmpty) return null;
+    if (m.attachmentUrl == null || m.attachmentUrl!.isEmpty) {
+      return null;
+    }
     try {
       final name = m.attachmentFilename ?? 'файл';
       final cached = await getCachedAttachmentBytes(widget.peer.id, m.id, name);
@@ -212,7 +220,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
-    if (_isRecording) _audioRecorder.stop();
+    if (_isRecording) {
+      _audioRecorder.stop();
+    }
     _audioRecorder.dispose();
     _wsUnsub?.call();
     _text.dispose();
@@ -1304,7 +1314,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                   : Theme.of(
                                                       context,
                                                     ).colorScheme.onSurface)
-                                              .withOpacity(0.12),
+                                              .withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Column(
@@ -1351,7 +1361,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                                     )
                                                                     .colorScheme
                                                                     .onSurface)
-                                                          .withOpacity(0.9),
+                                                          .withValues(alpha: 0.9),
                                                 ),
                                           ),
                                       ],
@@ -1430,7 +1440,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                         : Theme.of(
                                                             context,
                                                           ).colorScheme.surface)
-                                                    .withOpacity(0.2),
+                                                    .withValues(alpha: 0.2),
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),
