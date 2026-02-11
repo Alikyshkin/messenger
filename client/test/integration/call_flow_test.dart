@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import '../../lib/models/call_signal.dart';
-import '../../lib/models/user.dart';
+import 'package:client/models/call_signal.dart';
 
 /// Интеграционные тесты для проверки полного потока работы звонков
 void main() {
@@ -74,11 +73,12 @@ void main() {
 
     test('Call rejection flow: receive offer -> reject -> call ended', () {
       // 1. Получение входящего звонка
-      final incomingOffer = CallSignal(
+      final offer = CallSignal(
         fromUserId: 2,
         signal: 'offer',
         payload: {'type': 'offer', 'sdp': 'test_offer_sdp'},
       );
+      expect(offer.signal, 'offer');
 
       // 2. Отклонение звонка
       bool callRejected = false;

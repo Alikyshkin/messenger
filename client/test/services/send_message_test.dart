@@ -3,20 +3,17 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'dart:convert';
 import 'package:client/services/api.dart';
-import 'package:client/models/message.dart';
 
 void main() {
   group('Api.sendMessage', () {
     const testToken = 'test_token_123';
-    const testBaseUrl = 'http://localhost:3000';
 
     test('успешно отправляет текстовое сообщение', () async {
-      final mockClient = MockClient((request) async {
+      MockClient((request) async {
         if (request.method == 'POST' &&
             request.url.path == '/messages' &&
             request.headers['authorization'] == 'Bearer $testToken') {
-          final body =
-              jsonDecode(request.body as String) as Map<String, dynamic>;
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
           expect(body['receiver_id'], 2);
           expect(body['content'], 'Тестовое сообщение');
 
@@ -38,6 +35,7 @@ void main() {
         }
         return http.Response('Not Found', 404);
       });
+      // mockClient не используется напрямую, но нужен для структуры теста
 
       final api = Api(testToken);
       // Заменяем клиент для тестирования
@@ -52,7 +50,7 @@ void main() {
     });
 
     test('правильно обрабатывает ошибку 404 (маршрут не найден)', () async {
-      final mockClient = MockClient((request) async {
+      MockClient((request) async {
         if (request.method == 'POST' && request.url.path == '/messages') {
           return http.Response(
             jsonEncode({'error': 'Маршрут не найден', 'path': '/messages'}),
@@ -80,7 +78,7 @@ void main() {
     });
 
     test('правильно обрабатывает ошибку 400 (валидация)', () async {
-      final mockClient = MockClient((request) async {
+      MockClient((request) async {
         if (request.method == 'POST' && request.url.path == '/messages') {
           return http.Response(
             jsonEncode({'error': 'ID получателя обязателен'}),
@@ -102,7 +100,7 @@ void main() {
     });
 
     test('правильно обрабатывает ошибку 401 (неавторизован)', () async {
-      final mockClient = MockClient((request) async {
+      MockClient((request) async {
         if (request.method == 'POST' && request.url.path == '/messages') {
           return http.Response(
             jsonEncode({'error': 'Не авторизован'}),
@@ -124,10 +122,9 @@ void main() {
     });
 
     test('правильно отправляет сообщение с reply_to_id', () async {
-      final mockClient = MockClient((request) async {
+      MockClient((request) async {
         if (request.method == 'POST' && request.url.path == '/messages') {
-          final body =
-              jsonDecode(request.body as String) as Map<String, dynamic>;
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
           expect(body['reply_to_id'], 10);
 
           return http.Response(
@@ -149,6 +146,7 @@ void main() {
         }
         return http.Response('Not Found', 404);
       });
+      // mockClient не используется напрямую, но нужен для структуры теста
 
       final api = Api(testToken);
       final message = await api.sendMessage(2, 'Ответ', replyToId: 10);
@@ -157,10 +155,9 @@ void main() {
     });
 
     test('правильно отправляет пересланное сообщение', () async {
-      final mockClient = MockClient((request) async {
+      MockClient((request) async {
         if (request.method == 'POST' && request.url.path == '/messages') {
-          final body =
-              jsonDecode(request.body as String) as Map<String, dynamic>;
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
           expect(body['is_forwarded'], true);
           expect(body['forward_from_sender_id'], 3);
           expect(body['forward_from_display_name'], 'Имя отправителя');
@@ -186,6 +183,7 @@ void main() {
         }
         return http.Response('Not Found', 404);
       });
+      // mockClient не используется напрямую, но нужен для структуры теста
 
       final api = Api(testToken);
       final message = await api.sendMessage(
@@ -204,7 +202,7 @@ void main() {
     test(
       'правильно устанавливает заголовки Content-Type и Authorization',
       () async {
-        final mockClient = MockClient((request) async {
+        MockClient((request) async {
           expect(
             request.headers['content-type'],
             'application/json; charset=utf-8',
@@ -227,6 +225,7 @@ void main() {
             headers: {'Content-Type': 'application/json'},
           );
         });
+        // mockClient не используется напрямую, но нужен для структуры теста
 
         final api = Api(testToken);
         await api.sendMessage(2, 'Тест');

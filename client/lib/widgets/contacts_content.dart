@@ -182,7 +182,7 @@ class _ContactsContentState extends State<ContactsContent> {
               ? ListView.builder(
                   padding: AppSpacing.listPadding,
                   itemCount: 12,
-                  itemBuilder: (_, __) =>
+                  itemBuilder: (_, _) =>
                       const Card(child: SkeletonContactTile()),
                 )
               : _error != null

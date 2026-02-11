@@ -237,10 +237,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final filename = file.name;
     setState(() => _loading = true);
     try {
+      if (!mounted) {
+        return;
+      }
       final auth = context.read<AuthService>();
       await Api(auth.token).uploadAvatar(bytes, filename);
       await auth.refreshUser();
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() => _loading = false);
       ScaffoldMessenger.of(
         context,

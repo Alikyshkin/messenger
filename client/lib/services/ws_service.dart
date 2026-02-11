@@ -232,9 +232,9 @@ class WsService extends ChangeNotifier {
       'type': 'call_signal',
       'toUserId': toUserId,
       'signal': signal,
-      if (payload != null) 'payload': payload,
-      if (isVideoCall != null) 'isVideoCall': isVideoCall,
-      if (groupId != null) 'groupId': groupId,
+      ...?payload != null ? {'payload': payload} : null,
+      ...?isVideoCall != null ? {'isVideoCall': isVideoCall} : null,
+      ...?groupId != null ? {'groupId': groupId} : null,
     };
 
     if (_connected && _channel != null) {
@@ -264,8 +264,8 @@ class WsService extends ChangeNotifier {
       'type': 'group_call_signal',
       'groupId': groupId,
       'signal': signal,
-      if (payload != null) 'payload': payload,
-      if (isVideoCall != null) 'isVideoCall': isVideoCall,
+      ...?payload != null ? {'payload': payload} : null,
+      ...?isVideoCall != null ? {'isVideoCall': isVideoCall} : null,
     };
 
     if (_connected && _channel != null) {

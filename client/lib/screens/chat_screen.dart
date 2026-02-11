@@ -2118,7 +2118,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   width: 200,
                   height: 200,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Row(
+                  errorBuilder: (_, __, _) => Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.broken_image, color: textColor, size: 48),
@@ -2193,7 +2193,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               );
             },
-            errorBuilder: (_, __, ___) => Row(
+            errorBuilder: (_, __, _) => Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.broken_image, color: textColor, size: 48),
@@ -2302,9 +2302,13 @@ class _ChatScreenState extends State<ChatScreen> {
     if (content == null || content.isEmpty) {
       return '';
     }
-    if (content.startsWith('e2ee:')) return _undecryptedPlaceholder;
-    if (content.length > 24 && RegExp(r'^[A-Za-z0-9+/]+=*$').hasMatch(content))
+    if (content.startsWith('e2ee:')) {
       return _undecryptedPlaceholder;
+    }
+    if (content.length > 24 &&
+        RegExp(r'^[A-Za-z0-9+/]+=*$').hasMatch(content)) {
+      return _undecryptedPlaceholder;
+    }
     final replacementCount = content.runes.where((r) => r == 0xFFFD).length;
     if (content.isNotEmpty && replacementCount > content.length ~/ 2)
       return _undecryptedPlaceholder;

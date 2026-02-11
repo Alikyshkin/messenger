@@ -92,7 +92,7 @@ class ImagePreviewScreen extends StatelessWidget {
               ? Image.memory(
                   imageBytes!,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(
+                  errorBuilder: (_, __, _) => const Icon(
                     Icons.broken_image,
                     color: Colors.white54,
                     size: 80,
@@ -110,7 +110,7 @@ class ImagePreviewScreen extends StatelessWidget {
                       child: CircularProgressIndicator(color: Colors.white),
                     );
                   },
-                  errorBuilder: (_, __, ___) => const Icon(
+                  errorBuilder: (_, __, _) => const Icon(
                     Icons.broken_image,
                     color: Colors.white54,
                     size: 80,

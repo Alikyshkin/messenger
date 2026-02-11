@@ -202,8 +202,9 @@ class E2EEService {
     Uint8List ciphertext,
     String? otherPublicKeyBase64,
   ) async {
-    if (otherPublicKeyBase64 == null || otherPublicKeyBase64.isEmpty)
+    if (otherPublicKeyBase64 == null || otherPublicKeyBase64.isEmpty) {
       return null;
+    }
     if (ciphertext.length < 4 + 12 + 16) {
       return null;
     }

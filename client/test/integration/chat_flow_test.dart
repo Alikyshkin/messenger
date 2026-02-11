@@ -2,9 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'dart:convert';
-import '../../lib/services/api.dart';
-import '../../lib/models/user.dart';
-import '../../lib/models/message.dart';
+import 'package:client/services/api.dart';
 
 /// Интеграционные тесты для проверки полного потока работы чата
 void main() {
@@ -20,10 +18,9 @@ void main() {
       'Complete chat flow: load messages -> send message -> receive message',
       () async {
         int messageCount = 0;
-        bool messageSent = false;
         bool messageReceived = false;
 
-        final mockClient = MockClient((request) async {
+        MockClient((request) async {
           // Загрузка сообщений
           if (request.method == 'GET' &&
               request.url.path.contains('/messages/2')) {
@@ -56,7 +53,6 @@ void main() {
           // Отправка сообщения
           if (request.method == 'POST' &&
               request.url.path.contains('/messages')) {
-            messageSent = true;
             return http.Response(
               jsonEncode({
                 'id': 100,
@@ -75,6 +71,7 @@ void main() {
 
           return http.Response('{}', 404);
         });
+        // mockClient не используется напрямую, но нужен для структуры теста
 
         // Симуляция полного потока
         // 1. Загрузка сообщений

@@ -336,7 +336,7 @@ class Api {
       headers: _headers,
       body: jsonEncode({
         'lastSyncTime': lastSyncTime,
-        if (peerIds != null) 'peerIds': peerIds,
+        ...?peerIds != null ? {'peerIds': peerIds} : null,
       }),
     );
     _checkResponse(r);

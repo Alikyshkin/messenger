@@ -105,7 +105,7 @@ class _ContactsScreenState extends State<ContactsScreen> {
           ? ListView.builder(
               padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
               itemCount: 12,
-              itemBuilder: (_, __) => const Card(child: SkeletonContactTile()),
+              itemBuilder: (_, _) => const Card(child: SkeletonContactTile()),
             )
           : _error != null
           ? Center(

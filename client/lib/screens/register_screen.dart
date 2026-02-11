@@ -166,8 +166,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   enableInteractiveSelection: true,
                   onFieldSubmitted: (_) => _submit(),
                   validator: (v) {
-                    if (v == null || v.length < 6)
+                    if (v == null || v.length < 6) {
                       return context.tr('min_6_chars');
+                    }
                     return null;
                   },
                 ),

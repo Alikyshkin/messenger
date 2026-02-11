@@ -77,8 +77,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final auth = context.read<AuthService>();
     final u = auth.user;
-    if (u == null)
+    if (u == null) {
       return Scaffold(body: Center(child: Text(context.tr('not_authorized'))));
+    }
 
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;

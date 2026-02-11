@@ -267,15 +267,14 @@ class _HomeScreenState extends State<HomeScreen>
           }
         }
       } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                e is ApiException ? e.message : context.tr('error'),
-              ),
-            ),
-          );
+        if (!mounted) {
+          return;
         }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e is ApiException ? e.message : context.tr('error')),
+          ),
+        );
       }
     }
   }
@@ -345,7 +344,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ? ListView.builder(
                     padding: AppSpacing.listPadding,
                     itemCount: 10,
-                    itemBuilder: (_, __) =>
+                    itemBuilder: (_, _) =>
                         const Card(child: SkeletonChatTile()),
                   )
                 : _error != null && _chats.isEmpty
@@ -764,7 +763,10 @@ class _HomeScreenState extends State<HomeScreen>
                           ],
                         ),
                       );
-                      if (ok == true && mounted) {
+                      if (ok == true) {
+                        if (!mounted) {
+                          return;
+                        }
                         await context.read<AuthService>().logout();
                         if (!mounted) {
                           return;

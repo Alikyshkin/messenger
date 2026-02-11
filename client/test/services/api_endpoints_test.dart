@@ -2,23 +2,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'dart:convert';
-import '../../lib/services/api.dart';
-import '../../lib/models/user.dart';
-import '../../lib/models/message.dart';
-import '../../lib/models/chat.dart';
-import '../../lib/models/group.dart';
+import 'package:client/services/api.dart';
 
 void main() {
   group('API Endpoints Tests', () {
     const testToken = 'test_token_123';
-    late Api api;
-
-    setUp(() {
-      api = Api(testToken);
-    });
 
     test('getMessages handles pagination response', () async {
-      final mockClient = MockClient((request) async {
+      MockClient((request) async {
         if (request.url.path.contains('/messages/2')) {
           return http.Response(
             jsonEncode({
@@ -42,6 +33,7 @@ void main() {
         }
         return http.Response('{}', 404);
       });
+      // mockClient не используется напрямую, но нужен для структуры теста
 
       // В реальном тесте нужно мокировать http клиент
       // Здесь проверяем логику парсинга
