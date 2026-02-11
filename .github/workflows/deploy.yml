@@ -1,72 +1,50 @@
-# Автодеплой сервера мессенджера при пуше в main (API + веб-клиент)
-# Секреты: DEPLOY_HOST, DEPLOY_USER, DEPLOY_SSH_KEY; опционально DEPLOY_PATH (по умолчанию /opt/messenger)
-
-name: Deploy server
+name: Deploy
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          cache: true
-
-      - name: Build web client
-        run: |
-          cd client
-          flutter pub get
-          flutter build web --release
-
-      - name: Cache-bust web assets (version in script URL so users get updates without hard refresh)
-        run: |
-          VERSION="${GITHUB_SHA:0:7}"
-          sed -i "s|flutter_bootstrap.js|flutter_bootstrap.js?v=$VERSION|g" client/build/web/index.html
-
-      - name: Prepare public folder
-        run: |
-          mkdir -p server/public
-          cp -r client/build/web/* server/public/
-
-      - name: Prepare SSH key
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-        run: |
-          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > "$GITHUB_WORKSPACE/deploy_key"
-          chmod 600 "$GITHUB_WORKSPACE/deploy_key"
-          ssh-keygen -y -f "$GITHUB_WORKSPACE/deploy_key" > /dev/null || (echo 'Invalid SSH key' && exit 1)
-
-      - name: Copy web client to server
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        run: |
-          PATH_TO_DEPLOY="${DEPLOY_PATH:-/opt/messenger}"
-          scp -o StrictHostKeyChecking=accept-new -i "$GITHUB_WORKSPACE/deploy_key" -r server/public/* "$DEPLOY_USER@$DEPLOY_HOST:$PATH_TO_DEPLOY/server/public/"
-
-      - name: Deploy API via SSH
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-        run: |
-          PATH_TO_DEPLOY="${DEPLOY_PATH:-/opt/messenger}"
-          ssh -o StrictHostKeyChecking=accept-new -i "$GITHUB_WORKSPACE/deploy_key" "$DEPLOY_USER@$DEPLOY_HOST" "set -e
-            cd $PATH_TO_DEPLOY
-            git fetch origin main
-            git reset --hard origin/main
-            mkdir -p data
-            cd server
-            npm ci --omit=dev
-            mkdir -p public
-            pm2 restart messenger || (pm2 start index.js --name messenger)
-            pm2 save"
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Login to Docker Hub
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+    
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: |
+          ${{ secrets.DOCKER_USERNAME }}/messenger-server:latest
+          ${{ secrets.DOCKER_USERNAME }}/messenger-server:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Deploy to server
+      if: github.event_name != 'pull_request'
+      uses: appleboy/ssh-action@v1
+      with:
+        host: ${{ secrets.DEPLOY_HOST }}
+        username: ${{ secrets.DEPLOY_USER }}
+        key: ${{ secrets.DEPLOY_SSH_KEY }}
+        script: |
+          cd /opt/messenger
+          docker-compose pull
+          docker-compose up -d
+          docker-compose exec -T messenger-server npm run migrate || true
+          docker-compose restart messenger-server || true

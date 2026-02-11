@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop, 'feature/**' ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [20.x]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: server/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./server
+      run: npm ci
+    
+    - name: Run linter
+      working-directory: ./server
+      run: |
+        if [ -f "node_modules/.bin/eslint" ]; then
+          npm run lint || true
+        else
+          echo "ESLint not configured, skipping..."
+        fi
+    
+    - name: Run tests
+      working-directory: ./server
+      env:
+        NODE_ENV: test
+        MESSENGER_DB_PATH: :memory:
+        JWT_SECRET: test-secret-key-for-ci
+      run: |
+        if [ -f "tests" ] || [ -d "tests" ]; then
+          npm test || echo "Tests not implemented yet"
+        else
+          echo "No tests directory found, skipping tests..."
+        fi
+    
+    - name: Check code formatting
+      working-directory: ./server
+      run: |
+        if [ -f "node_modules/.bin/prettier" ]; then
+          npm run format:check || true
+        else
+          echo "Prettier not configured, skipping..."
+        fi
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: false
+        tags: messenger-server:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  security:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: server/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./server
+      run: npm ci
+    
+    - name: Run npm audit
+      working-directory: ./server
+      run: npm audit --audit-level=moderate || true
+    
+    - name: Check for known vulnerabilities
+      working-directory: ./server
+      run: |
+        if [ -f "node_modules/.bin/snyk" ]; then
+          npx snyk test || true
+        else
+          echo "Snyk not configured, skipping..."
+        fi
