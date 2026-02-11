@@ -22,8 +22,11 @@ class _AppUpdateDialogListenerState extends State<AppUpdateDialogListener> {
         // Показываем диалог при первом обнаружении обновления
         if (updateService.hasUpdate && !_hasShownDialog && mounted) {
           _hasShownDialog = true;
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _showUpdateDialog(context, updateService);
+          // Используем Future.microtask чтобы не блокировать build
+          Future.microtask(() {
+            if (mounted) {
+              _showUpdateDialog(context, updateService);
+            }
           });
         }
         

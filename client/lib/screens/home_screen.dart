@@ -16,6 +16,7 @@ import '../widgets/skeleton.dart';
 import '../widgets/offline_indicator.dart';
 import '../widgets/app_update_banner.dart';
 import '../services/app_update_service.dart';
+import '../screens/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -167,8 +168,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 IconButton(
                   icon: const Icon(Icons.account_circle_outlined),
                   tooltip: context.tr('my_profile'),
-                  onPressed: () {
-                    context.push('/profile');
+                  onPressed: () async {
+                    try {
+                      await context.push('/profile');
+                    } catch (e) {
+                      // Если не удалось перейти через go_router, пробуем через Navigator
+                      if (context.mounted) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ProfileScreen(),
+                          ),
+                        );
+                      }
+                    }
                   },
                 ),
               ],

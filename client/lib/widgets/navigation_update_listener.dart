@@ -25,16 +25,19 @@ class NavigationUpdateObserver extends NavigatorObserver {
   void _checkForUpdates(Route<dynamic>? route) {
     if (route == null) return;
     
-    // Получаем контекст из route
-    final context = route.navigator?.context;
-    if (context == null) return;
-    
-    try {
-      // Проверяем обновления при навигации
-      final updateService = Provider.of<AppUpdateService>(context, listen: false);
-      updateService.checkForUpdates();
-    } catch (_) {
-      // Игнорируем ошибки если сервис недоступен
-    }
+    // Используем Future.microtask чтобы не блокировать навигацию
+    Future.microtask(() {
+      try {
+        // Получаем контекст из route после микротаска
+        final navigatorContext = route.navigator?.context;
+        if (navigatorContext == null) return;
+        
+        // Проверяем обновления при навигации
+        final updateService = Provider.of<AppUpdateService>(navigatorContext, listen: false);
+        updateService.checkForUpdates();
+      } catch (_) {
+        // Игнорируем ошибки если сервис недоступен или контекст недоступен
+      }
+    });
   }
 }
