@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
-import '../../lib/screens/call_screen.dart';
-import '../../lib/models/user.dart';
-import '../../lib/models/call_signal.dart';
-import '../../lib/services/auth_service.dart';
-import '../../lib/services/ws_service.dart';
+import 'package:client/screens/call_screen.dart';
+import 'package:client/models/user.dart';
+import 'package:client/models/call_signal.dart';
+import 'package:client/services/auth_service.dart';
+import 'package:client/services/ws_service.dart';
 
 void main() {
   group('CallScreen Tests', () {
@@ -22,7 +22,6 @@ void main() {
         birthday: null,
         phone: null,
       );
-      testToken = 'test_token_123';
     });
 
     testWidgets('CallScreen initializes for outgoing call', (
@@ -39,7 +38,7 @@ void main() {
               ChangeNotifierProvider.value(value: authService),
               ChangeNotifierProvider(create: (_) => WsService()),
             ],
-            child: const CallScreen(peer: testPeer, isIncoming: false),
+            child: CallScreen(peer: testPeer, isVideoCall: false),
           ),
         ),
       );
@@ -127,7 +126,7 @@ void main() {
               ChangeNotifierProvider.value(value: authService),
               ChangeNotifierProvider(create: (_) => WsService()),
             ],
-            child: const CallScreen(peer: testPeer, isIncoming: false),
+            child: CallScreen(peer: testPeer, isVideoCall: false),
           ),
         ),
       );
@@ -150,7 +149,7 @@ void main() {
               ChangeNotifierProvider.value(value: authService),
               ChangeNotifierProvider(create: (_) => WsService()),
             ],
-            child: const CallScreen(peer: testPeer, isIncoming: false),
+            child: CallScreen(peer: testPeer, isVideoCall: false),
           ),
         ),
       );
