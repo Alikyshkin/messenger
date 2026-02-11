@@ -638,7 +638,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
           children: [
             // Видео сетка участников
             if (_state == 'connected' && (connectedParticipants.isNotEmpty || connectingParticipants.isNotEmpty))
-              _buildVideoGrid(connectedParticipants, connectingParticipants),
+              _buildVideoGrid(connectedParticipants, connectingParticipants)
             else if (_state == 'ringing')
               _buildRingingView()
             else if (_state == 'calling')
