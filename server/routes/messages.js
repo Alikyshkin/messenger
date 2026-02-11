@@ -308,8 +308,9 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
   const rid = data.receiver_id;
   const isPoll = data.type === 'poll' && data.question && Array.isArray(data.options) && data.options.length >= 2;
+  const isMissedCall = data.type === 'missed_call';
   const text = data.content ? sanitizeText(data.content) : '';
-  if (!isPoll && !text && files.length === 0) return res.status(400).json({ error: 'content или файл обязательны' });
+  if (!isPoll && !isMissedCall && !text && files.length === 0) return res.status(400).json({ error: 'content или файл обязательны' });
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
   const replyToId = data.reply_to_id || null;
@@ -398,10 +399,11 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   }
 
   if (files.length === 0) {
-    const contentToStore = text || '';
+    const contentToStore = isMissedCall ? 'Пропущенный звонок' : (text || '');
+    const messageType = isMissedCall ? 'missed_call' : 'text';
     const result = db.prepare(
-      `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name) VALUES (?, ?, ?, ?, ?, 'text', ?, ?, ?, ?, ?, ?, ?)`
-    ).run(me, rid, contentToStore, null, null, attachmentKind, attachmentDurationSec, attachmentEncrypted, replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
+      `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(me, rid, contentToStore, null, null, messageType, attachmentKind, attachmentDurationSec, attachmentEncrypted, replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
     const msgId = result.lastInsertRowid;
     syncMessagesFTS(msgId);
     const row = db.prepare(

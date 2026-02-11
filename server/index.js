@@ -426,6 +426,53 @@ wss.on('connection', (ws, req) => {
         const set = clients.get(toId);
         const n = set ? set.size : 0;
         log.ws('call_signal', { fromUserId: userId, toUserId: toId, connections: n });
+        
+        // Если звонок был отклонен (reject), создаем сообщение о пропущенном звонке
+        // userId - это получатель звонка (тот, кто отклоняет)
+        // toId - это звонивший (отправитель звонка)
+        // Сообщение создается от имени звонившего (toId) к получателю (userId)
+        if (data.signal === 'reject') {
+          try {
+            const { syncMessagesFTS } = await import('./utils/ftsSync.js');
+            const result = db.prepare(
+              `INSERT INTO messages (sender_id, receiver_id, content, message_type) VALUES (?, ?, ?, ?)`
+            ).run(toId, userId, 'Пропущенный звонок', 'missed_call');
+            const msgId = result.lastInsertRowid;
+            syncMessagesFTS(msgId);
+            const row = db.prepare(
+              'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
+            ).get(msgId);
+            const sender = db.prepare('SELECT public_key, display_name, username FROM users WHERE id = ?').get(row.sender_id);
+            const baseUrl = req.headers.host ? `http://${req.headers.host}` : 'http://localhost:3000';
+            const payload = {
+              id: row.id,
+              sender_id: row.sender_id,
+              receiver_id: row.receiver_id,
+              content: row.content,
+              created_at: row.created_at,
+              read_at: row.read_at,
+              is_mine: false,
+              attachment_url: null,
+              attachment_filename: null,
+              message_type: row.message_type || 'text',
+              poll_id: null,
+              attachment_kind: 'file',
+              attachment_duration_sec: null,
+              attachment_encrypted: false,
+              sender_public_key: sender?.public_key ?? null,
+              sender_display_name: sender?.display_name || sender?.username || '?',
+              reply_to_id: null,
+              is_forwarded: false,
+              forward_from_sender_id: null,
+              forward_from_display_name: null,
+            };
+            const { notifyNewMessage } = await import('./realtime.js');
+            notifyNewMessage(payload);
+          } catch (e) {
+            log.error('Ошибка при создании сообщения о пропущенном звонке', e);
+          }
+        }
+        
         broadcastToUser(toId, {
           type: 'call_signal',
           fromUserId: userId,

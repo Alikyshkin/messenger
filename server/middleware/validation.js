@@ -223,7 +223,7 @@ export const sendMessageSchema = Joi.object({
       'number.integer': 'ID получателя должно быть целым числом',
     }),
   content: Joi.string().trim().max(VALIDATION_LIMITS.MESSAGE_MAX_LENGTH).allow('').optional(),
-  type: Joi.string().valid('text', 'poll').optional(),
+  type: Joi.string().valid('text', 'poll', 'missed_call').optional(),
   question: Joi.when('type', {
     is: 'poll',
     then: Joi.string().trim().min(1).max(VALIDATION_LIMITS.POLL_QUESTION_MAX_LENGTH).required(),
