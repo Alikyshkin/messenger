@@ -24,10 +24,12 @@ import groupsRoutes from './routes/groups.js';
 import pollsRoutes from './routes/polls.js';
 import searchRoutes from './routes/search.js';
 import exportRoutes from './routes/export.js';
+import pushRoutes from './routes/push.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './utils/swagger.js';
 import { metricsMiddleware, getMetrics, metrics } from './utils/metrics.js';
 import { initCache } from './utils/cache.js';
+import { initFCM } from './utils/pushNotifications.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const uploadsDir = join(__dirname, 'uploads');
@@ -93,6 +95,7 @@ app.use('/users', usersRoutes);
 app.use('/polls', pollsRoutes);
 app.use('/search', searchRoutes);
 app.use('/export', exportRoutes);
+app.use('/push', pushRoutes);
 
 // Swagger UI для документации API
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
@@ -357,6 +360,9 @@ app.use((req, res, next) => {
 if (config.nodeEnv !== 'test') {
   // Инициализация кэша
 initCache();
+
+// Инициализация FCM для push-уведомлений
+initFCM();
 
 server.listen(config.port, () => {
     log.info(`Server running at http://localhost:${config.port}`, { port: config.port, env: config.nodeEnv });
