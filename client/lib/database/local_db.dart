@@ -13,7 +13,7 @@ class LocalDb {
   static Database? _db;
   static bool _failed = false;
   static const _dbName = 'messenger_local.db';
-  static const _version = 4;
+  static const _version = 5;
 
   static Future<Database?> _getDb() async {
     if (_db != null) {
@@ -38,7 +38,8 @@ class LocalDb {
             last_message_at TEXT,
             last_message_is_mine INTEGER,
             last_message_type TEXT,
-            updated_at TEXT
+            updated_at TEXT,
+            unread_count INTEGER DEFAULT 0
           )
         ''');
           await db.execute('''
@@ -128,6 +129,13 @@ class LocalDb {
               );
             } catch (_) {}
           }
+          if (oldVersion < 5) {
+            try {
+              await db.execute(
+                'ALTER TABLE chats ADD COLUMN unread_count INTEGER DEFAULT 0',
+              );
+            } catch (_) {}
+          }
         },
       );
       return _db;
@@ -184,6 +192,7 @@ class LocalDb {
       'last_message_is_mine': last?.isMine == true ? 1 : 0,
       'last_message_type': last?.messageType,
       'updated_at': last?.createdAt ?? DateTime.now().toIso8601String(),
+      'unread_count': chat.unreadCount,
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
@@ -207,7 +216,12 @@ class LocalDb {
           messageType: r['last_message_type'] as String? ?? 'text',
         );
       }
-      return ChatPreview(peer: peer, lastMessage: last);
+      final unreadCount = r['unread_count'] as int? ?? 0;
+      return ChatPreview(
+        peer: peer,
+        lastMessage: last,
+        unreadCount: unreadCount,
+      );
     }).toList();
   }
 
