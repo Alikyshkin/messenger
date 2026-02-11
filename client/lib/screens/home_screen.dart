@@ -18,7 +18,6 @@ import '../widgets/offline_indicator.dart';
 import '../widgets/app_update_banner.dart';
 import '../widgets/user_avatar.dart';
 import '../widgets/contacts_content.dart';
-import '../widgets/start_chat_content.dart';
 import '../widgets/profile_content.dart';
 import '../widgets/error_state_widget.dart';
 import '../widgets/empty_state_widget.dart';
@@ -37,7 +36,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-enum _NavigationItem { chats, contacts, newChat, profile }
+enum _NavigationItem { chats, contacts, profile }
 
 class _HomeScreenState extends State<HomeScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
@@ -325,8 +324,6 @@ class _HomeScreenState extends State<HomeScreen>
         return context.tr('chats');
       case _NavigationItem.contacts:
         return context.tr('contacts');
-      case _NavigationItem.newChat:
-        return context.tr('new_chat');
       case _NavigationItem.profile:
         return context.tr('profile');
     }
@@ -343,8 +340,6 @@ class _HomeScreenState extends State<HomeScreen>
           },
           navigator: _navigatorKey.currentState,
         );
-      case _NavigationItem.newChat:
-        return StartChatContent(navigator: _navigatorKey.currentState);
       case _NavigationItem.profile:
         return ProfileContent(navigator: _navigatorKey.currentState);
     }
@@ -597,7 +592,7 @@ class _HomeScreenState extends State<HomeScreen>
         body: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Левая навигация: профиль, чаты, друзья, новый чат, внизу выход
+            // Левая навигация: профиль, чаты, друзья, внизу выход
             Container(
               width: AppSizes.navigationWidth,
               decoration: BoxDecoration(
@@ -708,26 +703,6 @@ class _HomeScreenState extends State<HomeScreen>
                       if (mounted && _currentView != _NavigationItem.contacts) {
                         setState(() {
                           _currentView = _NavigationItem.contacts;
-                        });
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  // Новый чат
-                  _NavButton(
-                    icon: Icon(
-                      Icons.edit_outlined,
-                      size: AppSizes.iconXL,
-                      color: _currentView == _NavigationItem.newChat
-                          ? Theme.of(context).colorScheme.primary
-                          : null,
-                    ),
-                    tooltip: context.tr('new_chat'),
-                    isActive: _currentView == _NavigationItem.newChat,
-                    onPressed: () {
-                      if (mounted && _currentView != _NavigationItem.newChat) {
-                        setState(() {
-                          _currentView = _NavigationItem.newChat;
                         });
                       }
                     },
