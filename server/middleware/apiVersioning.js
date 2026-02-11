@@ -51,12 +51,21 @@ export function isVersionSupported(version) {
  * Middleware для проверки поддерживаемых версий
  */
 export function validateApiVersion(req, res, next) {
-  if (!isVersionSupported(req.apiVersion)) {
+  // Если apiVersion не установлен (для путей без /api), используем версию по умолчанию
+  const version = req.apiVersion || DEFAULT_VERSION;
+  
+  if (!isVersionSupported(version)) {
     return res.status(400).json({
-      error: `Версия API ${req.apiVersion} не поддерживается`,
+      error: `Версия API ${version} не поддерживается`,
       supportedVersions: ['v1'],
       code: 'UNSUPPORTED_API_VERSION',
     });
   }
+  
+  // Устанавливаем версию, если она еще не установлена
+  if (!req.apiVersion) {
+    req.apiVersion = version;
+  }
+  
   next();
 }
