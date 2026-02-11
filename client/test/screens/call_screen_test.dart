@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import '../../lib/screens/call_screen.dart';
 import '../../lib/models/user.dart';
 import '../../lib/models/call_signal.dart';
 import '../../lib/services/auth_service.dart';
 import '../../lib/services/ws_service.dart';
-import '../../lib/services/locale_service.dart';
-import '../../lib/services/theme_service.dart';
-import '../helpers/widget_helpers.dart';
 
 void main() {
   group('CallScreen Tests', () {
     late User testPeer;
-    late String testToken;
 
     setUp(() {
       testPeer = User(
@@ -31,13 +28,15 @@ void main() {
     testWidgets('CallScreen initializes for outgoing call', (
       WidgetTester tester,
     ) async {
+      final authService = AuthService();
+      // Используем _save для установки токена (приватный метод, но для тестов это нормально)
+      // В реальном коде токен устанавливается через login/register
+
       await tester.pumpWidget(
         MaterialApp(
           home: MultiProvider(
             providers: [
-              ChangeNotifierProvider(
-                create: (_) => AuthService()..setToken(testToken),
-              ),
+              ChangeNotifierProvider.value(value: authService),
               ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: const CallScreen(peer: testPeer, isIncoming: false),
@@ -56,17 +55,17 @@ void main() {
     ) async {
       final initialSignal = CallSignal(
         fromUserId: 2,
-        type: 'offer',
-        signal: {'type': 'offer', 'sdp': 'test_sdp'},
+        signal: 'offer',
+        payload: {'type': 'offer', 'sdp': 'test_sdp'},
       );
+
+      final authService = AuthService();
 
       await tester.pumpWidget(
         MaterialApp(
           home: MultiProvider(
             providers: [
-              ChangeNotifierProvider(
-                create: (_) => AuthService()..setToken(testToken),
-              ),
+              ChangeNotifierProvider.value(value: authService),
               ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: CallScreen(
@@ -89,17 +88,17 @@ void main() {
     ) async {
       final initialSignal = CallSignal(
         fromUserId: 2,
-        type: 'offer',
-        signal: {'type': 'offer', 'sdp': 'test_sdp'},
+        signal: 'offer',
+        payload: {'type': 'offer', 'sdp': 'test_sdp'},
       );
+
+      final authService = AuthService();
 
       await tester.pumpWidget(
         MaterialApp(
           home: MultiProvider(
             providers: [
-              ChangeNotifierProvider(
-                create: (_) => AuthService()..setToken(testToken),
-              ),
+              ChangeNotifierProvider.value(value: authService),
               ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: CallScreen(
@@ -119,13 +118,13 @@ void main() {
     });
 
     testWidgets('CallScreen handles call end', (WidgetTester tester) async {
+      final authService = AuthService();
+
       await tester.pumpWidget(
         MaterialApp(
           home: MultiProvider(
             providers: [
-              ChangeNotifierProvider(
-                create: (_) => AuthService()..setToken(testToken),
-              ),
+              ChangeNotifierProvider.value(value: authService),
               ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: const CallScreen(peer: testPeer, isIncoming: false),
@@ -142,13 +141,13 @@ void main() {
     testWidgets('CallScreen handles WebRTC signal errors', (
       WidgetTester tester,
     ) async {
+      final authService = AuthService();
+
       await tester.pumpWidget(
         MaterialApp(
           home: MultiProvider(
             providers: [
-              ChangeNotifierProvider(
-                create: (_) => AuthService()..setToken(testToken),
-              ),
+              ChangeNotifierProvider.value(value: authService),
               ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: const CallScreen(peer: testPeer, isIncoming: false),

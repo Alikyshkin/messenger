@@ -5,7 +5,6 @@ import 'package:client/services/auth_service.dart';
 import 'package:client/services/locale_service.dart';
 import 'package:client/services/theme_service.dart';
 import 'package:client/services/ws_service.dart';
-import 'package:client/models/user.dart';
 
 /// Сбрасывает SharedPreferences для тестов.
 Future<void> initTestPreferences() async {

@@ -1,5 +1,3 @@
-import 'user.dart';
-
 class Group {
   final int id;
   final String name;

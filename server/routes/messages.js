@@ -311,14 +311,14 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   }
   log.info({ path: req.path, method: req.method }, 'POST /messages - not multipart, calling next()');
   next();
-}), (req, res, next) => {
-  log.info({ path: req.path, method: req.method }, 'POST /messages - before validation');
-  next();
-}, validate(sendMessageSchema), (req, res, next) => {
-  log.info({ path: req.path, method: req.method }, 'POST /messages - after validation, before handler');
-  next();
-}, asyncHandler(async (req, res) => {
-  log.info({ path: req.path, method: req.method }, 'POST /messages route handler - after validation');
+}, validate(sendMessageSchema), asyncHandler(async (req, res) => {
+  log.info({ 
+    path: req.path, 
+    method: req.method, 
+    userId: req.user?.userId,
+    body: req.body,
+    validated: req.validated 
+  }, 'POST /messages route handler - after validation');
   const data = req.validated;
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
   const rid = data.receiver_id;
@@ -485,7 +485,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   
   if (payloads.length === 1) return res.status(201).json(payloads[0]);
   return res.status(201).json({ messages: payloads });
-});
+}));
 
 // Удаление сообщения (для всех участников)
 router.delete('/:messageId', validateParams(messageIdParamSchema), asyncHandler(async (req, res) => {

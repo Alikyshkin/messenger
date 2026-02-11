@@ -78,9 +78,7 @@ void main() {
         MaterialApp(
           home: MultiProvider(
             providers: [
-              ChangeNotifierProvider(
-                create: (_) => AuthService()..setToken(testToken),
-              ),
+              ChangeNotifierProvider(create: (_) => AuthService()),
               ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: ChatScreen(peer: testPeer),
@@ -137,9 +135,7 @@ void main() {
         MaterialApp(
           home: MultiProvider(
             providers: [
-              ChangeNotifierProvider(
-                create: (_) => AuthService()..setToken(testToken),
-              ),
+              ChangeNotifierProvider(create: (_) => AuthService()),
               ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: ChatScreen(peer: testPeer),
@@ -183,9 +179,7 @@ void main() {
         MaterialApp(
           home: MultiProvider(
             providers: [
-              ChangeNotifierProvider(
-                create: (_) => AuthService()..setToken(testToken),
-              ),
+              ChangeNotifierProvider(create: (_) => AuthService()),
               ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: ChatScreen(peer: testPeer),
@@ -219,9 +213,7 @@ void main() {
         MaterialApp(
           home: MultiProvider(
             providers: [
-              ChangeNotifierProvider(
-                create: (_) => AuthService()..setToken(testToken),
-              ),
+              ChangeNotifierProvider(create: (_) => AuthService()),
               ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: ChatScreen(peer: testPeer),

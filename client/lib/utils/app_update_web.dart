@@ -1,4 +1,5 @@
 // ignore: avoid_web_libraries_in_flutter
+import 'dart:async';
 import 'dart:html' as html;
 import 'package:flutter/foundation.dart';
 
@@ -18,7 +19,7 @@ class AppUpdateWeb {
 
       // Перезагружаем страницу с очисткой кеша
       // Добавляем параметр для принудительной перезагрузки без кеша
-      final url = html.Uri.parse(html.window.location.href);
+      final url = Uri.parse(html.window.location.href);
       final newUrl = url.replace(
         queryParameters: {
           ...url.queryParameters,

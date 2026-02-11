@@ -6,7 +6,6 @@ import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../widgets/app_back_button.dart';
 import '../utils/app_page_route.dart';
-import 'group_chat_screen.dart';
 import 'group_call_screen.dart';
 
 class GroupProfileScreen extends StatefulWidget {
@@ -83,8 +82,6 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final g = _group ?? widget.group;
-    final me = context.watch<AuthService>().user?.id;
-    final isAdmin = g.myRole == 'admin';
 
     return Scaffold(
       appBar: AppBar(

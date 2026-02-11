@@ -19,19 +19,6 @@ class ReactionUpdate {
   });
 }
 
-class _ReactionUpdate {
-  final int messageId;
-  final int? peerId;
-  final int? groupId;
-  final List<MessageReaction> reactions;
-  _ReactionUpdate({
-    required this.messageId,
-    this.peerId,
-    this.groupId,
-    required this.reactions,
-  });
-}
-
 class WsService extends ChangeNotifier {
   WebSocketChannel? _channel;
   StreamSubscription? _sub;
@@ -43,7 +30,7 @@ class WsService extends ChangeNotifier {
   static const int _maxReconnectDelay =
       30; // Максимальная задержка переподключения (секунды)
   final List<Message> _incoming = [];
-  final List<_ReactionUpdate> _reactionUpdates = [];
+  final List<ReactionUpdate> _reactionUpdates = [];
   final List<Map<String, dynamic>> _pendingCallSignals =
       []; // Очередь сигналов звонка при отсутствии соединения
   final StreamController<CallSignal> _callSignalController =
@@ -173,7 +160,7 @@ class WsService extends ChangeNotifier {
           map['reactions'] != null) {
         final reactions = _parseReactions(map['reactions']);
         _reactionUpdates.add(
-          _ReactionUpdate(
+          ReactionUpdate(
             messageId: map['message_id'] as int,
             peerId: map['peer_id'] as int,
             reactions: reactions,
@@ -186,7 +173,7 @@ class WsService extends ChangeNotifier {
           map['reactions'] != null) {
         final reactions = _parseReactions(map['reactions']);
         _reactionUpdates.add(
-          _ReactionUpdate(
+          ReactionUpdate(
             messageId: map['message_id'] as int,
             groupId: map['group_id'] as int,
             reactions: reactions,
@@ -301,11 +288,7 @@ class WsService extends ChangeNotifier {
     if (i < 0) return null;
     final u = _reactionUpdates.removeAt(i);
     notifyListeners();
-    return ReactionUpdate(
-      messageId: u.messageId,
-      peerId: u.peerId,
-      reactions: u.reactions,
-    );
+    return u;
   }
 
   ReactionUpdate? takeGroupReactionUpdateFor(int groupId) {
@@ -313,11 +296,7 @@ class WsService extends ChangeNotifier {
     if (i < 0) return null;
     final u = _reactionUpdates.removeAt(i);
     notifyListeners();
-    return ReactionUpdate(
-      messageId: u.messageId,
-      groupId: u.groupId,
-      reactions: u.reactions,
-    );
+    return u;
   }
 
   void clearPending() {

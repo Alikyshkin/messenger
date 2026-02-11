@@ -26,6 +26,7 @@ import '../services/app_update_service.dart';
 import '../config/version.dart' show AppVersion;
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
+import '../widgets/nav_badge.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -181,6 +182,76 @@ class _HomeScreenState extends State<HomeScreen>
       }
     } catch (_) {
       // Игнорируем ошибки загрузки заявок
+    }
+  }
+
+  Future<void> _confirmDeleteChat(
+    BuildContext context,
+    ChatPreview chat,
+    bool isGroup,
+  ) async {
+    final navigator = _navigatorKey.currentState;
+    if (navigator == null) return;
+
+    final title = isGroup ? (chat.group!.name) : (chat.peer!.displayName);
+
+    final ok = await showDialog<bool>(
+      context: navigator.context,
+      useRootNavigator: false,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.tr('delete_chat_title')),
+        content: Text(
+          context.tr('delete_chat_message').replaceFirst('%s', title),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(context.tr('cancel')),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(context.tr('delete')),
+          ),
+        ],
+      ),
+    );
+
+    if (ok == true && mounted) {
+      try {
+        if (isGroup) {
+          // Для групповых чатов просто удаляем из текущего списка
+          // Групповые чаты не сохраняются в локальную БД, поэтому они вернутся
+          // при следующей загрузке, если пользователь все еще в группе
+          setState(() {
+            _chats.removeWhere(
+              (c) => c.isGroup && c.group?.id == chat.group?.id,
+            );
+          });
+        } else {
+          // Для приватных чатов удаляем из локальной БД и обновляем список
+          await LocalDb.deleteChat(chat.peer!.id);
+          if (mounted) {
+            setState(() {
+              _chats.removeWhere(
+                (c) => !c.isGroup && c.peer?.id == chat.peer?.id,
+              );
+            });
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                e is ApiException ? e.message : context.tr('error'),
+              ),
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -367,6 +438,23 @@ class _HomeScreenState extends State<HomeScreen>
                                   ),
                                 )
                               : null,
+                          trailing: IconButton(
+                            icon: Icon(
+                              Icons.delete_outline,
+                              size: AppSizes.iconSM,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.error.withOpacity(0.7),
+                            ),
+                            tooltip: context.tr('delete_chat'),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(
+                              minWidth: 32,
+                              minHeight: 32,
+                            ),
+                            onPressed: () =>
+                                _confirmDeleteChat(context, c, isGroup),
+                          ),
                           onTap: () async {
                             if (isGroup) {
                               await context.push('/group/${c.group!.id}');
@@ -408,7 +496,8 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               child: Column(
                 children: [
-                  AppSpacing.spacingVerticalSM,
+                  const SizedBox(height: 12),
+                  // Профиль
                   Builder(
                     builder: (context) {
                       return Consumer<AuthService>(
@@ -416,7 +505,7 @@ class _HomeScreenState extends State<HomeScreen>
                           final user = auth.user;
                           final isActive =
                               _currentView == _NavigationItem.profile;
-                          return IconButton(
+                          return _NavButton(
                             icon:
                                 (user != null &&
                                     (user.avatarUrl?.isNotEmpty ?? false))
@@ -432,13 +521,7 @@ class _HomeScreenState extends State<HomeScreen>
                                         : null,
                                   ),
                             tooltip: context.tr('my_profile'),
-                            style: IconButton.styleFrom(
-                              backgroundColor: isActive
-                                  ? Theme.of(
-                                      context,
-                                    ).colorScheme.primaryContainer
-                                  : null,
-                            ),
+                            isActive: isActive,
                             onPressed: () {
                               if (mounted &&
                                   _currentView != _NavigationItem.profile) {
@@ -452,7 +535,9 @@ class _HomeScreenState extends State<HomeScreen>
                       );
                     },
                   ),
-                  IconButton(
+                  const SizedBox(height: 8),
+                  // Чаты с badge
+                  _NavButton(
                     icon: Stack(
                       clipBehavior: Clip.none,
                       children: [
@@ -465,39 +550,14 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                         if (_totalUnreadCount > 0)
                           Positioned(
-                            right: -AppSpacing.xs,
-                            top: -AppSpacing.xs,
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.xs,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusMD,
-                                ),
-                              ),
-                              child: Text(
-                                _totalUnreadCount > 99
-                                    ? '99+'
-                                    : '$_totalUnreadCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                            right: -6,
+                            top: -6,
+                            child: NavBadge(count: _totalUnreadCount),
                           ),
                       ],
                     ),
                     tooltip: context.tr('chats'),
-                    style: IconButton.styleFrom(
-                      backgroundColor: _currentView == _NavigationItem.chats
-                          ? Theme.of(context).colorScheme.primaryContainer
-                          : null,
-                    ),
+                    isActive: _currentView == _NavigationItem.chats,
                     onPressed: () {
                       if (mounted && _currentView != _NavigationItem.chats) {
                         setState(() {
@@ -506,7 +566,9 @@ class _HomeScreenState extends State<HomeScreen>
                       }
                     },
                   ),
-                  IconButton(
+                  const SizedBox(height: 8),
+                  // Контакты с badge
+                  _NavButton(
                     icon: Stack(
                       clipBehavior: Clip.none,
                       children: [
@@ -519,39 +581,14 @@ class _HomeScreenState extends State<HomeScreen>
                         ),
                         if (_friendRequests.isNotEmpty)
                           Positioned(
-                            right: -AppSpacing.xs,
-                            top: -AppSpacing.xs,
-                            child: Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: AppSpacing.md,
-                                vertical: AppSpacing.xs,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.red,
-                                borderRadius: BorderRadius.circular(
-                                  AppSizes.radiusMD,
-                                ),
-                              ),
-                              child: Text(
-                                _friendRequests.length > 99
-                                    ? '99+'
-                                    : '${_friendRequests.length}',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                            right: -6,
+                            top: -6,
+                            child: NavBadge(count: _friendRequests.length),
                           ),
                       ],
                     ),
                     tooltip: context.tr('contacts'),
-                    style: IconButton.styleFrom(
-                      backgroundColor: _currentView == _NavigationItem.contacts
-                          ? Theme.of(context).colorScheme.primaryContainer
-                          : null,
-                    ),
+                    isActive: _currentView == _NavigationItem.contacts,
                     onPressed: () {
                       if (mounted && _currentView != _NavigationItem.contacts) {
                         setState(() {
@@ -560,7 +597,9 @@ class _HomeScreenState extends State<HomeScreen>
                       }
                     },
                   ),
-                  IconButton(
+                  const SizedBox(height: 8),
+                  // Новый чат
+                  _NavButton(
                     icon: Icon(
                       Icons.edit_outlined,
                       size: AppSizes.iconXL,
@@ -569,11 +608,7 @@ class _HomeScreenState extends State<HomeScreen>
                           : null,
                     ),
                     tooltip: context.tr('new_chat'),
-                    style: IconButton.styleFrom(
-                      backgroundColor: _currentView == _NavigationItem.newChat
-                          ? Theme.of(context).colorScheme.primaryContainer
-                          : null,
-                    ),
+                    isActive: _currentView == _NavigationItem.newChat,
                     onPressed: () {
                       if (mounted && _currentView != _NavigationItem.newChat) {
                         setState(() {
@@ -583,22 +618,34 @@ class _HomeScreenState extends State<HomeScreen>
                     },
                   ),
                   const Spacer(),
+                  // Разделитель перед нижними кнопками
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    height: 1,
+                    width: 40,
+                    color: Theme.of(context).dividerColor.withOpacity(0.3),
+                  ),
+                  // Версия
                   Padding(
-                    padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                    padding: const EdgeInsets.only(bottom: 8),
                     child: Text(
                       'v${AppVersion.displayVersion}',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 9,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.2,
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  IconButton(
+                  // Настройки
+                  _NavButton(
                     icon: const Icon(Icons.settings, size: AppSizes.iconXL),
                     tooltip: context.tr('settings'),
+                    isActive: false,
                     onPressed: () {
                       final nav =
                           _navigatorKey.currentState ?? Navigator.of(context);
@@ -611,9 +658,16 @@ class _HomeScreenState extends State<HomeScreen>
                       );
                     },
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.logout, size: AppSizes.iconXL),
+                  const SizedBox(height: 4),
+                  // Выход
+                  _NavButton(
+                    icon: Icon(
+                      Icons.logout,
+                      size: AppSizes.iconXL,
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                     tooltip: context.tr('logout'),
+                    isActive: false,
                     onPressed: () async {
                       final navigator = _navigatorKey.currentState;
                       if (navigator == null) return;
@@ -641,7 +695,7 @@ class _HomeScreenState extends State<HomeScreen>
                       }
                     },
                   ),
-                  AppSpacing.spacingVerticalSM,
+                  const SizedBox(height: 12),
                 ],
               ),
             ),
@@ -657,6 +711,47 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Аккуратная кнопка навигации с улучшенным стилем
+class _NavButton extends StatelessWidget {
+  final Widget icon;
+  final String tooltip;
+  final bool isActive;
+  final VoidCallback onPressed;
+
+  const _NavButton({
+    required this.icon,
+    required this.tooltip,
+    required this.isActive,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Tooltip(
+      message: tooltip,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: isActive
+                  ? theme.colorScheme.primaryContainer.withOpacity(0.5)
+                  : null,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(child: icon),
+          ),
         ),
       ),
     );

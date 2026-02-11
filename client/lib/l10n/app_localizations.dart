@@ -108,6 +108,10 @@ class AppLocalizations {
     'accept': 'Принять',
     'remove_friend_title': 'Удалить из друзей?',
     'remove_friend_body': 'Удалить %s из друзей?',
+    'delete_chat': 'Удалить чат',
+    'delete_chat_title': 'Удалить чат?',
+    'delete_chat_message':
+        'Чат с %s будет удалён из списка. Сообщения останутся на сервере.',
     'new_chat': 'Новый чат',
     'search_hint': 'Введите имя и нажмите поиск',
     'add_friend': 'Добавить друга',
@@ -296,6 +300,10 @@ class AppLocalizations {
     'accept': 'Accept',
     'remove_friend_title': 'Remove from friends?',
     'remove_friend_body': 'Remove %s from friends?',
+    'delete_chat': 'Delete chat',
+    'delete_chat_title': 'Delete chat?',
+    'delete_chat_message':
+        'Chat with %s will be removed from the list. Messages will remain on the server.',
     'new_chat': 'New chat',
     'search_hint': 'Enter name and search',
     'add_friend': 'Add friend',

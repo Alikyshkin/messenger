@@ -90,7 +90,6 @@ void main() {
 
     test('Message Sending - Network error flow', () {
       // Проверка обработки сетевой ошибки
-      final messageContent = 'Test message';
       final isNetworkError = true;
 
       if (isNetworkError) {

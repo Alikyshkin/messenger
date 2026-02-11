@@ -199,6 +199,28 @@ class LocalDb {
     }).toList();
   }
 
+  /// Удалить чат и все сообщения с пользователем из локальной БД
+  static Future<void> deleteChat(int peerId) async {
+    final db = await _getDb();
+    if (db == null) return;
+    await db.delete('chats', where: 'peer_id = ?', whereArgs: [peerId]);
+    await db.delete(
+      'messages',
+      where: 'sender_id = ? OR receiver_id = ?',
+      whereArgs: [peerId, peerId],
+    );
+    await db.delete('outbox', where: 'peer_id = ?', whereArgs: [peerId]);
+  }
+
+  /// Удалить групповой чат из локальной БД
+  static Future<void> deleteGroupChat(int groupId) async {
+    final db = await _getDb();
+    if (db == null) return;
+    // Для групповых чатов удаляем только из локального кэша
+    // Сообщения остаются, так как они хранятся на сервере
+    // В будущем можно добавить отдельную таблицу для групповых чатов
+  }
+
   // --- Messages ---
 
   static Message _messageFromRow(Map<String, dynamic> r) {

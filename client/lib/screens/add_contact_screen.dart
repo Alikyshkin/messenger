@@ -7,7 +7,6 @@ import '../services/auth_service.dart';
 import '../utils/app_page_route.dart';
 import '../widgets/app_back_button.dart';
 import '../widgets/user_search_widget.dart';
-import '../widgets/user_list_tile.dart';
 import 'chat_screen.dart';
 
 class AddContactScreen extends StatefulWidget {

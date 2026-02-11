@@ -29,6 +29,12 @@ export const validate = (schema) => {
     });
 
     if (error) {
+      log.warn({ 
+        path: req.path, 
+        method: req.method, 
+        errors: error.details,
+        body: req.body 
+      }, 'Validation failed');
       const errors = error.details.map((detail) => {
         // Переводим стандартные сообщения Joi на русский
         let message = detail.message;

@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-// Note: photo_view, video_player, chewie нужно добавить в pubspec.yaml
-// import 'package:photo_view/photo_view.dart';
-// import 'package:video_player/video_player.dart';
-// import 'package:chewie/chewie.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../models/user.dart';
@@ -32,8 +28,6 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen>
   String? _error;
   String _selectedType = 'all'; // 'all', 'photo', 'video'
   late TabController _tabController;
-  int _currentPage = 0;
-  int _total = 0;
   bool _hasMore = true;
 
   @override
@@ -44,7 +38,6 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen>
       if (_tabController.indexIsChanging) {
         setState(() {
           _selectedType = ['all', 'photo', 'video'][_tabController.index];
-          _currentPage = 0;
           _media = [];
           _hasMore = true;
         });
@@ -104,7 +97,6 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen>
         } else {
           _media = newMedia;
         }
-        _total = pagination['total'] as int? ?? 0;
         _hasMore = pagination['hasMore'] as bool? ?? false;
         _loading = false;
       });

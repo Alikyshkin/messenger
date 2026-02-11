@@ -5,21 +5,6 @@ import '../../lib/models/user.dart';
 /// Интеграционные тесты для проверки полного потока работы звонков
 void main() {
   group('Call Flow Integration Tests', () {
-    late User testPeer;
-
-    setUp(() {
-      testPeer = User(
-        id: 2,
-        username: 'testuser',
-        displayName: 'Test User',
-        bio: '',
-        avatarUrl: null,
-        publicKey: null,
-        birthday: null,
-        phone: null,
-      );
-    });
-
     test('Outgoing call flow: initiate -> offer -> answer -> connected', () {
       // 1. Инициализация исходящего звонка
       bool callInitiated = false;
@@ -29,24 +14,24 @@ void main() {
       // 2. Создание offer сигнала
       final offerSignal = CallSignal(
         fromUserId: 1,
-        type: 'offer',
-        signal: {'type': 'offer', 'sdp': 'test_offer_sdp'},
+        signal: 'offer',
+        payload: {'type': 'offer', 'sdp': 'test_offer_sdp'},
       );
-      expect(offerSignal.type, 'offer');
-      expect(offerSignal.signal['type'], 'offer');
+      expect(offerSignal.signal, 'offer');
+      expect(offerSignal.payload?['type'], 'offer');
 
       // 3. Получение answer сигнала
       final answerSignal = CallSignal(
         fromUserId: 2,
-        type: 'answer',
-        signal: {'type': 'answer', 'sdp': 'test_answer_sdp'},
+        signal: 'answer',
+        payload: {'type': 'answer', 'sdp': 'test_answer_sdp'},
       );
-      expect(answerSignal.type, 'answer');
-      expect(answerSignal.signal['type'], 'answer');
+      expect(answerSignal.signal, 'answer');
+      expect(answerSignal.payload?['type'], 'answer');
 
       // 4. Установление соединения
       bool connected = false;
-      if (offerSignal.type == 'offer' && answerSignal.type == 'answer') {
+      if (offerSignal.signal == 'offer' && answerSignal.signal == 'answer') {
         connected = true;
       }
       expect(connected, true);
@@ -58,10 +43,10 @@ void main() {
         // 1. Получение входящего звонка
         final incomingOffer = CallSignal(
           fromUserId: 2,
-          type: 'offer',
-          signal: {'type': 'offer', 'sdp': 'test_offer_sdp'},
+          signal: 'offer',
+          payload: {'type': 'offer', 'sdp': 'test_offer_sdp'},
         );
-        expect(incomingOffer.type, 'offer');
+        expect(incomingOffer.signal, 'offer');
         expect(incomingOffer.fromUserId, 2);
 
         // 2. Принятие звонка
@@ -72,14 +57,15 @@ void main() {
         // 3. Отправка answer сигнала
         final answerSignal = CallSignal(
           fromUserId: 1,
-          type: 'answer',
-          signal: {'type': 'answer', 'sdp': 'test_answer_sdp'},
+          signal: 'answer',
+          payload: {'type': 'answer', 'sdp': 'test_answer_sdp'},
         );
-        expect(answerSignal.type, 'answer');
+        expect(answerSignal.signal, 'answer');
 
         // 4. Установление соединения
         bool connected = false;
-        if (incomingOffer.type == 'offer' && answerSignal.type == 'answer') {
+        if (incomingOffer.signal == 'offer' &&
+            answerSignal.signal == 'answer') {
           connected = true;
         }
         expect(connected, true);
@@ -90,8 +76,8 @@ void main() {
       // 1. Получение входящего звонка
       final incomingOffer = CallSignal(
         fromUserId: 2,
-        type: 'offer',
-        signal: {'type': 'offer', 'sdp': 'test_offer_sdp'},
+        signal: 'offer',
+        payload: {'type': 'offer', 'sdp': 'test_offer_sdp'},
       );
 
       // 2. Отклонение звонка

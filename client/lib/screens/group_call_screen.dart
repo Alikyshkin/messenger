@@ -76,7 +76,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
 
   bool _cameraEnabled = true;
   bool _micEnabled = true;
-  bool _isFrontCamera = true;
+  final bool _isFrontCamera = true;
 
   int? _myUserId;
   List<GroupMember>? _groupMembers;
