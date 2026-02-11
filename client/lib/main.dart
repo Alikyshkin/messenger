@@ -10,6 +10,7 @@ import 'services/ws_service.dart';
 import 'services/call_minimized_service.dart';
 import 'services/app_update_service.dart';
 import 'widgets/app_lifecycle_listener.dart' show AppUpdateLifecycleListener;
+import 'widgets/app_update_dialog.dart';
 import 'routes/app_router.dart';
 
 void main() async {
@@ -219,30 +220,32 @@ class MessengerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AppUpdateService()),
       ],
       child: AppUpdateLifecycleListener(
-        child: Consumer<AuthService>(
-          builder: (context, authService, _) {
-            return Consumer2<ThemeService, LocaleService>(
-              builder: (context, themeService, localeService, _) {
-                final locale = localeService.locale ?? const Locale('ru');
-                final router = createAppRouter(authService);
-                return MaterialApp.router(
-            title: 'Мессенджер',
-            debugShowCheckedModeBanner: false,
-            locale: locale,
-            supportedLocales: const [Locale('ru'), Locale('en')],
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            theme: _buildLightTheme(),
-            darkTheme: _buildDarkTheme(),
-            themeMode: themeService.themeMode,
-                routerConfig: router,
-                );
-              },
-            );
-          },
+        child: AppUpdateDialogListener(
+          child: Consumer<AuthService>(
+            builder: (context, authService, _) {
+              return Consumer2<ThemeService, LocaleService>(
+                builder: (context, themeService, localeService, _) {
+                  final locale = localeService.locale ?? const Locale('ru');
+                  final router = createAppRouter(authService);
+                  return MaterialApp.router(
+                    title: 'Мессенджер',
+                    debugShowCheckedModeBanner: false,
+                    locale: locale,
+                    supportedLocales: const [Locale('ru'), Locale('en')],
+                    localizationsDelegates: const [
+                      GlobalMaterialLocalizations.delegate,
+                      GlobalWidgetsLocalizations.delegate,
+                      GlobalCupertinoLocalizations.delegate,
+                    ],
+                    theme: _buildLightTheme(),
+                    darkTheme: _buildDarkTheme(),
+                    themeMode: themeService.themeMode,
+                    routerConfig: router,
+                  );
+                },
+              );
+            },
+          ),
         ),
       ),
     );
