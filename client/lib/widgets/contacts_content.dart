@@ -21,8 +21,9 @@ import '../screens/user_profile_screen.dart';
 /// Виджет содержимого экрана контактов без Scaffold для встраивания в HomeScreen
 class ContactsContent extends StatefulWidget {
   final VoidCallback? onFriendRequestChanged;
+  final NavigatorState? navigator;
 
-  const ContactsContent({super.key, this.onFriendRequestChanged});
+  const ContactsContent({super.key, this.onFriendRequestChanged, this.navigator});
 
   @override
   State<ContactsContent> createState() => _ContactsContentState();
@@ -124,7 +125,8 @@ class _ContactsContentState extends State<ContactsContent> {
                 icon: const Icon(Icons.people_alt_outlined),
                 tooltip: context.tr('possible_friends'),
                 onPressed: () async {
-                  await Navigator.of(context).push(
+                  final nav = widget.navigator ?? Navigator.of(context);
+                  await nav.push(
                     MaterialPageRoute(builder: (_) => const PossibleFriendsScreen()),
                   );
                   _load();
@@ -134,7 +136,8 @@ class _ContactsContentState extends State<ContactsContent> {
                 icon: const Icon(Icons.add),
                 tooltip: context.tr('add_by_username'),
                 onPressed: () async {
-                  await Navigator.of(context).push(
+                  final nav = widget.navigator ?? Navigator.of(context);
+                  await nav.push(
                     MaterialPageRoute(builder: (_) => const AddContactScreen()),
                   );
                   _load();
@@ -216,24 +219,33 @@ class _ContactsContentState extends State<ContactsContent> {
                                   children: _contacts.map((u) => UserListTile(
                                     user: u,
                                     avatarRadius: AppSizes.avatarMD,
-                                    onTap: () => Navigator.of(context).push(
-                                      AppPageRoute(builder: (_) => UserProfileScreen(user: u)),
-                                    ),
+                                    onTap: () {
+                                      final nav = widget.navigator ?? Navigator.of(context);
+                                      nav.push(
+                                        AppPageRoute(builder: (_) => UserProfileScreen(user: u)),
+                                      );
+                                    },
                                     trailing: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         IconButton(
                                           icon: const Icon(Icons.person_outline),
-                                          onPressed: () => Navigator.of(context).push(
-                                            AppPageRoute(builder: (_) => UserProfileScreen(user: u)),
-                                          ),
+                                          onPressed: () {
+                                            final nav = widget.navigator ?? Navigator.of(context);
+                                            nav.push(
+                                              AppPageRoute(builder: (_) => UserProfileScreen(user: u)),
+                                            );
+                                          },
                                           tooltip: context.tr('profile_tooltip'),
                                         ),
                                         IconButton(
                                           icon: const Icon(Icons.message_outlined),
-                                          onPressed: () => Navigator.of(context).push(
-                                            AppPageRoute(builder: (_) => ChatScreen(peer: u)),
-                                          ),
+                                          onPressed: () {
+                                            final nav = widget.navigator ?? Navigator.of(context);
+                                            nav.push(
+                                              AppPageRoute(builder: (_) => ChatScreen(peer: u)),
+                                            );
+                                          },
                                           tooltip: context.tr('write'),
                                         ),
                                         IconButton(

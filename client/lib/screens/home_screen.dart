@@ -51,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   List<FriendRequest> _friendRequests = [];
   int _totalUnreadCount = 0;
   _NavigationItem _currentView = _NavigationItem.chats;
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   bool _initialized = false;
 
@@ -209,11 +210,16 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
           onFriendRequestChanged: () {
             _loadFriendRequests();
           },
+          navigator: _navigatorKey.currentState,
         );
       case _NavigationItem.newChat:
-        return const StartChatContent();
+        return StartChatContent(
+          navigator: _navigatorKey.currentState,
+        );
       case _NavigationItem.profile:
-        return const ProfileContent();
+        return ProfileContent(
+          navigator: _navigatorKey.currentState,
+        );
     }
   }
 
@@ -376,7 +382,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                               return IconButton(
                                 icon: (user != null && (user.avatarUrl?.isNotEmpty ?? false))
                                     ? UserAvatar(
-                                        user: user!,
+                                        user: user,
                                         radius: AppSizes.avatarSM,
                                       )
                                     : Icon(
@@ -579,7 +585,15 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   ),
                 ),
                 Expanded(
-                  child: _buildContentView(context),
+                  child: Navigator(
+                    key: _navigatorKey,
+                    onGenerateRoute: (settings) {
+                      return MaterialPageRoute(
+                        builder: (context) => _buildContentView(context),
+                        settings: settings,
+                      );
+                    },
+                  ),
                 ),
               ],
             ),

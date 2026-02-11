@@ -32,7 +32,9 @@ String _formatBirthday(BuildContext context, String iso) {
 
 /// Виджет содержимого экрана профиля без Scaffold для встраивания в HomeScreen
 class ProfileContent extends StatefulWidget {
-  const ProfileContent({super.key});
+  final NavigatorState? navigator;
+  
+  const ProfileContent({super.key, this.navigator});
 
   @override
   State<ProfileContent> createState() => _ProfileContentState();
@@ -70,7 +72,8 @@ class _ProfileContentState extends State<ProfileContent> {
                     icon: const Icon(Icons.settings),
                     tooltip: context.tr('settings'),
                     onPressed: () {
-                      Navigator.of(context).push(
+                      final nav = widget.navigator ?? Navigator.of(context);
+                      nav.push(
                         MaterialPageRoute(builder: (_) => const SettingsScreen()),
                       );
                     },
@@ -159,7 +162,8 @@ class _ProfileContentState extends State<ProfileContent> {
                           title: Text(context.tr('settings')),
                           subtitle: Text(context.tr('settings_subtitle')),
                           onTap: () {
-                            Navigator.of(context).push(
+                            final nav = widget.navigator ?? Navigator.of(context);
+                            nav.push(
                               MaterialPageRoute(builder: (_) => const SettingsScreen()),
                             );
                           },

@@ -4,14 +4,16 @@ import '../models/user.dart';
 import '../utils/app_page_route.dart';
 import '../screens/chat_screen.dart';
 import 'user_search_widget.dart';
-import 'user_list_tile.dart';
 
 /// Виджет содержимого экрана нового чата без Scaffold для встраивания в HomeScreen
 class StartChatContent extends StatelessWidget {
-  const StartChatContent({super.key});
+  final NavigatorState? navigator;
+  
+  const StartChatContent({super.key, this.navigator});
 
   void _openChat(BuildContext context, User u) {
-    Navigator.of(context).push(
+    final nav = navigator ?? Navigator.of(context);
+    nav.push(
       AppPageRoute(builder: (_) => ChatScreen(peer: u)),
     );
   }
