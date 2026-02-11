@@ -73,7 +73,10 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.tr('contacts_permission')),
-          action: SnackBarAction(label: context.tr('settings'), onPressed: openAppSettings),
+          action: SnackBarAction(
+            label: context.tr('settings'),
+            onPressed: openAppSettings,
+          ),
         ),
       );
       return;
@@ -103,14 +106,20 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
       await _load();
       if (!mounted) return;
       setState(() {
-        _users = found.where((u) => !_contactIds.contains(u.id) && !_pendingIds.contains(u.id)).toList();
+        _users = found
+            .where(
+              (u) => !_contactIds.contains(u.id) && !_pendingIds.contains(u.id),
+            )
+            .toList();
         _syncing = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() => _syncing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка синхронизации')),
+        SnackBar(
+          content: Text(e is ApiException ? e.message : 'Ошибка синхронизации'),
+        ),
       );
     }
   }
@@ -120,7 +129,8 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _load().then((_) {
-        if (mounted && _users.isEmpty && !_loading && _error == null) _syncContacts();
+        if (mounted && _users.isEmpty && !_loading && _error == null)
+          _syncContacts();
       });
     });
   }
@@ -135,11 +145,17 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
         _users = _users.where((x) => x.id != u.id).toList();
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr('request_sent_to').replaceFirst('%s', u.displayName))),
+        SnackBar(
+          content: Text(
+            context.tr('request_sent_to').replaceFirst('%s', u.displayName),
+          ),
+        ),
       );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     }
   }
 
@@ -153,7 +169,11 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
           if (_syncing)
             const Padding(
               padding: EdgeInsets.all(16),
-              child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             )
           else
             IconButton(
@@ -166,87 +186,126 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error), textAlign: TextAlign.center),
-                        const SizedBox(height: 16),
-                        FilledButton.icon(onPressed: _load, icon: const Icon(Icons.refresh, size: 20), label: Text(context.tr('retry'))),
-                      ],
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _error!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                  ),
-                )
-              : _users.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.people_outline, size: 64, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
-                            const SizedBox(height: 16),
-                            Text(
-                              context.tr('possible_friends_empty'),
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            FilledButton.icon(
-                              onPressed: _syncing ? null : _syncContacts,
-                              icon: const Icon(Icons.sync, size: 20),
-                              label: Text(context.tr('sync_contacts')),
-                            ),
-                          ],
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      onPressed: _load,
+                      icon: const Icon(Icons.refresh, size: 20),
+                      label: Text(context.tr('retry')),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : _users.isEmpty
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.people_outline,
+                      size: 64,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      context.tr('possible_friends_empty'),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: _syncing ? null : _syncContacts,
+                      icon: const Icon(Icons.sync, size: 20),
+                      label: Text(context.tr('sync_contacts')),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: () async {
+                await _load();
+                if (mounted) _syncContacts();
+              },
+              child: ListView.builder(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+                itemCount: _users.length,
+                itemBuilder: (context, i) {
+                  final u = _users[i];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
+                      leading: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer,
+                        backgroundImage:
+                            u.avatarUrl != null && u.avatarUrl!.isNotEmpty
+                            ? NetworkImage(u.avatarUrl!)
+                            : null,
+                        child: u.avatarUrl == null || u.avatarUrl!.isEmpty
+                            ? Text(
+                                u.displayName.isNotEmpty
+                                    ? u.displayName[0].toUpperCase()
+                                    : '?',
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              )
+                            : null,
+                      ),
+                      title: Text(
+                        u.displayName,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      subtitle: Text(
+                        '@${u.username}',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          fontSize: 14,
                         ),
                       ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        await _load();
-                        if (mounted) _syncContacts();
-                      },
-                      child: ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-                        itemCount: _users.length,
-                        itemBuilder: (context, i) {
-                          final u = _users[i];
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              leading: CircleAvatar(
-                                radius: 24,
-                                backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                backgroundImage: u.avatarUrl != null && u.avatarUrl!.isNotEmpty ? NetworkImage(u.avatarUrl!) : null,
-                                child: u.avatarUrl == null || u.avatarUrl!.isEmpty
-                                    ? Text(
-                                        u.displayName.isNotEmpty ? u.displayName[0].toUpperCase() : '?',
-                                        style: TextStyle(
-                                          color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      )
-                                    : null,
-                              ),
-                              title: Text(u.displayName, style: const TextStyle(fontWeight: FontWeight.w500)),
-                              subtitle: Text('@${u.username}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),
-                              trailing: FilledButton(
-                                onPressed: () => _addFriend(u),
-                                child: Text(context.tr('add')),
-                              ),
-                              onTap: () => Navigator.of(context).push(
-                                AppPageRoute(builder: (_) => UserProfileScreen(user: u)),
-                              ),
-                            ),
-                          );
-                        },
+                      trailing: FilledButton(
+                        onPressed: () => _addFriend(u),
+                        child: Text(context.tr('add')),
+                      ),
+                      onTap: () => Navigator.of(context).push(
+                        AppPageRoute(
+                          builder: (_) => UserProfileScreen(user: u),
+                        ),
                       ),
                     ),
+                  );
+                },
+              ),
+            ),
     );
   }
 }

@@ -101,7 +101,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
       return;
     }
 
-    _myUserId = auth.userId;
+    _myUserId = auth.user?.id;
     _ws = context.read<WsService>();
 
     // Загружаем актуальный список участников группы
@@ -696,12 +696,14 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     );
   }
 
-  Widget _buildVideoGrid(List<_GroupCallParticipant> participants) {
+  Widget _buildVideoGrid(List<_GroupCallParticipant> connectedParticipants, List<_GroupCallParticipant> connectingParticipants) {
     // Добавляем локальное видео в начало списка
+    // Показываем подключенных и подключающихся участников
     final allParticipants = [
       if (_localRendererInitialized && _localStream != null)
         null, // null означает локальное видео
-      ...participants,
+      ...connectedParticipants,
+      ...connectingParticipants, // Показываем подключающихся участников
     ];
 
     final count = allParticipants.length;
@@ -718,7 +720,8 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     else
       columns = 4;
 
-    final rows = (count / columns).ceil();
+    // rows вычисляется для информации, но не используется напрямую
+    // GridView автоматически вычисляет количество строк
 
     return GridView.builder(
       padding: const EdgeInsets.all(8),
