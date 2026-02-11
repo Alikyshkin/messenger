@@ -127,9 +127,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<Message> _decryptMessage(Message m, {int? myId}) async {
     if (!m.content.startsWith('e2ee:')) return m;
-    String? keyToUse = m.senderPublicKey;
-    if (keyToUse == null && myId != null && m.senderId == myId) {
+    // Для своих сообщений используем публичный ключ получателя (peer),
+    // потому что сообщение было зашифровано для него.
+    // Для входящих сообщений используем публичный ключ отправителя.
+    String? keyToUse;
+    if (myId != null && m.senderId == myId) {
       keyToUse = widget.peer.publicKey;
+    } else {
+      keyToUse = m.senderPublicKey;
     }
     if (keyToUse == null || keyToUse.isEmpty) return m;
     final decrypted = await _e2ee.decrypt(m.content, keyToUse);
