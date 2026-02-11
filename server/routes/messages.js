@@ -13,7 +13,7 @@ import { messageLimiter, uploadLimiter } from '../middleware/rateLimit.js';
 import { sanitizeText } from '../middleware/sanitize.js';
 import { validate, sendMessageSchema, validateParams, peerIdParamSchema, messageIdParamSchema, addReactionSchema } from '../middleware/validation.js';
 import { validateFile } from '../middleware/fileValidation.js';
-
+import { asyncHandler } from '../middleware/errorHandler.js';
 import { ALLOWED_REACTION_EMOJIS, FILE_LIMITS, ALLOWED_FILE_TYPES } from '../config/constants.js';
 const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getMessageReactions(messageId) {
