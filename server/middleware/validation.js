@@ -1,10 +1,12 @@
 import Joi from 'joi';
 import zxcvbn from 'zxcvbn';
 import { VALIDATION_LIMITS, ALLOWED_REACTION_EMOJIS } from '../config/constants.js';
+import { log } from '../utils/logger.js';
 
 // Middleware для валидации запросов
 export const validate = (schema) => {
   return (req, res, next) => {
+    log.info({ path: req.path, method: req.method }, 'Validation middleware - start');
     const { error, value } = schema.validate(req.body, {
       abortEarly: false,
       stripUnknown: true,
@@ -54,6 +56,7 @@ export const validate = (schema) => {
     }
 
     req.validated = value;
+    log.info({ path: req.path, method: req.method }, 'Validation middleware - success, calling next()');
     next();
   };
 };
