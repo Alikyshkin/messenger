@@ -7,10 +7,11 @@ import { sendPasswordResetEmail } from '../mailer.js';
 import { authLimiter, registerLimiter, passwordResetLimiter } from '../middleware/rateLimit.js';
 import { validate, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema } from '../middleware/validation.js';
 import { log } from '../utils/logger.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
-router.post('/register', registerLimiter, validate(registerSchema), (req, res) => {
+router.post('/register', registerLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
   const { username, password, displayName, email } = req.validated;
   const password_hash = bcrypt.hashSync(password, 10);
   try {
@@ -36,9 +37,9 @@ router.post('/register', registerLimiter, validate(registerSchema), (req, res) =
     log.error('Registration error', e, { username });
     throw e;
   }
-});
+}));
 
-router.post('/login', authLimiter, validate(loginSchema), (req, res) => {
+router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async (req, res) => {
   const { username, password } = req.validated;
   const user = db.prepare(
     'SELECT id, username, display_name, email, password_hash FROM users WHERE username = ?'
@@ -56,10 +57,10 @@ router.post('/login', authLimiter, validate(loginSchema), (req, res) => {
     },
     token,
   });
-});
+}));
 
 // Восстановление пароля: запрос письма со ссылкой
-router.post('/forgot-password', passwordResetLimiter, validate(forgotPasswordSchema), async (req, res) => {
+router.post('/forgot-password', passwordResetLimiter, validate(forgotPasswordSchema), asyncHandler(async (req, res) => {
   const { email } = req.validated;
   const user = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
   if (user) {
@@ -73,10 +74,10 @@ router.post('/forgot-password', passwordResetLimiter, validate(forgotPasswordSch
     await sendPasswordResetEmail(email, token);
   }
   res.json({ message: 'Если аккаунт с таким email существует, на него отправлена ссылка для сброса пароля.' });
-});
+}));
 
 // Сброс пароля по токену из ссылки
-router.post('/reset-password', passwordResetLimiter, validate(resetPasswordSchema), (req, res) => {
+router.post('/reset-password', passwordResetLimiter, validate(resetPasswordSchema), asyncHandler(async (req, res) => {
   const { token, newPassword } = req.validated;
   const tokenHash = crypto.createHash('sha256').update(token.trim()).digest('hex');
   const row = db.prepare(
@@ -89,10 +90,10 @@ router.post('/reset-password', passwordResetLimiter, validate(resetPasswordSchem
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(password_hash, row.user_id);
   db.prepare('DELETE FROM password_reset_tokens WHERE id = ?').run(row.id);
   res.json({ message: 'Пароль обновлён. Теперь можно войти.' });
-});
+}));
 
 // Смена пароля (авторизованный пользователь)
-router.post('/change-password', authMiddleware, validate(changePasswordSchema), (req, res) => {
+router.post('/change-password', authMiddleware, validate(changePasswordSchema), asyncHandler(async (req, res) => {
   const { currentPassword, newPassword } = req.validated;
   const user = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user.userId);
   if (!user || !bcrypt.compareSync(currentPassword, user.password_hash)) {
@@ -101,6 +102,6 @@ router.post('/change-password', authMiddleware, validate(changePasswordSchema), 
   const password_hash = bcrypt.hashSync(newPassword, 10);
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(password_hash, req.user.userId);
   res.json({ message: 'Пароль изменён' });
-});
+}));
 
 export default router;

@@ -11,6 +11,7 @@ import { verifyToken } from './auth.js';
 import { clients, broadcastToUser } from './realtime.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { log } from './utils/logger.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 import authRoutes from './routes/auth.js';
 import contactsRoutes from './routes/contacts.js';
@@ -88,6 +89,12 @@ app.use('/users', usersRoutes);
 app.use('/polls', pollsRoutes);
 
 app.get('/health', (req, res) => res.json({ ok: true }));
+
+// Обработка 404 ошибок (должен быть после всех маршрутов)
+app.use(notFoundHandler);
+
+// Централизованный обработчик ошибок (должен быть последним)
+app.use(errorHandler);
 
 // Веб-клиент (Flutter build) — отдаём по корню; без долгого кэша, чтобы после пуша сразу видеть изменения
 app.use(express.static(publicDir, {
