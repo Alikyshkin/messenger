@@ -422,6 +422,7 @@ class _CallScreenState extends State<CallScreen> {
       _offerReceived = true;
       
       try {
+        setState(() => _isConnecting = true);
         await _renderersFuture;
         
         // Получаем медиа только если еще не получили
@@ -468,6 +469,7 @@ class _CallScreenState extends State<CallScreen> {
           AppSoundService.instance.stopRingtone();
           setState(() {
             _state = 'connected';
+            _isConnecting = false;
           });
         }
       } catch (e) {
@@ -476,6 +478,7 @@ class _CallScreenState extends State<CallScreen> {
           setState(() {
             _state = 'ended';
             _error = _mediaErrorMessage(e);
+            _isConnecting = false;
           });
         }
       }
