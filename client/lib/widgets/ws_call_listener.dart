@@ -40,6 +40,41 @@ class _WsCallListenerState extends State<WsCallListener> {
     _sub = ws.callSignals.listen((signal) async {
       if (!mounted || signal.signal != 'offer') return;
       
+      // Если это групповой звонок, обрабатываем отдельно
+      if (signal.groupId != null) {
+        try {
+          final api = Api(auth.token);
+          final group = await api.getGroup(signal.groupId!);
+          
+          AppSoundService.instance.playRingtone();
+          
+          if (!isPageVisible) {
+            await requestNotificationPermission();
+            await showPageNotification(
+              title: 'Входящий групповой видеозвонок',
+              body: group.name,
+            );
+            await focusWindow();
+          }
+          
+          if (!mounted) return;
+          Navigator.of(context).push(
+            AppPageRoute(
+              builder: (_) => GroupCallScreen(
+                group: group,
+                isIncoming: true,
+                initialSignal: signal,
+              ),
+            ),
+          );
+        } catch (e) {
+          // Если не удалось загрузить группу, игнорируем звонок
+          print('Error loading group for call: $e');
+        }
+        return;
+      }
+      
+      // Обычный приватный звонок
       // Загружаем информацию о пользователе
       User peer;
       try {

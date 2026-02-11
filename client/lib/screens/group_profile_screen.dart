@@ -5,7 +5,9 @@ import '../models/group.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../widgets/app_back_button.dart';
+import '../utils/app_page_route.dart';
 import 'group_chat_screen.dart';
+import 'group_call_screen.dart';
 
 class GroupProfileScreen extends StatefulWidget {
   final Group group;
@@ -144,10 +146,13 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
                 );
                 return;
               }
-              // Пока что групповые звонки не полностью реализованы
-              // Можно добавить отдельный экран для групповых звонков в будущем
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Групповые видеозвонки в разработке')),
+              Navigator.of(context).push(
+                AppPageRoute(
+                  builder: (_) => GroupCallScreen(
+                    group: g,
+                    isIncoming: false,
+                  ),
+                ),
               );
             },
           ),

@@ -530,14 +530,20 @@ wss.on('connection', (ws, req) => {
           return;
         }
         
-        broadcastToUser(toId, {
+        const signalPayload = {
           type: 'call_signal',
           fromUserId: userId,
           signal: data.signal,
           payload: data.payload ?? null,
           isVideoCall: data.isVideoCall ?? true, // По умолчанию видеозвонок для совместимости
-          groupId: groupId ?? null,
-        });
+        };
+        
+        // Если это групповой звонок, добавляем groupId
+        if (groupId != null) {
+          signalPayload.groupId = groupId;
+        }
+        
+        broadcastToUser(toId, signalPayload);
       }
       
       if (data.type === 'group_call_signal') {
