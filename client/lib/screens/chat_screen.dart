@@ -28,7 +28,6 @@ import 'call_screen.dart';
 import 'record_video_note_screen.dart';
 import 'user_profile_screen.dart';
 import 'image_preview_screen.dart';
-import 'media_gallery_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   final User peer;
@@ -636,12 +635,24 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
-      await LocalDb.addToOutbox(widget.peer.id, toSend);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Нет связи. Сообщение будет отправлено при появлении сети.'),
-        ),
-      );
+      // Проверяем, была ли это реальная сетевая ошибка или ошибка парсинга
+      // Если это ApiException с кодом 201, значит сообщение было отправлено, но была ошибка парсинга
+      if (e is ApiException && e.statusCode == 201) {
+        // Сообщение было отправлено, но была ошибка парсинга - не добавляем в outbox
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Сообщение отправлено, но произошла ошибка при обработке ответа: ${e.message}'),
+          ),
+        );
+      } else {
+        // Для реальных сетевых ошибок добавляем в outbox
+        await LocalDb.addToOutbox(widget.peer.id, toSend);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Нет связи. Сообщение будет отправлено при появлении сети.'),
+          ),
+        );
+      }
     }
   }
 

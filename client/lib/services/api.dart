@@ -326,13 +326,31 @@ class Api {
       if (forwardFromSenderId != null) body['forward_from_sender_id'] = forwardFromSenderId;
       if (forwardFromDisplayName != null) body['forward_from_display_name'] = forwardFromDisplayName;
     }
-    final r = await http.post(
-      Uri.parse('$base/messages'),
-      headers: _headers,
-      body: jsonEncode(body),
-    );
-    _checkResponse(r);
-    return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+    http.Response? r;
+    try {
+      r = await http.post(
+        Uri.parse('$base/messages'),
+        headers: _headers,
+        body: jsonEncode(body),
+      );
+      _checkResponse(r);
+      final json = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+      return Message.fromJson(json);
+    } catch (e) {
+      // Если это ошибка парсинга, но запрос был успешным (201), значит сообщение отправлено
+      if (r != null && r.statusCode == 201) {
+        // Пытаемся распарсить ответ еще раз с более мягкой обработкой
+        try {
+          final json = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+          return Message.fromJson(json);
+        } catch (_) {
+          // Если все равно не получается, выбрасываем ошибку парсинга
+          throw ApiException(500, 'Ошибка парсинга ответа сервера: ${e.toString()}');
+        }
+      }
+      // Для всех остальных ошибок пробрасываем дальше
+      rethrow;
+    }
   }
 
   Future<Message> sendMessageWithFile(
