@@ -37,7 +37,7 @@ class AppSoundService {
     } catch (_) {
       if (kDebugMode) {
         // ignore: avoid_print
-        print('AppSoundService: ringtone asset not found or failed');
+        debugPrint('AppSoundService: ringtone asset not found or failed');
       }
     }
   }
@@ -65,7 +65,7 @@ class AppSoundService {
     } catch (_) {
       if (kDebugMode) {
         // ignore: avoid_print
-        print('AppSoundService: notification asset not found or failed');
+        debugPrint('AppSoundService: notification asset not found or failed');
       }
     }
   }

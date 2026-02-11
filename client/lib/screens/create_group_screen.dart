@@ -157,7 +157,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                             size: 48,
                             color: Theme.of(
                               context,
-                            ).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                            ).colorScheme.onPrimaryContainer.withValues(alpha:0.7),
                           )
                         : null,
                   ),

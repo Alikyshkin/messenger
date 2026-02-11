@@ -22,7 +22,7 @@ class EmptyStateWidget extends StatelessWidget {
                 size: 64,
                 color: Theme.of(
                   context,
-                ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                ).colorScheme.onSurfaceVariant.withValues(alpha:0.5),
               ),
               AppSpacing.spacingVerticalLG,
             ],

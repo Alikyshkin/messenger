@@ -115,7 +115,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: progress,
-                  backgroundColor: color.withOpacity(0.3),
+                  backgroundColor: color.withValues(alpha:0.3),
                   valueColor: AlwaysStoppedAnimation<Color>(color),
                   minHeight: 4,
                 ),
@@ -124,7 +124,7 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
             const SizedBox(height: 4),
             Text(
               '${_formatDuration(position)} / ${_formatDuration(duration)}',
-              style: TextStyle(fontSize: 12, color: color.withOpacity(0.9)),
+              style: TextStyle(fontSize: 12, color: color.withValues(alpha:0.9)),
             ),
           ],
         ),

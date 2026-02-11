@@ -278,8 +278,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final u = auth.user;
-    if (u == null)
+    if (u == null) {
       return Scaffold(body: Center(child: Text(context.tr('not_authorized'))));
+    }
 
     return Scaffold(
       appBar: AppBar(

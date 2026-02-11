@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
@@ -336,13 +337,13 @@ class _CallScreenState extends State<CallScreen> {
       }, widget.isVideoCall);
     };
     _pc!.onTrack = (event) {
-      print(
+      debugPrint(
         'onTrack event: ${event.track.kind}, streams: ${event.streams.length}',
       );
       if (event.streams.isNotEmpty) {
         final stream = event.streams.first;
         _remoteStream = stream;
-        print(
+        debugPrint(
           'Remote stream received: ${stream.id}, tracks: ${stream.getTracks().length}',
         );
         if (_renderersInitialized) {
@@ -353,7 +354,7 @@ class _CallScreenState extends State<CallScreen> {
         }
       } else {
         // Если потоков нет, но есть трек - это нестандартная ситуация
-        print(
+        debugPrint(
           'Track without stream: ${event.track.kind}, enabled: ${event.track.enabled}',
         );
         // Обновляем состояние, возможно поток появится позже
@@ -363,7 +364,7 @@ class _CallScreenState extends State<CallScreen> {
       }
     };
     _pc!.onConnectionState = (state) {
-      print('PeerConnection connectionState: $state');
+      debugPrint('PeerConnection connectionState: $state');
       if (mounted) {
         setState(() {});
       }
@@ -411,10 +412,12 @@ class _CallScreenState extends State<CallScreen> {
         _isConnecting = false;
 
         // Проверяем обновления когда собеседник вышел из звонка
-        try {
-          context.read<AppUpdateService>().checkForUpdates();
-        } catch (_) {
-          // Игнорируем ошибки проверки обновлений
+        if (mounted) {
+          try {
+            context.read<AppUpdateService>().checkForUpdates();
+          } catch (_) {
+            // Игнорируем ошибки проверки обновлений
+          }
         }
       }
       return;
@@ -438,7 +441,7 @@ class _CallScreenState extends State<CallScreen> {
 
       // Защита от дублирующих offer
       if (_offerReceived && _pc != null) {
-        print('Duplicate offer received, ignoring');
+        debugPrint('Duplicate offer received, ignoring');
         return;
       }
       _offerReceived = true;
@@ -454,12 +457,12 @@ class _CallScreenState extends State<CallScreen> {
 
         _pc = await createPeerConnection(WebRTCConstants.iceServers, {});
         _setupPeerConnection();
-        print(
+        debugPrint(
           'Adding local tracks (handle offer): ${_localStream!.getTracks().length}',
         );
         // Добавляем треки в PeerConnection перед применением mute
         for (var track in _localStream!.getTracks()) {
-          print('Adding track: ${track.kind}, enabled: ${track.enabled}');
+          debugPrint('Adding track: ${track.kind}, enabled: ${track.enabled}');
           await _pc!.addTrack(track, _localStream!);
         }
         // Применяем mute после добавления треков
@@ -480,7 +483,7 @@ class _CallScreenState extends State<CallScreen> {
               ),
             );
           } catch (e) {
-            print('Error adding pending candidate: $e');
+            debugPrint('Error adding pending candidate: $e');
           }
         }
         _pendingCandidates.clear();
@@ -531,7 +534,7 @@ class _CallScreenState extends State<CallScreen> {
               ),
             );
           } catch (e) {
-            print('Error adding pending candidate: $e');
+            debugPrint('Error adding pending candidate: $e');
           }
         }
         _pendingCandidates.clear();
@@ -544,7 +547,7 @@ class _CallScreenState extends State<CallScreen> {
           });
         }
       } catch (e) {
-        print('Error handling answer signal: $e');
+        debugPrint('Error handling answer signal: $e');
         if (mounted) {
           setState(() {
             _state = 'ended';
@@ -589,7 +592,7 @@ class _CallScreenState extends State<CallScreen> {
       _setupPeerConnection();
       // Добавляем треки в PeerConnection перед применением mute
       for (var track in _localStream!.getTracks()) {
-        print(
+        debugPrint(
           'Adding track to PeerConnection (accept): ${track.kind}, enabled: ${track.enabled}',
         );
         await _pc!.addTrack(track, _localStream!);
@@ -661,7 +664,9 @@ class _CallScreenState extends State<CallScreen> {
     if (_screenShareEnabled) await _stopScreenShare();
     _localRenderer.srcObject = null;
     // Очищаем состояние минимизации
-    context.read<CallMinimizedService>().endCall();
+    if (mounted) {
+      context.read<CallMinimizedService>().endCall();
+    }
     _remoteRenderer.srcObject = null;
     _screenRenderer.srcObject = null;
     _localStream?.getTracks().forEach((t) => t.stop());
@@ -679,8 +684,9 @@ class _CallScreenState extends State<CallScreen> {
     }
 
     // Проверяем обновления при выходе из звонка
-    try {
-      context.read<AppUpdateService>().checkForUpdates();
+    if (mounted) {
+      try {
+        context.read<AppUpdateService>().checkForUpdates();
     } catch (_) {
       // Игнорируем ошибки проверки обновлений
     }

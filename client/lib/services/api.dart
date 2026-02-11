@@ -380,10 +380,12 @@ class Api {
     if (replyToId != null) body['reply_to_id'] = replyToId;
     if (isForwarded) {
       body['is_forwarded'] = true;
-      if (forwardFromSenderId != null)
+      if (forwardFromSenderId != null) {
         body['forward_from_sender_id'] = forwardFromSenderId;
-      if (forwardFromDisplayName != null)
+      }
+      if (forwardFromDisplayName != null) {
         body['forward_from_display_name'] = forwardFromDisplayName;
+      }
     }
     http.Response? r;
     try {
@@ -594,8 +596,9 @@ class Api {
 
   static Future<List<int>> getAttachmentBytes(String url) async {
     final r = await http.get(Uri.parse(url));
-    if (r.statusCode != 200)
+    if (r.statusCode != 200) {
       throw ApiException(r.statusCode, 'Ошибка загрузки');
+    }
     List<int> bytes = r.bodyBytes;
     if (url.endsWith('.gz')) {
       bytes = GZipDecoder().decodeBytes(bytes);
@@ -730,9 +733,12 @@ class Api {
       );
     }
     final body = <String, dynamic>{};
-    if (name != null) body['name'] = name;
-    if (body.isEmpty)
+    if (name != null) {
+      body['name'] = name;
+    }
+    if (body.isEmpty) {
       throw ApiException(400, 'Укажите name и/или загрузите avatar');
+    }
     final r = await http.patch(
       Uri.parse('$base/groups/$groupId'),
       headers: _headers,
@@ -804,10 +810,12 @@ class Api {
     if (replyToId != null) body['reply_to_id'] = replyToId;
     if (isForwarded) {
       body['is_forwarded'] = true;
-      if (forwardFromSenderId != null)
+      if (forwardFromSenderId != null) {
         body['forward_from_sender_id'] = forwardFromSenderId;
-      if (forwardFromDisplayName != null)
+      }
+      if (forwardFromDisplayName != null) {
         body['forward_from_display_name'] = forwardFromDisplayName;
+      }
     }
     final r = await http.post(
       Uri.parse('$base/groups/$groupId/messages'),

@@ -33,7 +33,7 @@ class NavBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
         boxShadow: [
           BoxShadow(
-            color: bgColor.withOpacity(0.3),
+            color: bgColor.withValues(alpha:0.3),
             blurRadius: 4,
             offset: const Offset(0, 1),
           ),

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -44,8 +43,9 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
       // В браузере камера работает только по HTTPS; по HTTP браузер блокирует доступ
       return 'Видеокружок в браузере доступен только по HTTPS. Откройте сайт по https:// или используйте приложение на телефоне.';
     }
-    if (e.toString().toLowerCase().contains('permission'))
+    if (e.toString().toLowerCase().contains('permission')) {
       return 'Нет доступа к камере. Разрешите доступ в настройках.';
+    }
     return 'Ошибка камеры. Проверьте, что приложению разрешён доступ к камере.';
   }
 
@@ -87,8 +87,9 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
   }
 
   Future<void> _startRecording() async {
-    if (_controller == null || !_controller!.value.isInitialized || _recording)
+    if (_controller == null || !_controller!.value.isInitialized || _recording) {
       return;
+    }
     try {
       await _controller!.startVideoRecording();
       setState(() {
@@ -131,6 +132,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
           ? name
           : 'video_note_${DateTime.now().millisecondsSinceEpoch}.mp4';
       final durationSec = _recordSeconds > 0 ? _recordSeconds : 1;
+      if (!mounted) return;
       final auth = context.read<AuthService>();
       final api = Api(auth.token);
       final msg = await api.sendVideoNoteMessage(

@@ -82,6 +82,7 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
       return;
     }
     setState(() => _syncing = true);
+    if (!mounted) return;
     try {
       final auth = context.read<AuthService>();
       final contacts = await FlutterContacts.getContacts(withProperties: true);
@@ -129,8 +130,9 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _load().then((_) {
-        if (mounted && _users.isEmpty && !_loading && _error == null)
+        if (mounted && _users.isEmpty && !_loading && _error == null) {
           _syncContacts();
+        }
       });
     });
   }
@@ -221,7 +223,7 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
                       size: 64,
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                      ).colorScheme.onSurfaceVariant.withValues(alpha:0.5),
                     ),
                     const SizedBox(height: 16),
                     Text(

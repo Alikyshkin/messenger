@@ -10,9 +10,12 @@ import '../styles/app_sizes.dart';
 String _friendsCountLabel(BuildContext context, int? count) {
   if (count == null) return '—';
   if (count == 0) return context.tr('no_friends');
-  if (count == 1) return context.tr('one_friend');
-  if (count >= 2 && count <= 4)
+  if (count == 1) {
+    return context.tr('one_friend');
+  }
+  if (count >= 2 && count <= 4) {
     return context.tr('friends_2_4').replaceFirst('%s', '$count');
+  }
   return context.tr('friends_5_plus').replaceFirst('%s', '$count');
 }
 

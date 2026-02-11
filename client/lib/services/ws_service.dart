@@ -136,9 +136,12 @@ class WsService extends ChangeNotifier {
         final msg = Message.fromJson(map['message'] as Map<String, dynamic>);
         _incoming.add(msg);
         notifyListeners();
-        if (!_newMessageController.isClosed) _newMessageController.add(null);
-        if (!_newMessagePayloadController.isClosed)
+        if (!_newMessageController.isClosed) {
+          _newMessageController.add(null);
+        }
+        if (!_newMessagePayloadController.isClosed) {
           _newMessagePayloadController.add(msg);
+        }
       } else if (map['type'] == 'new_group_message' &&
           map['group_id'] != null &&
           map['message'] != null) {
@@ -147,9 +150,12 @@ class WsService extends ChangeNotifier {
         final msg = Message.fromJson(msgMap);
         _incoming.add(msg);
         notifyListeners();
-        if (!_newMessageController.isClosed) _newMessageController.add(null);
-        if (!_newMessagePayloadController.isClosed)
+        if (!_newMessageController.isClosed) {
+          _newMessageController.add(null);
+        }
+        if (!_newMessagePayloadController.isClosed) {
           _newMessagePayloadController.add(msg);
+        }
       } else if (map['type'] == 'call_signal' &&
           map['fromUserId'] != null &&
           map['signal'] != null) {
@@ -185,7 +191,9 @@ class WsService extends ChangeNotifier {
   }
 
   static List<MessageReaction> _parseReactions(dynamic v) {
-    if (v is! List) return [];
+    if (v is! List) {
+      return [];
+    }
     final list = <MessageReaction>[];
     for (final e in v) {
       if (e is! Map<String, dynamic>) continue;
@@ -271,13 +279,17 @@ class WsService extends ChangeNotifier {
       (m) =>
           m.groupId == null && (m.senderId == peerId || m.receiverId == peerId),
     );
-    if (i < 0) return null;
+    if (i < 0) {
+      return null;
+    }
     return _incoming.removeAt(i);
   }
 
   Message? takeIncomingGroupFor(int groupId) {
     final i = _incoming.indexWhere((m) => m.groupId == groupId);
-    if (i < 0) return null;
+    if (i < 0) {
+      return null;
+    }
     return _incoming.removeAt(i);
   }
 
@@ -285,7 +297,9 @@ class WsService extends ChangeNotifier {
     final i = _reactionUpdates.indexWhere(
       (u) => u.peerId == peerId && u.groupId == null,
     );
-    if (i < 0) return null;
+    if (i < 0) {
+      return null;
+    }
     final u = _reactionUpdates.removeAt(i);
     notifyListeners();
     return u;
@@ -293,7 +307,9 @@ class WsService extends ChangeNotifier {
 
   ReactionUpdate? takeGroupReactionUpdateFor(int groupId) {
     final i = _reactionUpdates.indexWhere((u) => u.groupId == groupId);
-    if (i < 0) return null;
+    if (i < 0) {
+      return null;
+    }
     final u = _reactionUpdates.removeAt(i);
     notifyListeners();
     return u;

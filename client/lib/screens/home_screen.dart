@@ -379,7 +379,7 @@ class _HomeScreenState extends State<HomeScreen>
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onPrimaryContainer
-                                        .withOpacity(0.7),
+                                        .withValues(alpha:0.7),
                                   )
                                 : null,
                           ),
@@ -444,7 +444,7 @@ class _HomeScreenState extends State<HomeScreen>
                               size: AppSizes.iconSM,
                               color: Theme.of(
                                 context,
-                              ).colorScheme.error.withOpacity(0.7),
+                              ).colorScheme.error.withValues(alpha:0.7),
                             ),
                             tooltip: context.tr('delete_chat'),
                             padding: EdgeInsets.zero,
@@ -623,7 +623,7 @@ class _HomeScreenState extends State<HomeScreen>
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     height: 1,
                     width: 40,
-                    color: Theme.of(context).dividerColor.withOpacity(0.3),
+                    color: Theme.of(context).dividerColor.withValues(alpha:0.3),
                   ),
                   // Версия
                   Padding(
@@ -634,7 +634,7 @@ class _HomeScreenState extends State<HomeScreen>
                         fontSize: 9,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                        ).colorScheme.onSurfaceVariant.withValues(alpha:0.5),
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.2,
                       ),
@@ -746,7 +746,7 @@ class _NavButton extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               color: isActive
-                  ? theme.colorScheme.primaryContainer.withOpacity(0.5)
+                  ? theme.colorScheme.primaryContainer.withValues(alpha:0.5)
                   : null,
               borderRadius: BorderRadius.circular(12),
             ),

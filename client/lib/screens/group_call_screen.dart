@@ -260,7 +260,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
         widget.group.id,
       );
     } catch (e) {
-      print(
+      debugPrint(
         'Error creating PeerConnection for participant ${participant.user.id}: $e',
       );
       if (mounted) {
@@ -295,7 +295,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     if (signal.signal == 'offer' && signal.payload != null) {
       // Предотвращаем обработку дублирующих offer
       if (participant.offerReceived && participant.peerConnection != null) {
-        print('Duplicate offer received from ${signal.fromUserId}, ignoring');
+        debugPrint('Duplicate offer received from ${signal.fromUserId}, ignoring');
         return;
       }
       participant.offerReceived = true;
@@ -345,7 +345,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
               ),
             );
           } catch (e) {
-            print('Error adding pending candidate: $e');
+            debugPrint('Error adding pending candidate: $e');
           }
         }
         participant.pendingCandidates.clear();
@@ -372,7 +372,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
           });
         }
       } catch (e) {
-        print('Error handling offer signal: $e');
+        debugPrint('Error handling offer signal: $e');
         if (mounted) {
           setState(() {
             participant.state = 'failed';
@@ -394,7 +394,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
           });
         }
       } catch (e) {
-        print('Error handling answer signal: $e');
+        debugPrint('Error handling answer signal: $e');
         if (mounted) {
           setState(() {
             participant.state = 'failed';
@@ -417,7 +417,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
           ),
         );
       } catch (e) {
-        print('Error adding ICE candidate: $e');
+        debugPrint('Error adding ICE candidate: $e');
       }
     }
   }
@@ -457,14 +457,14 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     };
 
     pc.onConnectionState = (state) {
-      print('Participant ${participant.user.id} connection state: $state');
+      debugPrint('Participant ${participant.user.id} connection state: $state');
       if (mounted) {
         setState(() {});
       }
     };
 
     pc.onIceConnectionState = (state) {
-      print('Participant ${participant.user.id} ICE connection state: $state');
+      debugPrint('Participant ${participant.user.id} ICE connection state: $state');
       if (state == RTCIceConnectionState.RTCIceConnectionStateDisconnected) {
         // При временном разрыве соединения не помечаем как отключенного сразу
         // Даем время на восстановление (ICE может восстановить соединение)
@@ -760,14 +760,15 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
 
     // Определяем количество колонок в зависимости от количества участников
     int columns;
-    if (count <= 2)
+    if (count <= 2) {
       columns = 1;
-    else if (count <= 4)
+    } else if (count <= 4) {
       columns = 2;
-    else if (count <= 9)
+    } else if (count <= 9) {
       columns = 3;
-    else
+    } else {
       columns = 4;
+    }
 
     // rows вычисляется для информации, но не используется напрямую
     // GridView автоматически вычисляет количество строк

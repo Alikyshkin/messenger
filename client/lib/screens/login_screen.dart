@@ -144,8 +144,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: _loading
                                   ? null
                                   : () {
-                                      if (_formKey.currentState!.validate())
+                                      if (_formKey.currentState!.validate()) {
                                         _submit();
+                                      }
                                     },
                               child: _loading
                                   ? const SizedBox(

@@ -22,7 +22,7 @@ class AppUpdateBanner extends StatelessWidget {
             color: Theme.of(context).colorScheme.primaryContainer,
             border: Border(
               bottom: BorderSide(
-                color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.outline.withValues(alpha:0.2),
                 width: 1,
               ),
             ),
@@ -53,7 +53,7 @@ class AppUpdateBanner extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(
                             context,
-                          ).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                          ).colorScheme.onPrimaryContainer.withValues(alpha:0.7),
                         ),
                       ),
                   ],
@@ -75,7 +75,7 @@ class AppUpdateBanner extends StatelessWidget {
                   style: TextStyle(
                     color: Theme.of(
                       context,
-                    ).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                    ).colorScheme.onPrimaryContainer.withValues(alpha:0.7),
                     fontSize: 13,
                   ),
                 ),

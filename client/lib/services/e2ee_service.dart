@@ -56,10 +56,13 @@ class E2EEService {
     String plaintext,
     String? recipientPublicKeyBase64,
   ) async {
-    if (recipientPublicKeyBase64 == null || recipientPublicKeyBase64.isEmpty)
+    if (recipientPublicKeyBase64 == null || recipientPublicKeyBase64.isEmpty) {
       return null;
+    }
     final keyPair = await _loadKeyPair();
-    if (keyPair == null) return null;
+    if (keyPair == null) {
+      return null;
+    }
     try {
       final theirPublic = SimplePublicKey(
         base64Decode(recipientPublicKeyBase64),
@@ -101,11 +104,16 @@ class E2EEService {
 
   /// Расшифровать текст от отправителя (его публичный ключ в base64). Возвращает plaintext или null.
   Future<String?> decrypt(String content, String? senderPublicKeyBase64) async {
-    if (senderPublicKeyBase64 == null || senderPublicKeyBase64.isEmpty)
+    if (senderPublicKeyBase64 == null || senderPublicKeyBase64.isEmpty) {
       return null;
-    if (!content.startsWith(_prefix)) return null;
+    }
+    if (!content.startsWith(_prefix)) {
+      return null;
+    }
     final keyPair = await _loadKeyPair();
-    if (keyPair == null) return null;
+    if (keyPair == null) {
+      return null;
+    }
     try {
       final theirPublic = SimplePublicKey(
         base64Decode(senderPublicKeyBase64),
@@ -122,7 +130,9 @@ class E2EEService {
       final combined = base64Decode(raw);
       const nonceLen = 12;
       const macLen = 16;
-      if (combined.length < nonceLen + macLen) return null;
+      if (combined.length < nonceLen + macLen) {
+        return null;
+      }
       final nonce = combined.sublist(0, nonceLen);
       final mac = Mac(combined.sublist(combined.length - macLen));
       final cipherText = combined.sublist(nonceLen, combined.length - macLen);
@@ -144,10 +154,13 @@ class E2EEService {
     Uint8List plaintext,
     String? recipientPublicKeyBase64,
   ) async {
-    if (recipientPublicKeyBase64 == null || recipientPublicKeyBase64.isEmpty)
+    if (recipientPublicKeyBase64 == null || recipientPublicKeyBase64.isEmpty) {
       return null;
+    }
     final keyPair = await _loadKeyPair();
-    if (keyPair == null) return null;
+    if (keyPair == null) {
+      return null;
+    }
     try {
       final theirPublic = SimplePublicKey(
         base64Decode(recipientPublicKeyBase64),
@@ -185,7 +198,9 @@ class E2EEService {
   ) async {
     if (otherPublicKeyBase64 == null || otherPublicKeyBase64.isEmpty)
       return null;
-    if (ciphertext.length < 4 + 12 + 16) return null;
+    if (ciphertext.length < 4 + 12 + 16) {
+      return null;
+    }
     const magic = [0x45, 0x32, 0x45, 0x45];
     if (ciphertext[0] != magic[0] ||
         ciphertext[1] != magic[1] ||
@@ -194,7 +209,9 @@ class E2EEService {
       return null;
     }
     final keyPair = await _loadKeyPair();
-    if (keyPair == null) return null;
+    if (keyPair == null) {
+      return null;
+    }
     try {
       final theirPublic = SimplePublicKey(
         base64Decode(otherPublicKeyBase64),

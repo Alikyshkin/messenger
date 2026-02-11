@@ -72,12 +72,13 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     ReactionUpdate? ru;
     while ((ru = ws.takeGroupReactionUpdateFor(widget.group.id)) != null) {
       final idx = _messages.indexWhere((msg) => msg.id == ru!.messageId);
-      if (idx >= 0 && mounted)
+      if (idx >= 0 && mounted) {
         setState(
           () => _messages[idx] = _messages[idx].copyWith(
             reactions: ru!.reactions,
           ),
         );
+      }
     }
   }
 
@@ -88,10 +89,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       ).setGroupMessageReaction(widget.group.id, m.id, emoji);
       if (!mounted) return;
       final idx = _messages.indexWhere((msg) => msg.id == m.id);
-      if (idx >= 0)
+      if (idx >= 0) {
         setState(
           () => _messages[idx] = _messages[idx].copyWith(reactions: reactions),
         );
+      }
     } catch (_) {}
   }
 
@@ -190,6 +192,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         .toList();
     if (files.isEmpty) return;
     setState(() => _sending = true);
+    if (!mounted) return;
     try {
       final api = Api(context.read<AuthService>().token);
       if (files.length == 1) {
@@ -627,7 +630,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.surface.withOpacity(0.6),
+                    ).colorScheme.surface.withValues(alpha:0.6),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -652,7 +655,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             fontSize: 10,
             color: Theme.of(
               context,
-            ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+            ).colorScheme.onSurfaceVariant.withValues(alpha:0.7),
           ),
         ),
       ],

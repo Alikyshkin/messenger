@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
@@ -70,7 +71,7 @@ class _WsCallListenerState extends State<WsCallListener> {
           );
         } catch (e) {
           // Если не удалось загрузить группу, игнорируем звонок
-          print('Error loading group for call: $e');
+          debugPrint('Error loading group for call: $e');
         }
         return;
       }

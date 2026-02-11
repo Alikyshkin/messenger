@@ -300,7 +300,7 @@ class _MediaThumbnail extends StatelessWidget {
                   child: const Icon(Icons.videocam, size: 40),
                 ),
                 Container(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha:0.3),
                   child: const Center(
                     child: Icon(
                       Icons.play_circle_filled,
@@ -319,7 +319,7 @@ class _MediaThumbnail extends StatelessWidget {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.7),
+                        color: Colors.black.withValues(alpha:0.7),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(

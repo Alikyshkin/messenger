@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -131,12 +130,13 @@ class _ChatScreenState extends State<ChatScreen> {
     ReactionUpdate? ru;
     while ((ru = ws.takeReactionUpdateFor(widget.peer.id)) != null) {
       final idx = _messages.indexWhere((msg) => msg.id == ru!.messageId);
-      if (idx >= 0 && mounted)
+      if (idx >= 0 && mounted) {
         setState(
           () => _messages[idx] = _messages[idx].copyWith(
             reactions: ru!.reactions,
           ),
         );
+      }
     }
     // Пользователь в чате — помечаем все сообщения прочитанными, чтобы при выходе не показывался счётчик непрочитанных
     if (mounted) {
@@ -307,10 +307,11 @@ class _ChatScreenState extends State<ChatScreen> {
       ).setMessageReaction(m.id, emoji);
       if (!mounted) return;
       final idx = _messages.indexWhere((msg) => msg.id == m.id);
-      if (idx >= 0)
+      if (idx >= 0) {
         setState(
           () => _messages[idx] = _messages[idx].copyWith(reactions: reactions),
         );
+      }
     } catch (_) {}
   }
 
@@ -320,10 +321,11 @@ class _ChatScreenState extends State<ChatScreen> {
     final theme = Theme.of(context);
     return r.userIds.take(3).map((userId) {
       String? avatarUrl;
-      if (userId == widget.peer.id)
+      if (userId == widget.peer.id) {
         avatarUrl = widget.peer.avatarUrl;
-      else if (userId == myId)
+      } else if (userId == myId) {
         avatarUrl = auth?.avatarUrl;
+      }
       return Padding(
         padding: const EdgeInsets.only(right: 2),
         child: CircleAvatar(
@@ -726,13 +728,15 @@ class _ChatScreenState extends State<ChatScreen> {
       if (ErrorUtils.isNetworkError(e)) {
         // Только для реальных сетевых ошибок (нет интернета) добавляем в outbox
         await LocalDb.addToOutbox(widget.peer.id, toSend);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Нет связи. Сообщение будет отправлено при появлении сети.',
+        if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Нет связи. Сообщение будет отправлено при появлении сети.',
+              ),
             ),
-          ),
-        );
+          );
+        }
       } else {
         // Для других ошибок просто показываем сообщение
         ScaffoldMessenger.of(context).showSnackBar(
@@ -828,9 +832,11 @@ class _ChatScreenState extends State<ChatScreen> {
     );
     if (result == null ||
         result.question.trim().isEmpty ||
-        result.options.length < 2)
+        result.options.length < 2) {
       return;
+    }
     setState(() => _sending = true);
+    if (!mounted) return;
     try {
       final api = Api(context.read<AuthService>().token);
       final msg = await api.sendPoll(
@@ -1170,7 +1176,7 @@ class _ChatScreenState extends State<ChatScreen> {
                               color: Theme.of(context)
                                   .colorScheme
                                   .surfaceContainerHighest
-                                  .withOpacity(0.5),
+                                  .withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
@@ -1181,7 +1187,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                   size: 16,
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.onSurface.withOpacity(0.7),
+                                  ).colorScheme.onSurface.withValues(alpha: 0.7),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
@@ -1193,7 +1199,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.7),
+                                            .withValues(alpha: 0.7),
                                         fontStyle: FontStyle.italic,
                                       ),
                                 ),
@@ -1259,7 +1265,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                     : Theme.of(
                                                         context,
                                                       ).colorScheme.onSurface)
-                                                .withOpacity(0.8),
+                                                .withValues(alpha: 0.8),
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
@@ -1276,7 +1282,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                           : Theme.of(context)
                                                                 .colorScheme
                                                                 .onSurface)
-                                                      .withOpacity(0.8),
+                                                      .withValues(alpha: 0.8),
                                             ),
                                       ),
                                     ],
@@ -1471,7 +1477,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                 ? Theme.of(context)
                                                       .colorScheme
                                                       .onPrimary
-                                                      .withOpacity(0.8)
+                                                      .withValues(alpha: 0.8)
                                                 : Theme.of(context)
                                                       .colorScheme
                                                       .onSurfaceVariant,
@@ -1487,7 +1493,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onPrimary
-                                            .withOpacity(0.8),
+                                            .withValues(alpha: 0.8),
                                       ),
                                       const SizedBox(width: 2),
                                       Text(
@@ -1501,7 +1507,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                               color: Theme.of(context)
                                                   .colorScheme
                                                   .onPrimary
-                                                  .withOpacity(0.8),
+                                                  .withValues(alpha: 0.8),
                                               fontSize: 11,
                                             ),
                                       ),
@@ -1762,10 +1768,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     onPressed: _sending
                         ? null
                         : () {
-                            if (_isRecording)
+                            if (_isRecording) {
                               _stopVoiceRecord();
-                            else
+                            } else {
                               _startVoiceRecord();
+                            }
                           },
                     icon: _isRecording
                         ? const Icon(Icons.stop_circle, color: Colors.red)
@@ -1861,7 +1868,7 @@ class _ChatScreenState extends State<ChatScreen> {
             const SizedBox(width: 6),
             Text(
               'Опрос',
-              style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.8)),
+              style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
             ),
           ],
         ),
@@ -1892,7 +1899,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  border: Border.all(color: textColor.withOpacity(0.3)),
+                  border: Border.all(color: textColor.withValues(alpha: 0.3)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -1908,7 +1915,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         '${opt.votes}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: textColor.withOpacity(0.8),
+                          color: textColor.withValues(alpha: 0.8),
                         ),
                       ),
                     if (opt.voted) ...[
@@ -2091,10 +2098,11 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Не удалось открыть файл')),
         );
+      }
     }
   }
 
@@ -2102,13 +2110,16 @@ class _ChatScreenState extends State<ChatScreen> {
     final lower = name.toLowerCase();
     final parts = lower.split('.');
     final ext = parts.length > 1 ? parts.last : '';
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(ext)) return true;
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(ext)) {
+      return true;
+    }
     // Файлы без расширения или с типичными именами с камеры/галереи
     if (ext.isEmpty &&
         (lower.startsWith('img') ||
             lower.startsWith('photo') ||
-            lower == 'image'))
+            lower == 'image')) {
       return true;
+    }
     return false;
   }
 
