@@ -374,6 +374,19 @@ app.get(/^\/(?!auth|contacts|messages|users|polls|uploads|health|reset-password|
 app.use(notFoundHandler);
 
 // Централизованный обработчик ошибок (должен быть последним)
+// Обработка необработанных исключений и промисов
+process.on('uncaughtException', (err) => {
+  log.error({ error: err, stack: err.stack }, 'Uncaught Exception - Server will exit');
+  // Даем время на логирование перед выходом
+  setTimeout(() => {
+    process.exit(1);
+  }, 1000);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  log.error({ reason, promise }, 'Unhandled Rejection');
+});
+
 app.use(errorHandler);
 
 const wss = new WebSocketServer({ server, path: '/ws' });

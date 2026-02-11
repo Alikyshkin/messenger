@@ -59,16 +59,16 @@ function getBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
-router.patch('/:peerId/read', validateParams(peerIdParamSchema), (req, res) => {
+router.patch('/:peerId/read', validateParams(peerIdParamSchema), asyncHandler(async (req, res) => {
   const peerId = req.validatedParams.peerId;
   const me = req.user.userId;
   db.prepare(
     'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE receiver_id = ? AND sender_id = ? AND read_at IS NULL'
   ).run(me, peerId);
   res.status(204).send();
-});
+}));
 
-router.post('/:messageId/reaction', validateParams(messageIdParamSchema), validate(addReactionSchema), (req, res) => {
+router.post('/:messageId/reaction', validateParams(messageIdParamSchema), validate(addReactionSchema), asyncHandler(async (req, res) => {
   const messageId = req.validatedParams.messageId;
   const { emoji } = req.validated;
   const me = req.user.userId;
@@ -88,7 +88,7 @@ router.post('/:messageId/reaction', validateParams(messageIdParamSchema), valida
   const reactions = getMessageReactions(messageId);
   notifyReaction(messageId, row.sender_id, row.receiver_id, reactions);
   res.json({ reactions });
-});
+}));
 
 /**
  * @swagger
@@ -139,7 +139,7 @@ router.post('/:messageId/reaction', validateParams(messageIdParamSchema), valida
  *                     hasMore:
  *                       type: boolean
  */
-router.get('/:peerId', validateParams(peerIdParamSchema), (req, res) => {
+router.get('/:peerId', validateParams(peerIdParamSchema), asyncHandler(async (req, res) => {
   const peerId = req.validatedParams.peerId;
   const limit = Math.min(parseInt(req.query.limit, 10) || 100, 200);
   const before = req.query.before ? parseInt(req.query.before, 10) : null;
@@ -243,7 +243,7 @@ router.get('/:peerId', validateParams(peerIdParamSchema), (req, res) => {
       },
     });
   }
-});
+}));
 
 /**
  * @swagger
@@ -302,7 +302,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     });
   }
   next();
-}, validate(sendMessageSchema), async (req, res) => {
+}, validate(sendMessageSchema), asyncHandler(async (req, res) => {
   const data = req.validated;
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
   const rid = data.receiver_id;
