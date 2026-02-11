@@ -38,7 +38,7 @@ jobs:
       run: |
         flutter pub get
         # Собираем без source maps для уменьшения размера
-        flutter build web --release --web-renderer canvaskit --no-source-maps
+        flutter build web --release --no-source-maps
     
     - name: Upload Flutter build artifacts
       uses: actions/upload-artifact@v4
