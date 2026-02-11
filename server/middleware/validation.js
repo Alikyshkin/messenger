@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import zxcvbn from 'zxcvbn';
 import { VALIDATION_LIMITS, ALLOWED_REACTION_EMOJIS } from '../config/constants.js';
 
 // Middleware для валидации запросов
