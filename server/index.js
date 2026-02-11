@@ -34,7 +34,7 @@ import { metricsMiddleware, getMetrics, metrics } from './utils/metrics.js';
 import { initCache } from './utils/cache.js';
 import { initFCM } from './utils/pushNotifications.js';
 import { securityHeaders } from './middleware/security.js';
-import { csrfProtect, csrfTokenRoute } from './middleware/csrf.js';
+import { csrfProtect, getCsrfToken } from './middleware/csrf.js';
 import { auditMiddleware } from './utils/auditLog.js';
 import { getAllCircuitBreakerStates } from './utils/circuitBreaker.js';
 import { apiVersioning, validateApiVersion } from './middleware/apiVersioning.js';
@@ -50,6 +50,16 @@ const server = createServer(app);
 
 // Security headers (должен быть первым middleware)
 app.use(securityHeaders());
+
+// Middleware для логирования HTTP запросов (должен быть рано, чтобы логировать все запросы)
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const responseTime = Date.now() - start;
+    log.http(req, res, responseTime);
+  });
+  next();
+});
 
 // CORS настройка
 app.use(cors({
@@ -87,11 +97,36 @@ app.use(compression({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Для CSRF токенов в формах
 
-// CSRF Protection (только для запросов без Bearer токена)
-app.use(csrfProtect());
+// CSRF Protection применяется только к API маршрутам, исключая статические файлы и SPA маршруты
+// Статические файлы и корневой путь не требуют CSRF защиты
+app.use((req, res, next) => {
+  const path = req.path;
+  
+  // Пропускаем статические файлы, корневой путь и другие не-API маршруты
+  if (
+    path.startsWith('/uploads/') ||
+    path.startsWith('/api-docs') ||
+    path.startsWith('/health') ||
+    path.startsWith('/metrics') ||
+    path.startsWith('/live') ||
+    path.startsWith('/ready') ||
+    path.startsWith('/csrf-token') ||
+    path === '/' ||
+    // Пропускаем все пути, которые не начинаются с /api или /auth
+    (!path.startsWith('/api') && !path.startsWith('/auth'))
+  ) {
+    return next();
+  }
+  
+  // Применяем CSRF защиту только к API и auth маршрутам
+  return csrfProtect()(req, res, next);
+});
 
 // Endpoint для получения CSRF токена (для веб-форм)
-app.get('/csrf-token', csrfTokenRoute);
+// Используем getCsrfToken middleware для генерации токена
+app.get('/csrf-token', getCsrfToken, (req, res) => {
+  res.json({ csrfToken: res.locals.csrfToken });
+});
 
 app.use('/api', apiLimiter); // Общий лимит для всех API запросов
 
@@ -394,16 +429,6 @@ wss.on('connection', (ws, req) => {
     log.error('WebSocket error', error, { userId });
     ws.close();
   });
-});
-
-// Middleware для логирования HTTP запросов
-app.use((req, res, next) => {
-  const start = Date.now();
-  res.on('finish', () => {
-    const responseTime = Date.now() - start;
-    log.http(req, res, responseTime);
-  });
-  next();
 });
 
 if (config.nodeEnv !== 'test') {
