@@ -513,7 +513,9 @@ class _ChatScreenState extends State<ChatScreen> {
       ).showSnackBar(const SnackBar(content: Text('Ошибка загрузки чатов')));
       return;
     }
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     final peerId = widget.peer.id;
     final others = chats
         .where((c) => c.peer?.id != null && c.peer!.id != peerId)
@@ -606,11 +608,18 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   bool get _canSend {
-    if (_sending) return false;
-    if (_text.text.trim().isNotEmpty) return true;
-    if (_pendingAttachment != null) return true;
-    if (_pendingMultipleFiles != null && _pendingMultipleFiles!.isNotEmpty)
+    if (_sending) {
+      return false;
+    }
+    if (_text.text.trim().isNotEmpty) {
       return true;
+    }
+    if (_pendingAttachment != null) {
+      return true;
+    }
+    if (_pendingMultipleFiles != null && _pendingMultipleFiles!.isNotEmpty) {
+      return true;
+    }
     return false;
   }
 
@@ -834,12 +843,16 @@ class _ChatScreenState extends State<ChatScreen> {
       allowMultiple: true,
       withData: true,
     );
-    if (result == null || result.files.isEmpty) return;
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
     final files = result.files
         .where((f) => f.bytes != null && f.bytes!.isNotEmpty)
         .take(_maxMultipleFiles)
         .toList();
-    if (files.isEmpty) return;
+    if (files.isEmpty) {
+      return;
+    }
     if (files.length == 1) {
       final file = files.single;
       var bytes = Uint8List.fromList(file.bytes!);
@@ -899,7 +912,9 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     }
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     setState(() {
       _pendingAttachment = null;
       _pendingMultipleFiles = list;
@@ -920,7 +935,9 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
     setState(() => _sending = true);
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     try {
       final api = Api(context.read<AuthService>().token);
       final msg = await api.sendPoll(
@@ -954,9 +971,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _updatePollAfterVote(int pollId, PollResult result) {
     final idx = _messages.indexWhere((m) => m.pollId == pollId);
-    if (idx < 0) return;
+    if (idx < 0) {
+      return;
+    }
     final m = _messages[idx];
-    if (m.poll == null) return;
+    if (m.poll == null) {
+      return;
+    }
     final newOptions = result.options
         .map((o) => PollOption(text: o.text, votes: o.votes, voted: o.voted))
         .toList();
