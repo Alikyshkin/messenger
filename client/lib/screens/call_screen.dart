@@ -440,10 +440,13 @@ class _CallScreenState extends State<CallScreen> {
         _pc = await createPeerConnection(WebRTCConstants.iceServers, {});
         _setupPeerConnection();
         print('Adding local tracks (handle offer): ${_localStream!.getTracks().length}');
+        // Добавляем треки в PeerConnection перед применением mute
         for (var track in _localStream!.getTracks()) {
           print('Adding track: ${track.kind}, enabled: ${track.enabled}');
           await _pc!.addTrack(track, _localStream!);
         }
+        // Применяем mute после добавления треков
+        _applyInitialMute();
         var desc = RTCSessionDescription(
           s.payload!['sdp'] as String,
           s.payload!['type'] as String,
@@ -515,7 +518,7 @@ class _CallScreenState extends State<CallScreen> {
           AppSoundService.instance.stopRingtone();
           setState(() {
             _state = 'connected';
-            _isConnecting = true; // Начинаем процесс подключения после получения answer
+            _isConnecting = false; // Соединение установлено после получения answer
           });
         }
       } catch (e) {
