@@ -133,27 +133,28 @@ class _ContactsContentState extends State<ContactsContent> {
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-              IconButton(
-                icon: const Icon(Icons.people_alt_outlined),
-                tooltip: context.tr('possible_friends'),
-                onPressed: () async {
-                  final nav = widget.navigator ?? Navigator.of(context);
-                  await nav.push(
-                    MaterialPageRoute(builder: (_) => const PossibleFriendsScreen()),
-                  );
-                  _load();
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.add),
-                tooltip: context.tr('add_by_username'),
-                onPressed: () async {
-                  final nav = widget.navigator ?? Navigator.of(context);
-                  await nav.push(
-                    MaterialPageRoute(builder: (_) => const AddContactScreen()),
-                  );
-                  _load();
-                },
+                  IconButton(
+                    icon: const Icon(Icons.people_alt_outlined),
+                    tooltip: context.tr('possible_friends'),
+                    onPressed: () async {
+                      final nav = widget.navigator ?? Navigator.of(context);
+                      await nav.push(
+                        MaterialPageRoute(builder: (_) => const PossibleFriendsScreen()),
+                      );
+                      _load();
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    tooltip: context.tr('add_by_username'),
+                    onPressed: () async {
+                      final nav = widget.navigator ?? Navigator.of(context);
+                      await nav.push(
+                        MaterialPageRoute(builder: (_) => const AddContactScreen()),
+                      );
+                      _load();
+                    },
+                  ),
                 ],
               ),
             ],
