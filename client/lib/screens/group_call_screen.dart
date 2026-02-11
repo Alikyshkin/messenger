@@ -15,6 +15,7 @@ import '../utils/media_utils.dart';
 import '../widgets/user_avatar.dart';
 import '../widgets/call_action_button.dart';
 import '../widgets/call_control_button.dart';
+import '../services/call_minimized_service.dart';
 
 /// Участник группового звонка с его PeerConnection и потоком
 class _GroupCallParticipant {
@@ -554,8 +555,17 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
         );
       }
     }
+    // Очищаем состояние минимизации
+    context.read<CallMinimizedService>().endCall();
     _cleanup();
     if (mounted) Navigator.of(context).pop();
+  }
+
+  void _minimizeCall() {
+    final minimizedService = context.read<CallMinimizedService>();
+    // GroupCallScreen всегда видеозвонок
+    minimizedService.minimizeGroupCall(widget.group, true);
+    Navigator.of(context).pop();
   }
 
   void _cleanup() {
@@ -667,11 +677,14 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                   children: [
                     Icon(Icons.videocam, color: Colors.white70, size: 16),
                     const SizedBox(width: 8),
-                    Text(
-                      widget.group.name,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
+                    Expanded(
+                      child: Text(
+                        widget.group.name,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -682,6 +695,16 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                         fontSize: 12,
                       ),
                     ),
+                    if (_state == 'connected') ...[
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.minimize, color: Colors.white70, size: 20),
+                        onPressed: _minimizeCall,
+                        tooltip: 'Свернуть',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ],
                 ),
               ),

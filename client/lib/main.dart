@@ -7,6 +7,7 @@ import 'services/auth_service.dart';
 import 'services/locale_service.dart';
 import 'services/theme_service.dart';
 import 'services/ws_service.dart';
+import 'services/call_minimized_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'widgets/ws_call_listener.dart';
@@ -214,6 +215,7 @@ class MessengerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => LocaleService()..load()),
         ChangeNotifierProvider(create: (_) => ThemeService()),
         ChangeNotifierProvider(create: (_) => WsService()),
+        ChangeNotifierProvider(create: (_) => CallMinimizedService()),
       ],
       child: Consumer2<ThemeService, LocaleService>(
         builder: (context, themeService, localeService, _) {

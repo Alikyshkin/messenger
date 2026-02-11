@@ -12,6 +12,7 @@ import '../utils/media_utils.dart';
 import '../widgets/call_action_button.dart';
 import '../widgets/call_control_button.dart';
 import '../widgets/call_layout_button.dart';
+import '../services/call_minimized_service.dart';
 
 /// Режим отображения видео: докладчик (большой удалённый), обычный, рядом слева-справа.
 enum CallLayout {
@@ -606,6 +607,8 @@ class _CallScreenState extends State<CallScreen> {
     _signalSub?.cancel();
     if (_screenShareEnabled) await _stopScreenShare();
     _localRenderer.srcObject = null;
+    // Очищаем состояние минимизации
+    context.read<CallMinimizedService>().endCall();
     _remoteRenderer.srcObject = null;
     _screenRenderer.srcObject = null;
     _localStream?.getTracks().forEach((t) => t.stop());
@@ -898,29 +901,50 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Widget _buildOverlayTitle() {
-    return Container(
-      padding: const EdgeInsets.only(top: 24),
-      alignment: Alignment.topCenter,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return Positioned(
+      top: 8,
+      left: 8,
+      right: 8,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            widget.peer.displayName,
-            style: const TextStyle(color: Colors.white, fontSize: 22),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.peer.displayName,
+                  style: const TextStyle(color: Colors.white, fontSize: 22),
+                ),
+                Text(
+                  _state == 'calling'
+                      ? 'Вызов...'
+                      : _state == 'ringing'
+                          ? widget.isVideoCall ? 'Входящий видеозвонок' : 'Входящий звонок'
+                          : _state == 'connected'
+                              ? widget.isVideoCall ? 'Видеозвонок' : 'Голосовой звонок'
+                              : '...',
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
+            ),
           ),
-          Text(
-            _state == 'calling'
-                ? 'Вызов...'
-                : _state == 'ringing'
-                    ? widget.isVideoCall ? 'Входящий видеозвонок' : 'Входящий звонок'
-                    : _state == 'connected'
-                        ? widget.isVideoCall ? 'Видеозвонок' : 'Голосовой звонок'
-                        : '...',
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
-          ),
+          if (_state == 'connected')
+            IconButton(
+              icon: const Icon(Icons.minimize, color: Colors.white),
+              onPressed: _minimizeCall,
+              tooltip: 'Свернуть',
+            ),
         ],
       ),
     );
+  }
+
+  void _minimizeCall() {
+    final minimizedService = context.read<CallMinimizedService>();
+    minimizedService.minimizeCall(widget.peer, widget.isVideoCall);
+    Navigator.of(context).pop();
   }
 
   Widget _buildLocalPreview(bool isConnected) {
