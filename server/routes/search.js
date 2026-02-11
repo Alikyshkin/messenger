@@ -4,6 +4,7 @@ import { authMiddleware } from '../auth.js';
 import { decryptIfLegacy } from '../cipher.js';
 import { validatePagination } from '../middleware/pagination.js';
 import { SEARCH_CONFIG } from '../config/constants.js';
+import { getUsersByIds } from '../utils/queryOptimizer.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -73,10 +74,18 @@ router.get('/messages', validatePagination, (req, res) => {
     }
     const total = db.prepare(countSql).get(...countParams)?.cnt || 0;
     
+    // Оптимизация: получаем всех пользователей одним запросом
+    const userIds = new Set();
+    rows.forEach(r => {
+      userIds.add(r.sender_id);
+      userIds.add(r.receiver_id);
+    });
+    const usersMap = getUsersByIds([...userIds]);
+    
     const results = rows.map(r => {
-      const sender = db.prepare('SELECT display_name, username, public_key FROM users WHERE id = ?').get(r.sender_id);
+      const sender = usersMap.get(r.sender_id);
       const peerId = r.sender_id === me ? r.receiver_id : r.sender_id;
-      const peer = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(peerId);
+      const peer = usersMap.get(peerId);
       
       return {
         id: r.id,
@@ -139,10 +148,18 @@ router.get('/messages', validatePagination, (req, res) => {
       WHERE (sender_id = ? OR receiver_id = ?) AND content LIKE ?
     `).get(me, me, `%${query}%`)?.cnt || 0;
     
+    // Оптимизация: получаем всех пользователей одним запросом
+    const userIds = new Set();
+    rows.forEach(r => {
+      userIds.add(r.sender_id);
+      userIds.add(r.receiver_id);
+    });
+    const usersMap = getUsersByIds([...userIds]);
+    
     const results = rows.map(r => {
-      const sender = db.prepare('SELECT display_name, username, public_key FROM users WHERE id = ?').get(r.sender_id);
+      const sender = usersMap.get(r.sender_id);
       const peerId = r.sender_id === me ? r.receiver_id : r.sender_id;
-      const peer = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(peerId);
+      const peer = usersMap.get(peerId);
       
       return {
         id: r.id,
@@ -244,9 +261,19 @@ router.get('/group-messages', validatePagination, (req, res) => {
     }
     const total = db.prepare(countSql).get(...countParams)?.cnt || 0;
     
+    // Оптимизация: получаем всех отправителей одним запросом
+    const senderIds = [...new Set(rows.map(r => r.sender_id))];
+    const sendersMap = getUsersByIds(senderIds);
+    
+    // Оптимизация: получаем все группы одним запросом
+    const groupIds = [...new Set(rows.map(r => r.group_id))];
+    const groupPlaceholders = groupIds.map(() => '?').join(',');
+    const groupsRows = db.prepare(`SELECT id, name FROM groups WHERE id IN (${groupPlaceholders})`).all(...groupIds);
+    const groupsMap = new Map(groupsRows.map(g => [g.id, g]));
+    
     const results = rows.map(r => {
-      const sender = db.prepare('SELECT display_name, username, public_key FROM users WHERE id = ?').get(r.sender_id);
-      const group = db.prepare('SELECT name FROM groups WHERE id = ?').get(r.group_id);
+      const sender = sendersMap.get(r.sender_id);
+      const group = groupsMap.get(r.group_id);
       
       return {
         id: r.id,
@@ -307,9 +334,19 @@ router.get('/group-messages', validatePagination, (req, res) => {
       WHERE group_id IN (SELECT group_id FROM group_members WHERE user_id = ?) AND content LIKE ?
     `).get(me, `%${query}%`)?.cnt || 0;
     
+    // Оптимизация: получаем всех отправителей одним запросом
+    const senderIds = [...new Set(rows.map(r => r.sender_id))];
+    const sendersMap = getUsersByIds(senderIds);
+    
+    // Оптимизация: получаем все группы одним запросом
+    const groupIds = [...new Set(rows.map(r => r.group_id))];
+    const groupPlaceholders = groupIds.map(() => '?').join(',');
+    const groupsRows = db.prepare(`SELECT id, name FROM groups WHERE id IN (${groupPlaceholders})`).all(...groupIds);
+    const groupsMap = new Map(groupsRows.map(g => [g.id, g]));
+    
     const results = rows.map(r => {
-      const sender = db.prepare('SELECT display_name, username, public_key FROM users WHERE id = ?').get(r.sender_id);
-      const group = db.prepare('SELECT name FROM groups WHERE id = ?').get(r.group_id);
+      const sender = sendersMap.get(r.sender_id);
+      const group = groupsMap.get(r.group_id);
       
       return {
         id: r.id,

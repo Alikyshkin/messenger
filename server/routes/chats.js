@@ -3,6 +3,7 @@ import db from '../db.js';
 import { authMiddleware } from '../auth.js';
 import { decryptIfLegacy } from '../cipher.js';
 import { validatePagination, createPaginationMeta } from '../middleware/pagination.js';
+import { getUsersByIds } from '../utils/queryOptimizer.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -75,9 +76,14 @@ router.get('/', validatePagination, (req, res) => {
     GROUP BY sender_id
   `).all(me);
   const unreadMap = Object.fromEntries(unreadCounts.map((r) => [r.peer_id, r.cnt]));
+  
+  // Оптимизация: получаем всех пользователей одним запросом
+  const peerIds = lastIds.map(({ peer_id }) => peer_id);
+  const peersMap = getUsersByIds(peerIds);
+  
   const result = lastIds.map(({ mid, peer_id }) => {
     const msg = db.prepare('SELECT id, content, created_at, sender_id, message_type FROM messages WHERE id = ?').get(mid);
-    const user = db.prepare('SELECT id, username, display_name, bio, avatar_path, public_key, is_online, last_seen FROM users WHERE id = ?').get(peer_id);
+    const user = peersMap.get(peer_id);
     const isOnline = !!(user.is_online);
     return {
       peer: {
@@ -104,14 +110,25 @@ router.get('/', validatePagination, (req, res) => {
 
   // Групповые чаты
   const myGroups = db.prepare('SELECT group_id FROM group_members WHERE user_id = ?').all(me);
+  
+  // Оптимизация: получаем всех отправителей одним запросом
+  const groupSenderIds = [];
+  const groupLastRows = [];
   for (const { group_id } of myGroups) {
     const lastRow = db.prepare('SELECT id, sender_id, content, created_at, message_type FROM group_messages WHERE group_id = ? ORDER BY id DESC LIMIT 1').get(group_id);
-    if (!lastRow) continue;
+    if (lastRow) {
+      groupLastRows.push({ group_id, lastRow });
+      groupSenderIds.push(lastRow.sender_id);
+    }
+  }
+  const groupSendersMap = getUsersByIds(groupSenderIds);
+  
+  for (const { group_id, lastRow } of groupLastRows) {
     const group = db.prepare('SELECT id, name, avatar_path, created_by_user_id, created_at FROM groups WHERE id = ?').get(group_id);
     const readRow = db.prepare('SELECT last_read_message_id FROM group_read WHERE group_id = ? AND user_id = ?').get(group_id, me);
     const lastRead = readRow?.last_read_message_id ?? 0;
     const unreadCnt = db.prepare('SELECT COUNT(*) AS c FROM group_messages WHERE group_id = ? AND id > ?').get(group_id, lastRead)?.c ?? 0;
-    const sender = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(lastRow.sender_id);
+    const sender = groupSendersMap.get(lastRow.sender_id);
     result.push({
       peer: null,
       group: {
