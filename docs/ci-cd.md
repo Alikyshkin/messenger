@@ -52,13 +52,33 @@
 
 ## Настройка Secrets
 
+**ВАЖНО:** Без настроенных секретов deployment не будет работать!
+
 В настройках репозитория GitHub (`Settings` → `Secrets and variables` → `Actions`) добавьте:
 
-- `DOCKER_USERNAME` - ваш Docker Hub username
+### Обязательные секреты для Docker Hub:
+
+- `DOCKER_USERNAME` - ваш Docker Hub username (например, `yourusername`)
 - `DOCKER_PASSWORD` - ваш Docker Hub password или access token
-- `DEPLOY_HOST` - IP или домен вашего сервера
+  - **Рекомендуется использовать access token** вместо пароля для безопасности
+  - Создать токен: Docker Hub → Account Settings → Security → New Access Token
+  - Права: `Read, Write & Delete`
+
+### Обязательные секреты для развёртывания:
+
+- `DEPLOY_HOST` - IP или домен вашего сервера (например, `192.168.1.100` или `deploy.example.com`)
 - `DEPLOY_USER` - пользователь для SSH (обычно `root` или `deploy`)
 - `DEPLOY_SSH_KEY` - приватный SSH ключ для подключения к серверу
+  - Полный приватный ключ, включая `-----BEGIN OPENSSH PRIVATE KEY-----` и `-----END OPENSSH PRIVATE KEY-----`
+
+### Как добавить секрет:
+
+1. Перейдите в репозиторий на GitHub
+2. `Settings` → `Secrets and variables` → `Actions`
+3. Нажмите `New repository secret`
+4. Введите имя секрета (точно как указано выше)
+5. Введите значение
+6. Нажмите `Add secret`
 
 ## Локальное тестирование
 
@@ -122,6 +142,25 @@ git push origin v1.0.0
 - Корректность `Dockerfile`
 - Наличие всех необходимых файлов в контексте сборки
 - `.dockerignore` не исключает необходимые файлы
+
+### Ошибка "Username and password required" при Docker login
+
+Эта ошибка возникает, когда не настроены секреты для Docker Hub:
+
+1. Перейдите в настройки репозитория: `Settings` → `Secrets and variables` → `Actions`
+2. Убедитесь, что установлены секреты:
+   - `DOCKER_USERNAME` - ваш Docker Hub username
+   - `DOCKER_PASSWORD` - ваш Docker Hub password или access token (рекомендуется использовать access token вместо пароля)
+3. Если секреты отсутствуют, добавьте их:
+   - Нажмите `New repository secret`
+   - Введите имя секрета (например, `DOCKER_USERNAME`)
+   - Введите значение
+   - Нажмите `Add secret`
+4. Для создания Docker Hub access token:
+   - Войдите в Docker Hub
+   - Перейдите в `Account Settings` → `Security` → `New Access Token`
+   - Создайте токен с правами `Read, Write & Delete`
+   - Используйте этот токен как `DOCKER_PASSWORD`
 
 ### Развёртывание не работает
 

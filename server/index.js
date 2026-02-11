@@ -26,6 +26,7 @@ import searchRoutes from './routes/search.js';
 import exportRoutes from './routes/export.js';
 import pushRoutes from './routes/push.js';
 import gdprRoutes from './routes/gdpr.js';
+import mediaRoutes from './routes/media.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './utils/swagger.js';
 import { metricsMiddleware, getMetrics, metrics } from './utils/metrics.js';
@@ -121,6 +122,7 @@ app.use('/search', searchRoutes);
 app.use('/export', exportRoutes);
 app.use('/push', pushRoutes);
 app.use('/gdpr', gdprRoutes);
+app.use('/media', mediaRoutes);
 
 // Swagger UI для документации API
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
