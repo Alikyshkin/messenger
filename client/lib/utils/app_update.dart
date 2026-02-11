@@ -1,0 +1,8 @@
+import 'app_update_stub.dart'
+    if (dart.library.html) 'app_update_web.dart';
+
+/// Утилита для проверки обновлений и очистки кеша
+/// На Web проверяет обновления и перезагружает страницу при необходимости
+/// На других платформах ничего не делает
+export 'app_update_stub.dart'
+    if (dart.library.html) 'app_update_web.dart';
