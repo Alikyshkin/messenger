@@ -8,6 +8,7 @@ import { authLimiter, registerLimiter, passwordResetLimiter } from '../middlewar
 import { validate, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema } from '../middleware/validation.js';
 import { log } from '../utils/logger.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { checkAccountLockout, recordFailedAttempt, resetFailedAttempts, isAccountLocked } from '../utils/accountLockout.js';
 
 const router = Router();
 
@@ -125,7 +126,7 @@ router.post('/register', registerLimiter, validate(registerSchema), asyncHandler
  *       401:
  *         description: Неверные учетные данные
  */
-router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async (req, res) => {
+router.post('/login', authLimiter, checkAccountLockout, validate(loginSchema), asyncHandler(async (req, res) => {
   const { username, password } = req.validated;
   const user = db.prepare(
     'SELECT id, username, display_name, email, password_hash FROM users WHERE username = ?'
