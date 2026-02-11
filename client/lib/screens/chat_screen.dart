@@ -13,6 +13,7 @@ import '../models/message.dart';
 import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
+import '../services/chat_list_refresh_service.dart';
 import '../services/attachment_cache.dart';
 import '../services/e2ee_service.dart';
 import '../services/ws_service.dart';
@@ -246,11 +247,20 @@ class _ChatScreenState extends State<ChatScreen> {
     if (!auth.isLoggedIn) {
       return;
     }
+    final peerId = widget.peer.id;
+    // Сразу помечаем прочитанными и обновляем локальный кэш — счётчик должен исчезнуть
+    Api(auth.token).markMessagesRead(peerId).then((_) async {
+      await LocalDb.clearChatUnread(peerId);
+      if (mounted) {
+        try {
+          context.read<ChatListRefreshService>().requestRefresh();
+        } catch (_) {}
+      }
+    }).catchError((_) {});
     setState(() {
       _loading = true;
       _error = null;
     });
-    final peerId = widget.peer.id;
     final cached = await LocalDb.getMessages(peerId);
     if (cached.isNotEmpty && mounted) {
       setState(() => _messages = cached);
@@ -301,7 +311,6 @@ class _ChatScreenState extends State<ChatScreen> {
         _loading = false;
       });
       _scrollToBottom(force: true); // При загрузке всегда прокручиваем вниз
-      await api.markMessagesRead(peerId);
     } catch (e) {
       if (!mounted) {
         return;

@@ -397,6 +397,18 @@ class LocalDb {
         .toList();
   }
 
+  /// Обнулить счётчик непрочитанных для чата (при открытии диалога).
+  static Future<void> clearChatUnread(int peerId) async {
+    final db = await _getDb();
+    if (db == null) return;
+    await db.update(
+      'chats',
+      {'unread_count': 0},
+      where: 'peer_id = ?',
+      whereArgs: [peerId],
+    );
+  }
+
   static Future<void> updateChatLastMessage(int peerId, Message last) async {
     final db = await _getDb();
     if (db == null) {
