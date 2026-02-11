@@ -405,14 +405,14 @@ app.use((req, res, next) => {
 
 if (config.nodeEnv !== 'test') {
   // Инициализация кэша
-initCache();
+  initCache();
 
-// Инициализация FCM для push-уведомлений
-initFCM().catch(err => {
-  log.error({ error: err }, 'Ошибка инициализации FCM');
-});
+  // Инициализация FCM для push-уведомлений
+  initFCM().catch(err => {
+    log.error({ error: err }, 'Ошибка инициализации FCM');
+  });
 
-server.listen(config.port, () => {
+  server.listen(config.port, () => {
     log.info(`Server running at http://localhost:${config.port}`, { port: config.port, env: config.nodeEnv });
   });
 }
