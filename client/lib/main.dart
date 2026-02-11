@@ -11,6 +11,7 @@ import 'services/call_minimized_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'widgets/ws_call_listener.dart';
+import 'widgets/minimized_call_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -241,7 +242,9 @@ class MessengerApp extends StatelessWidget {
                   return const _AppLoadingScreen();
                 }
                 return auth.isLoggedIn
-                    ? const WsCallListener(child: HomeScreen())
+                    ? MinimizedCallOverlay(
+                        child: const WsCallListener(child: HomeScreen()),
+                      )
                     : const LoginScreen();
               },
               '/login': (context) => const LoginScreen(),

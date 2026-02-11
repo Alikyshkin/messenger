@@ -14,7 +14,6 @@ import '../utils/app_page_route.dart';
 import '../utils/page_visibility.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/offline_indicator.dart';
-import '../widgets/minimized_call_widget.dart';
 import 'chat_screen.dart';
 import 'contacts_screen.dart';
 import 'create_group_screen.dart';
@@ -136,9 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return OfflineIndicator(
-      child: Stack(
-        children: [
-          Scaffold(
+      child: Scaffold(
             appBar: AppBar(
               title: Text(context.tr('chats')),
               actions: [
@@ -318,9 +315,6 @@ class _HomeScreenState extends State<HomeScreen> {
                               },
                             ),
             ),
-          ),
-          const MinimizedCallWidget(),
-        ],
       ),
     );
   }
