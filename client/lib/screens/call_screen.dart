@@ -434,7 +434,6 @@ class _CallScreenState extends State<CallScreen> {
         // Получаем медиа только если еще не получили
         if (_localStream == null) {
           await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
-          _applyInitialMute();
         }
         
         _pc = await createPeerConnection(WebRTCConstants.iceServers, {});
