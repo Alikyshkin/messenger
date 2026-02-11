@@ -93,6 +93,21 @@ app.use(csrfProtect());
 // Endpoint для получения CSRF токена (для веб-форм)
 app.get('/csrf-token', csrfTokenRoute);
 
+// Корневой путь - информация о сервере
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Messenger API',
+    version: '1.0.0',
+    status: 'running',
+    endpoints: {
+      docs: '/api-docs',
+      health: '/health',
+      metrics: '/metrics',
+      api: '/api',
+    },
+  });
+});
+
 app.use('/api', apiLimiter); // Общий лимит для всех API запросов
 
 // API Versioning (должен быть до routes, но после rate limiting)
