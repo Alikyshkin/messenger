@@ -3,7 +3,7 @@ version: '3.8'
 services:
   messenger-server:
     # Используем образ из Docker Hub вместо локальной сборки
-    image: ${DOCKER_USERNAME:-alikakuznecova}/messenger-server:latest
+    image: ${DOCKER_USERNAME:-alikyshkin}/messenger-server:latest
     container_name: messenger-server
     restart: unless-stopped
     ports:

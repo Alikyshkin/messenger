@@ -80,14 +80,14 @@ cd /opt/messenger
 nano docker-compose.yml
 ```
 
-Вставьте содержимое из `docker-compose.prod.yml` и замените `${DOCKER_USERNAME}` на ваш Docker Hub username (например, `alikakuznecova`):
+Вставьте содержимое из `docker-compose.prod.yml` и замените `${DOCKER_USERNAME}` на ваш Docker Hub username (например, `alikyshkin`):
 
 ```yaml
 version: '3.8'
 
 services:
   messenger-server:
-    image: alikakuznecova/messenger-server:latest
+    image: alikyshkin/messenger-server:latest
     container_name: messenger-server
     restart: unless-stopped
     ports:
@@ -118,7 +118,7 @@ networks:
 ```
 
 **Важно:** Замените:
-- `alikakuznecova` на ваш Docker Hub username
+- `alikyshkin` на ваш Docker Hub username (или оставьте как есть, если ваш username именно `alikyshkin`)
 - `ваш_секретный_ключ` на случайную строку (сгенерируйте: `openssl rand -base64 32`)
 - `https://ваш-домен.com` на ваш реальный домен или IP
 

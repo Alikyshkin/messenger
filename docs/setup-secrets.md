@@ -8,7 +8,7 @@
 
 1. Перейдите на https://hub.docker.com/
 2. Нажмите `Sign Up` и создайте бесплатный аккаунт
-3. Запомните ваш **username** (например, `alikakuznecova`)
+3. Запомните ваш **username** (например, `alikyshkin`)
 
 ### Шаг 2: Создайте Access Token
 
@@ -22,7 +22,7 @@
 8. **ВАЖНО:** Скопируйте токен сразу! Он показывается только один раз. Выглядит примерно так: `dckr_pat_xxxxxxxxxxxxxxxxxxxx`
 
 **Что вам нужно:**
-- `DOCKER_USERNAME` = ваш username на Docker Hub (например, `alikakuznecova`)
+- `DOCKER_USERNAME` = ваш username на Docker Hub (например, `alikyshkin`)
 - `DOCKER_PASSWORD` = созданный access token (например, `dckr_pat_xxxxxxxxxxxxxxxxxxxx`)
 
 ---
@@ -119,7 +119,7 @@ cat ~/.ssh/id_ed25519
 
 ### Секрет 1: DOCKER_USERNAME
 - **Name:** `DOCKER_USERNAME`
-- **Secret:** ваш Docker Hub username (например, `alikakuznecova`)
+- **Secret:** ваш Docker Hub username (например, `alikyshkin`)
 
 ### Секрет 2: DOCKER_PASSWORD
 - **Name:** `DOCKER_PASSWORD`
