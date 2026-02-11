@@ -6,6 +6,7 @@ import '../models/call_signal.dart';
 import '../services/ws_service.dart';
 import '../services/auth_service.dart';
 import '../services/app_sound_service.dart';
+import '../services/api.dart';
 import '../utils/app_page_route.dart';
 import '../utils/page_visibility.dart';
 import '../screens/call_screen.dart';
@@ -38,12 +39,20 @@ class _WsCallListenerState extends State<WsCallListener> {
     _sub?.cancel();
     _sub = ws.callSignals.listen((signal) async {
       if (!mounted || signal.signal != 'offer') return;
-      final displayName = 'Пользователь #${signal.fromUserId}';
-      final peer = User(
-        id: signal.fromUserId,
-        username: '',
-        displayName: displayName,
-      );
+      
+      // Загружаем информацию о пользователе
+      User peer;
+      try {
+        final api = Api(auth.token);
+        peer = await api.getUserProfile(signal.fromUserId);
+      } catch (e) {
+        // Если не удалось загрузить, используем заглушку
+        peer = User(
+          id: signal.fromUserId,
+          username: '',
+          displayName: 'Пользователь #${signal.fromUserId}',
+        );
+      }
 
       AppSoundService.instance.playRingtone();
 
@@ -51,7 +60,7 @@ class _WsCallListenerState extends State<WsCallListener> {
         await requestNotificationPermission();
         await showPageNotification(
           title: 'Входящий звонок',
-          body: displayName,
+          body: peer.displayName,
         );
         await focusWindow();
       }
