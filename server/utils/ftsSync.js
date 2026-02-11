@@ -10,10 +10,10 @@ import db from '../db.js';
  */
 export function syncMessagesFTS(messageId) {
   try {
+    // Используем INSERT OR REPLACE для SQLite (вместо ON CONFLICT DO UPDATE)
     db.prepare(`
-      INSERT INTO messages_fts(rowid, content)
+      INSERT OR REPLACE INTO messages_fts(rowid, content)
       SELECT id, content FROM messages WHERE id = ?
-      ON CONFLICT(rowid) DO UPDATE SET content = excluded.content
     `).run(messageId);
   } catch (error) {
     // Игнорируем ошибки, если FTS таблица не создана
@@ -28,10 +28,10 @@ export function syncMessagesFTS(messageId) {
  */
 export function syncGroupMessagesFTS(messageId) {
   try {
+    // Используем INSERT OR REPLACE для SQLite (вместо ON CONFLICT DO UPDATE)
     db.prepare(`
-      INSERT INTO group_messages_fts(rowid, content)
+      INSERT OR REPLACE INTO group_messages_fts(rowid, content)
       SELECT id, content FROM group_messages WHERE id = ?
-      ON CONFLICT(rowid) DO UPDATE SET content = excluded.content
     `).run(messageId);
   } catch (error) {
     // Игнорируем ошибки, если FTS таблица не создана
@@ -47,17 +47,16 @@ export function syncGroupMessagesFTS(messageId) {
 export function initFTSIndexes() {
   try {
     // Синхронизируем существующие личные сообщения
+    // Используем INSERT OR IGNORE для SQLite (вместо ON CONFLICT DO NOTHING)
     db.prepare(`
-      INSERT INTO messages_fts(rowid, content)
+      INSERT OR IGNORE INTO messages_fts(rowid, content)
       SELECT id, content FROM messages
-      ON CONFLICT(rowid) DO NOTHING
     `).run();
     
     // Синхронизируем существующие групповые сообщения
     db.prepare(`
-      INSERT INTO group_messages_fts(rowid, content)
+      INSERT OR IGNORE INTO group_messages_fts(rowid, content)
       SELECT id, content FROM group_messages
-      ON CONFLICT(rowid) DO NOTHING
     `).run();
   } catch (error) {
     // Игнорируем ошибки, если FTS таблицы не созданы

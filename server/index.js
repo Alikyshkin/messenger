@@ -180,8 +180,7 @@ app.get('/health', (req, res) => {
     }
 
     // Проверка дискового пространства (упрощённая)
-    const fs = require('fs');
-    const stats = fs.statSync(process.env.MESSENGER_DB_PATH || join(__dirname, 'messenger.db'));
+    const stats = statSync(process.env.MESSENGER_DB_PATH || join(__dirname, 'messenger.db'));
     const dbSize = stats.size;
 
     // Проверка памяти (упрощённая)
