@@ -4,7 +4,7 @@ import cors from 'cors';
 import compression from 'compression';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
-import { mkdirSync, existsSync } from 'fs';
+import { mkdirSync, existsSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { verifyToken } from './auth.js';
@@ -88,7 +88,71 @@ app.use('/groups', groupsRoutes);
 app.use('/users', usersRoutes);
 app.use('/polls', pollsRoutes);
 
-app.get('/health', (req, res) => res.json({ ok: true }));
+// Health checks
+app.get('/health', (req, res) => {
+  try {
+    // Проверка базы данных
+    const dbCheck = db.prepare('SELECT 1').get();
+    if (!dbCheck) {
+      return res.status(503).json({
+        status: 'unhealthy',
+        database: 'unavailable',
+      });
+    }
+
+    // Проверка дискового пространства (упрощённая)
+    const fs = require('fs');
+    const stats = fs.statSync(process.env.MESSENGER_DB_PATH || join(__dirname, 'messenger.db'));
+    const dbSize = stats.size;
+
+    // Проверка памяти (упрощённая)
+    const memUsage = process.memoryUsage();
+    const memUsageMB = {
+      rss: Math.round(memUsage.rss / 1024 / 1024),
+      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+      external: Math.round(memUsage.external / 1024 / 1024),
+    };
+
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: Math.round(process.uptime()),
+      database: {
+        status: 'connected',
+        size: dbSize,
+      },
+      memory: memUsageMB,
+      version: process.env.npm_package_version || '1.0.0',
+    });
+  } catch (error) {
+    log.error('Health check failed', error);
+    res.status(503).json({
+      status: 'unhealthy',
+      error: process.env.NODE_ENV === 'production' ? 'Service unavailable' : error.message,
+    });
+  }
+});
+
+// Readiness check (для Kubernetes/Docker)
+app.get('/ready', (req, res) => {
+  try {
+    // Проверка базы данных
+    const dbCheck = db.prepare('SELECT 1').get();
+    if (!dbCheck) {
+      return res.status(503).json({ ready: false, reason: 'database' });
+    }
+    res.json({ ready: true });
+  } catch (error) {
+    log.error('Readiness check failed', error);
+    res.status(503).json({ ready: false, reason: 'database' });
+  }
+});
+
+// Liveness check (для Kubernetes/Docker)
+app.get('/live', (req, res) => {
+  res.json({ alive: true });
+});
 
 // Обработка 404 ошибок (должен быть после всех маршрутов)
 app.use(notFoundHandler);
