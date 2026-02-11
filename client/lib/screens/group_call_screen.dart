@@ -148,6 +148,14 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
       await _getUserMedia();
       _applyInitialMute();
       
+      // Инициализируем renderers для всех участников
+      for (final participant in _participants.values) {
+        if (!participant.rendererInitialized) {
+          await participant.renderer.initialize();
+          participant.rendererInitialized = true;
+        }
+      }
+      
       // Создаем PeerConnection для каждого участника
       for (final participant in _participants.values) {
         await _createPeerConnectionForParticipant(participant);
@@ -393,6 +401,14 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     try {
       await _getUserMedia();
       _applyInitialMute();
+      
+      // Инициализируем renderers для всех участников
+      for (final participant in _participants.values) {
+        if (!participant.rendererInitialized) {
+          await participant.renderer.initialize();
+          participant.rendererInitialized = true;
+        }
+      }
       
       // Создаем PeerConnection для каждого участника
       for (final participant in _participants.values) {
