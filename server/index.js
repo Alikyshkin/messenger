@@ -126,7 +126,15 @@ app.use(compression({
   threshold: 1024, // Минимальный размер для сжатия (1KB)
 }));
 
-app.use(express.json());
+// express.json() не должен обрабатывать multipart/form-data - это делает multer
+// Пропускаем multipart/form-data для express.json(), чтобы не мешать multer
+app.use((req, res, next) => {
+  const contentType = req.get('Content-Type') || '';
+  if (contentType.startsWith('multipart/form-data')) {
+    return next(); // Пропускаем multipart/form-data для multer
+  }
+  express.json()(req, res, next);
+});
 app.use(express.urlencoded({ extended: true })); // Для CSRF токенов в формах
 
 // Cookie parser для CSRF защиты (требуется для работы csurf)
