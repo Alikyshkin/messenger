@@ -13,6 +13,40 @@ function getBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
+/**
+ * @swagger
+ * /chats:
+ *   get:
+ *     summary: Получить список чатов
+ *     tags: [Chats]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *       - in: query
+ *         name: offset
+ *         schema:
+ *           type: integer
+ *           default: 0
+ *     responses:
+ *       200:
+ *         description: Список чатов
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   type: object
+ */
 router.get('/', validatePagination, (req, res) => {
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);

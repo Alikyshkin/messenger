@@ -90,6 +90,55 @@ router.post('/:messageId/reaction', validateParams(messageIdParamSchema), valida
   res.json({ reactions });
 });
 
+/**
+ * @swagger
+ * /messages/{peerId}:
+ *   get:
+ *     summary: Получить сообщения с пользователем
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: peerId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID собеседника
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *           maximum: 200
+ *         description: Количество сообщений
+ *       - in: query
+ *         name: before
+ *         schema:
+ *           type: integer
+ *         description: ID сообщения для пагинации (получить сообщения до этого ID)
+ *     responses:
+ *       200:
+ *         description: Список сообщений
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Message'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     hasMore:
+ *                       type: boolean
+ */
 router.get('/:peerId', validateParams(peerIdParamSchema), (req, res) => {
   const peerId = req.validatedParams.peerId;
   const limit = Math.min(parseInt(req.query.limit, 10) || 100, 200);
@@ -196,6 +245,55 @@ router.get('/:peerId', validateParams(peerIdParamSchema), (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /messages:
+ *   post:
+ *     summary: Отправить сообщение
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - receiver_id
+ *             properties:
+ *               receiver_id:
+ *                 type: integer
+ *               content:
+ *                 type: string
+ *                 maxLength: 10000
+ *               type:
+ *                 type: string
+ *                 enum: [text, poll]
+ *               reply_to_id:
+ *                 type: integer
+ *                 nullable: true
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               receiver_id:
+ *                 type: integer
+ *               content:
+ *                 type: string
+ *               file:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       201:
+ *         description: Сообщение отправлено
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Message'
+ */
 router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   if (req.get('Content-Type')?.startsWith('multipart/form-data')) {
     return upload.array('file', FILE_LIMITS.MAX_FILES_PER_MESSAGE)(req, res, (err) => {

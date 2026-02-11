@@ -65,6 +65,22 @@ function userToJson(user, baseUrl, options = {}) {
   return j;
 }
 
+/**
+ * @swagger
+ * /users/me:
+ *   get:
+ *     summary: Получить информацию о текущем пользователе
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Информация о пользователе
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ */
 router.get('/me', (req, res) => {
   const user = db.prepare(
     'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email, birthday, phone, is_online, last_seen FROM users WHERE id = ?'

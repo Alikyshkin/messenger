@@ -11,6 +11,57 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
 
+/**
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Регистрация нового пользователя
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 minLength: 3
+ *                 maxLength: 50
+ *               password:
+ *                 type: string
+ *                 minLength: 6
+ *                 maxLength: 128
+ *               displayName:
+ *                 type: string
+ *                 maxLength: 100
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       201:
+ *         description: Пользователь успешно зарегистрирован
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *                 token:
+ *                   type: string
+ *       400:
+ *         description: Ошибка валидации
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: Имя пользователя уже занято
+ */
 router.post('/register', registerLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
   const { username, password, displayName, email } = req.validated;
   const password_hash = bcrypt.hashSync(password, 10);
@@ -39,6 +90,41 @@ router.post('/register', registerLimiter, validate(registerSchema), asyncHandler
   }
 }));
 
+/**
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Вход в систему
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Успешный вход
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
+ *                 token:
+ *                   type: string
+ *       401:
+ *         description: Неверные учетные данные
+ */
 router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async (req, res) => {
   const { username, password } = req.validated;
   const user = db.prepare(
