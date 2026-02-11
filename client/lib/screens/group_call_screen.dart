@@ -10,7 +10,6 @@ import '../services/ws_service.dart';
 import '../services/app_sound_service.dart';
 import '../services/auth_service.dart';
 import '../services/api.dart';
-import '../utils/app_page_route.dart';
 
 /// Участник группового звонка с его PeerConnection и потоком
 class _GroupCallParticipant {
