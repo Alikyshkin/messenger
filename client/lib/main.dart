@@ -8,6 +8,7 @@ import 'services/theme_service.dart';
 import 'services/ws_service.dart';
 import 'services/call_minimized_service.dart';
 import 'services/app_update_service.dart';
+import 'services/chat_list_refresh_service.dart';
 import 'widgets/app_lifecycle_listener.dart' show AppUpdateLifecycleListener;
 import 'widgets/app_update_dialog.dart';
 import 'routes/app_router.dart';
@@ -237,6 +238,7 @@ class MessengerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WsService()),
         ChangeNotifierProvider(create: (_) => CallMinimizedService()),
         ChangeNotifierProvider(create: (_) => AppUpdateService()),
+        ChangeNotifierProvider(create: (_) => ChatListRefreshService()),
       ],
       child: AppUpdateLifecycleListener(
         child: AppUpdateDialogListener(

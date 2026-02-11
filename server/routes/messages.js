@@ -150,7 +150,7 @@ router.get('/:peerId', validateParams(peerIdParamSchema), asyncHandler(async (re
   const baseUrl = getBaseUrl(req);
 
   let query = `
-    SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name
+    SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name, sender_public_key
     FROM messages
     WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
   `;
@@ -164,7 +164,7 @@ router.get('/:peerId', validateParams(peerIdParamSchema), asyncHandler(async (re
 
   const rows = db.prepare(query).all(...params);
   const list = rows.reverse().map(r => {
-    const sender = db.prepare('SELECT public_key FROM users WHERE id = ?').get(r.sender_id);
+    const senderKey = r.sender_public_key ?? db.prepare('SELECT public_key FROM users WHERE id = ?').get(r.sender_id)?.public_key;
     const msg = {
       id: r.id,
       sender_id: r.sender_id,
@@ -180,7 +180,7 @@ router.get('/:peerId', validateParams(peerIdParamSchema), asyncHandler(async (re
       attachment_kind: r.attachment_kind || 'file',
       attachment_duration_sec: r.attachment_duration_sec ?? null,
       attachment_encrypted: !!(r.attachment_encrypted),
-      sender_public_key: sender?.public_key ?? null,
+      sender_public_key: senderKey ?? null,
       reply_to_id: r.reply_to_id ?? null,
       is_forwarded: !!(r.is_forwarded),
       forward_from_sender_id: r.forward_from_sender_id ?? null,
@@ -328,6 +328,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   const text = data.content ? sanitizeText(data.content) : '';
   if (!isPoll && !isMissedCall && !text && files.length === 0) return res.status(400).json({ error: 'content или файл обязательны' });
   const me = req.user.userId;
+  const meUser = db.prepare('SELECT public_key FROM users WHERE id = ?').get(me);
   const baseUrl = getBaseUrl(req);
   const replyToId = data.reply_to_id || null;
   const isFwd = data.is_forwarded || false;
@@ -339,8 +340,8 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     if (options.length < 2) return res.status(400).json({ error: 'Минимум 2 варианта ответа' });
     const questionText = sanitizeText(data.question);
     const result = db.prepare(
-      `INSERT INTO messages (sender_id, receiver_id, content, message_type, attachment_path, attachment_filename) VALUES (?, ?, ?, 'poll', NULL, NULL)`
-    ).run(me, rid, questionText);
+      `INSERT INTO messages (sender_id, receiver_id, content, message_type, attachment_path, attachment_filename, sender_public_key) VALUES (?, ?, ?, 'poll', NULL, NULL, ?)`
+    ).run(me, rid, questionText, meUser?.public_key ?? null);
     const msgId = result.lastInsertRowid;
     const pollResult = db.prepare(
       'INSERT INTO polls (message_id, question, options, multiple) VALUES (?, ?, ?, ?)'
@@ -349,7 +350,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     db.prepare('UPDATE messages SET poll_id = ? WHERE id = ?').run(pollId, msgId);
     syncMessagesFTS(msgId);
     const row = db.prepare(
-      'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id FROM messages WHERE id = ?'
+      'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, sender_public_key FROM messages WHERE id = ?'
     ).get(msgId);
     if (!row) {
       return res.status(500).json({ error: 'Ошибка при создании опроса' });
@@ -366,6 +367,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
       attachment_filename: null,
       message_type: 'poll',
       poll_id: pollId,
+      sender_public_key: row.sender_public_key ?? meUser?.public_key ?? null,
       poll: {
         id: pollId,
         question: questionText,
@@ -385,7 +387,6 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     ? parseInt(req.body.attachment_duration_sec, 10)
     : null;
   const attachmentEncrypted = req.body?.attachment_encrypted === 'true' || req.body?.attachment_encrypted === true ? 1 : 0;
-  const meUser = db.prepare('SELECT public_key FROM users WHERE id = ?').get(me);
 
   function buildPayload(row) {
     const payload = {
@@ -399,7 +400,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
       attachment_kind: row.attachment_kind || 'file',
       attachment_duration_sec: row.attachment_duration_sec ?? null,
       attachment_encrypted: !!(row.attachment_encrypted),
-      sender_public_key: meUser?.public_key ?? null,
+      sender_public_key: row.sender_public_key ?? meUser?.public_key ?? null,
       reply_to_id: row.reply_to_id ?? null,
       is_forwarded: !!(row.is_forwarded),
       forward_from_sender_id: row.forward_from_sender_id ?? null,
@@ -421,12 +422,12 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     const contentToStore = isMissedCall ? 'Пропущенный звонок' : (text || '');
     const messageType = isMissedCall ? 'missed_call' : 'text';
     const result = db.prepare(
-      `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(me, rid, contentToStore, null, null, messageType, attachmentKind, attachmentDurationSec, attachmentEncrypted, replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
+      `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name, sender_public_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(me, rid, contentToStore, null, null, messageType, attachmentKind, attachmentDurationSec, attachmentEncrypted, replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName, meUser?.public_key ?? null);
     const msgId = result.lastInsertRowid;
     syncMessagesFTS(msgId);
     const row = db.prepare(
-      'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
+      'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name, sender_public_key FROM messages WHERE id = ?'
     ).get(msgId);
     if (!row) {
       return res.status(500).json({ error: 'Ошибка при создании сообщения' });
@@ -463,12 +464,12 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     const attachmentFilename = file.originalname || null;
     const contentToStore = i === 0 && text ? text : (attachmentKind === 'voice' ? 'Голосовое сообщение' : attachmentKind === 'video_note' ? 'Видеокружок' : '(файл)');
     const result = db.prepare(
-      `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name) VALUES (?, ?, ?, ?, ?, 'text', ?, ?, ?, ?, ?, ?, ?)`
-    ).run(me, rid, contentToStore, attachmentPath, attachmentFilename, attachmentKind, attachmentDurationSec, attachmentEncrypted, i === 0 && !Number.isNaN(replyToId) ? replyToId : null, isFwd ? 1 : 0, fwdFromId, fwdFromName);
+      `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name, sender_public_key) VALUES (?, ?, ?, ?, ?, 'text', ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(me, rid, contentToStore, attachmentPath, attachmentFilename, attachmentKind, attachmentDurationSec, attachmentEncrypted, i === 0 && !Number.isNaN(replyToId) ? replyToId : null, isFwd ? 1 : 0, fwdFromId, fwdFromName, meUser?.public_key ?? null);
     const msgId = result.lastInsertRowid;
     syncMessagesFTS(msgId);
     const row = db.prepare(
-      'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
+      'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name, sender_public_key FROM messages WHERE id = ?'
     ).get(msgId);
     if (!row) {
       log.error('Failed to retrieve created message after file upload', { msgId, fileIndex: i });

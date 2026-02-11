@@ -23,6 +23,7 @@ import '../widgets/profile_content.dart';
 import '../widgets/error_state_widget.dart';
 import '../widgets/empty_state_widget.dart';
 import '../services/app_update_service.dart';
+import '../services/chat_list_refresh_service.dart';
 import '../config/version.dart' show AppVersion;
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
@@ -39,7 +40,7 @@ class HomeScreen extends StatefulWidget {
 enum _NavigationItem { chats, contacts, newChat, profile }
 
 class _HomeScreenState extends State<HomeScreen>
-    with AutomaticKeepAliveClientMixin {
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   List<ChatPreview> _chats = [];
   bool _loading = true;
   String? _error;
@@ -55,14 +56,25 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   bool get wantKeepAlive => true;
 
+  void _onRefreshRequested() {
+    if (mounted && _currentView == _NavigationItem.chats) {
+      _load();
+      _loadFriendRequests();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     if (!_initialized) {
       _initialized = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         final ws = context.read<WsService>();
         ws.connect(context.read<AuthService>().token);
+
+        // Слушаем запросы обновления списка чатов (возврат на главный экран)
+        context.read<ChatListRefreshService>().addListener(_onRefreshRequested);
 
         // Проверяем обновления при возврате на главный экран
         try {
@@ -73,6 +85,7 @@ class _HomeScreenState extends State<HomeScreen>
 
         _load();
         _loadFriendRequests();
+        WidgetsBinding.instance.addObserver(this);
         _newMessageSub = ws.onNewMessage.listen((_) {
           if (!mounted) {
             return;
@@ -109,7 +122,25 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     _newMessageSub?.cancel();
     _newMessagePayloadSub?.cancel();
+    if (_initialized) {
+      try {
+        context.read<ChatListRefreshService>().removeListener(
+          _onRefreshRequested,
+        );
+      } catch (_) {}
+      WidgetsBinding.instance.removeObserver(this);
+    }
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        mounted &&
+        _currentView == _NavigationItem.chats) {
+      _load();
+      _loadFriendRequests();
+    }
   }
 
   Future<void> _load() async {

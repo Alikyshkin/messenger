@@ -510,13 +510,14 @@ wss.on('connection', (ws, req) => {
             }
             
             const { syncMessagesFTS } = await import('./utils/ftsSync.js');
+            const senderUser = db.prepare('SELECT public_key FROM users WHERE id = ?').get(toId);
             const result = db.prepare(
-              `INSERT INTO messages (sender_id, receiver_id, content, message_type) VALUES (?, ?, ?, ?)`
-            ).run(toId, userId, 'Пропущенный звонок', 'missed_call');
+              `INSERT INTO messages (sender_id, receiver_id, content, message_type, sender_public_key) VALUES (?, ?, ?, ?, ?)`
+            ).run(toId, userId, 'Пропущенный звонок', 'missed_call', senderUser?.public_key ?? null);
             const msgId = result.lastInsertRowid;
             syncMessagesFTS(msgId);
             const row = db.prepare(
-              'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
+              'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name, sender_public_key FROM messages WHERE id = ?'
             ).get(msgId);
             
             if (!row) {
@@ -525,6 +526,7 @@ wss.on('connection', (ws, req) => {
             }
             
             const sender = db.prepare('SELECT public_key, display_name, username FROM users WHERE id = ?').get(row.sender_id);
+            const senderKey = row.sender_public_key ?? sender?.public_key;
             // Определяем протокол из заголовков (для поддержки HTTPS через прокси)
             const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
             const host = req.headers.host || 'localhost:3000';
@@ -544,7 +546,7 @@ wss.on('connection', (ws, req) => {
               attachment_kind: 'file',
               attachment_duration_sec: null,
               attachment_encrypted: false,
-              sender_public_key: sender?.public_key ?? null,
+              sender_public_key: senderKey ?? null,
               sender_display_name: sender?.display_name || sender?.username || '?',
               reply_to_id: null,
               is_forwarded: false,

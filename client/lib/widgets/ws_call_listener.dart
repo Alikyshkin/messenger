@@ -29,7 +29,14 @@ class _WsCallListenerState extends State<WsCallListener> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _subscribe());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final auth = context.read<AuthService>();
+      if (auth.isLoggedIn) {
+        context.read<WsService>().connect(auth.token);
+      }
+      _subscribe();
+    });
   }
 
   void _subscribe() {

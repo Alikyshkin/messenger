@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/app_update_service.dart';
+import '../services/chat_list_refresh_service.dart';
 
 /// NavigatorObserver для проверки обновлений при навигации
 /// Проверяет обновления только при переходе на главный экран, чтобы не перегружать сервер
@@ -52,11 +53,19 @@ class NavigationUpdateObserver extends NavigatorObserver {
         }
 
         // Проверяем обновления при навигации на главный экран
-        final updateService = Provider.of<AppUpdateService>(
-          navigatorContext,
-          listen: false,
-        );
-        updateService.checkForUpdates();
+        try {
+          Provider.of<AppUpdateService>(
+            navigatorContext,
+            listen: false,
+          ).checkForUpdates();
+        } catch (_) {}
+        // Обновляем список чатов при возврате на главный экран
+        try {
+          Provider.of<ChatListRefreshService>(
+            navigatorContext,
+            listen: false,
+          ).requestRefresh();
+        } catch (_) {}
       } catch (_) {
         // Игнорируем ошибки если сервис недоступен или контекст недоступен
       }
