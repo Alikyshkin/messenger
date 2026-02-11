@@ -13,6 +13,9 @@ class AppUpdateService extends ChangeNotifier {
   String? _currentVersion;
   bool _hasUpdate = false;
   Timer? _checkTimer;
+  DateTime? _lastCheckTime;
+  bool _isChecking = false;
+  static const Duration _minCheckInterval = Duration(seconds: 30); // Минимальный интервал между проверками
   
   String? get latestVersion => _latestVersion;
   String? get currentVersion => _currentVersion;
@@ -52,7 +55,22 @@ class AppUpdateService extends ChangeNotifier {
   }
   
   /// Проверяет наличие обновлений на сервере
+  /// Использует троттлинг чтобы не проверять слишком часто
   Future<void> checkForUpdates() async {
+    // Если уже идет проверка, пропускаем
+    if (_isChecking) return;
+    
+    // Если прошло недостаточно времени с последней проверки, пропускаем
+    if (_lastCheckTime != null) {
+      final timeSinceLastCheck = DateTime.now().difference(_lastCheckTime!);
+      if (timeSinceLastCheck < _minCheckInterval) {
+        return;
+      }
+    }
+    
+    _isChecking = true;
+    _lastCheckTime = DateTime.now();
+    
     try {
       final response = await http.get(
         Uri.parse('$apiBaseUrl/version'),
@@ -73,6 +91,8 @@ class AppUpdateService extends ChangeNotifier {
       }
     } catch (_) {
       // Игнорируем ошибки проверки обновлений
+    } finally {
+      _isChecking = false;
     }
   }
   
