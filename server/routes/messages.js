@@ -302,7 +302,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     });
   }
   next();
-}, validate(sendMessageSchema), (req, res) => {
+}, validate(sendMessageSchema), async (req, res) => {
   const data = req.validated;
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
   const rid = data.receiver_id;
