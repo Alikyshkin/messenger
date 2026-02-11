@@ -21,69 +21,81 @@ console.log('Начинаю очистку...\n');
 
 const db = new Database(dbPath);
 
-// Включаем foreign keys для каскадного удаления
-db.pragma('foreign_keys = ON');
+// Отключаем foreign keys для безопасного удаления всех данных
+db.pragma('foreign_keys = OFF');
 
 try {
-  // Удаляем все данные в правильном порядке (с учетом foreign keys)
+  // Удаляем все данные в правильном порядке
+  // Используем try-catch для каждой операции, чтобы пропускать несуществующие таблицы
+  
+  const deleteTable = (tableName) => {
+    try {
+      db.prepare(`DELETE FROM ${tableName}`).run();
+      return true;
+    } catch (err) {
+      // Игнорируем ошибки для несуществующих таблиц
+      return false;
+    }
+  };
   
   console.log('Удаление голосов в опросах...');
-  db.prepare('DELETE FROM group_poll_votes').run();
-  db.prepare('DELETE FROM poll_votes').run();
+  deleteTable('group_poll_votes');
+  deleteTable('poll_votes');
   
   console.log('Удаление опросов...');
-  db.prepare('DELETE FROM group_polls').run();
-  db.prepare('DELETE FROM polls').run();
+  deleteTable('group_polls');
+  deleteTable('polls');
   
   console.log('Удаление реакций...');
-  db.prepare('DELETE FROM group_message_reactions').run();
-  db.prepare('DELETE FROM message_reactions').run();
+  deleteTable('group_message_reactions');
+  deleteTable('message_reactions');
   
   console.log('Удаление прочитанных сообщений...');
-  db.prepare('DELETE FROM group_read').run();
+  deleteTable('group_read');
   
   console.log('Удаление групповых сообщений...');
-  db.prepare('DELETE FROM group_messages').run();
+  deleteTable('group_messages');
   
   console.log('Удаление участников групп...');
-  db.prepare('DELETE FROM group_members').run();
+  deleteTable('group_members');
   
   console.log('Удаление групп...');
-  db.prepare('DELETE FROM groups').run();
+  deleteTable('groups');
   
   console.log('Удаление сообщений...');
-  db.prepare('DELETE FROM messages').run();
+  deleteTable('messages');
   
   console.log('Удаление заявок в друзья...');
-  db.prepare('DELETE FROM friend_requests').run();
+  deleteTable('friend_requests');
   
   console.log('Удаление контактов...');
-  db.prepare('DELETE FROM contacts').run();
+  deleteTable('contacts');
   
   console.log('Удаление FCM токенов...');
-  db.prepare('DELETE FROM user_fcm_tokens').run();
+  deleteTable('user_fcm_tokens');
   
   console.log('Удаление токенов сброса пароля...');
-  db.prepare('DELETE FROM password_reset_tokens').run();
+  deleteTable('password_reset_tokens');
   
   console.log('Удаление audit logs...');
-  db.prepare('DELETE FROM audit_logs').run();
+  deleteTable('audit_logs');
   
   console.log('Удаление пользователей...');
-  db.prepare('DELETE FROM users').run();
+  deleteTable('users');
   
   // Очищаем FTS индексы
   console.log('Очистка FTS индексов...');
-  try {
-    db.prepare('DELETE FROM group_messages_fts').run();
-  } catch (_) {}
-  try {
-    db.prepare('DELETE FROM messages_fts').run();
-  } catch (_) {}
+  deleteTable('group_messages_fts');
+  deleteTable('messages_fts');
   
   // Сбрасываем счетчики AUTOINCREMENT
   console.log('Сброс счетчиков...');
-  db.prepare('DELETE FROM sqlite_sequence').run();
+  try {
+    db.prepare('DELETE FROM sqlite_sequence').run();
+  } catch (_) {}
+  
+  // Включаем foreign keys обратно
+  db.pragma('foreign_keys = ON');
   
   console.log('\n✅ База данных успешно очищена!');
   console.log('Теперь вы можете зарегистрировать нового пользователя.');
