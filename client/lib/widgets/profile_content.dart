@@ -46,11 +46,8 @@ class _ProfileContentState extends State<ProfileContent> {
     super.initState();
     if (!_userRefreshed) {
       _userRefreshed = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          context.read<AuthService>().refreshUser();
-        }
-      });
+      // Не вызываем refreshUser автоматически, чтобы не вызывать лишние перестройки
+      // Данные пользователя уже загружены в AuthService
     }
   }
 

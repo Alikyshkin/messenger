@@ -367,33 +367,39 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   child: Column(
                     children: [
                       AppSpacing.spacingVerticalSM,
-                      Consumer<AuthService>(
-                        builder: (context, auth, _) {
-                          final user = auth.user;
-                          final isActive = _currentView == _NavigationItem.profile;
-                          return IconButton(
-                            icon: user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
-                                ? UserAvatar(
-                                    user: user,
-                                    radius: AppSizes.avatarSM,
-                                  )
-                                : Icon(
-                                    Icons.account_circle_outlined,
-                                    size: AppSizes.iconXL,
-                                    color: isActive
-                                        ? Theme.of(context).colorScheme.primary
-                                        : null,
-                                  ),
-                            tooltip: context.tr('my_profile'),
-                            style: IconButton.styleFrom(
-                              backgroundColor: isActive
-                                  ? Theme.of(context).colorScheme.primaryContainer
-                                  : null,
-                            ),
-                            onPressed: () {
-                              setState(() {
-                                _currentView = _NavigationItem.profile;
-                              });
+                      Builder(
+                        builder: (context) {
+                          return Consumer<AuthService>(
+                            builder: (context, auth, _) {
+                              final user = auth.user;
+                              final isActive = _currentView == _NavigationItem.profile;
+                              return IconButton(
+                                icon: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
+                                    ? UserAvatar(
+                                        user: user!,
+                                        radius: AppSizes.avatarSM,
+                                      )
+                                    : Icon(
+                                        Icons.account_circle_outlined,
+                                        size: AppSizes.iconXL,
+                                        color: isActive
+                                            ? Theme.of(context).colorScheme.primary
+                                            : null,
+                                      ),
+                                tooltip: context.tr('my_profile'),
+                                style: IconButton.styleFrom(
+                                  backgroundColor: isActive
+                                      ? Theme.of(context).colorScheme.primaryContainer
+                                      : null,
+                                ),
+                                onPressed: () {
+                                  if (mounted && _currentView != _NavigationItem.profile) {
+                                    setState(() {
+                                      _currentView = _NavigationItem.profile;
+                                    });
+                                  }
+                                },
+                              );
                             },
                           );
                         },
@@ -441,9 +447,11 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                               : null,
                         ),
                         onPressed: () {
-                          setState(() {
-                            _currentView = _NavigationItem.chats;
-                          });
+                          if (mounted && _currentView != _NavigationItem.chats) {
+                            setState(() {
+                              _currentView = _NavigationItem.chats;
+                            });
+                          }
                         },
                       ),
                       IconButton(
@@ -489,9 +497,11 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                               : null,
                         ),
                         onPressed: () {
-                          setState(() {
-                            _currentView = _NavigationItem.contacts;
-                          });
+                          if (mounted && _currentView != _NavigationItem.contacts) {
+                            setState(() {
+                              _currentView = _NavigationItem.contacts;
+                            });
+                          }
                         },
                       ),
                       IconButton(
@@ -509,9 +519,11 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                               : null,
                         ),
                         onPressed: () {
-                          setState(() {
-                            _currentView = _NavigationItem.newChat;
-                          });
+                          if (mounted && _currentView != _NavigationItem.newChat) {
+                            setState(() {
+                              _currentView = _NavigationItem.newChat;
+                            });
+                          }
                         },
                       ),
                       const Spacer(),
