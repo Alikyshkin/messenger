@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
-import '../utils/app_page_route.dart';
 import '../widgets/user_avatar.dart';
 import 'contacts_screen.dart';
 import 'settings_screen.dart';
@@ -64,8 +64,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
+              // SettingsScreen пока не имеет маршрута в go_router, используем Navigator
               Navigator.of(context).push(
-                AppPageRoute(builder: (_) => const SettingsScreen()),
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
               );
             },
           ),
@@ -138,9 +139,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: Text(context.tr('friends')),
                   subtitle: Text(_friendsCountLabel(context, u.friendsCount)),
                   onTap: () {
-                    Navigator.of(context).push(
-                      AppPageRoute(builder: (_) => const ContactsScreen()),
-                    );
+                    context.push('/contacts');
                   },
                 ),
                 const Divider(height: 1),
@@ -149,8 +148,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: Text(context.tr('settings')),
                   subtitle: Text(context.tr('settings_subtitle')),
                   onTap: () {
+                    // SettingsScreen пока не имеет маршрута в go_router, используем Navigator
                     Navigator.of(context).push(
-                      AppPageRoute(builder: (_) => const SettingsScreen()),
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
                     );
                   },
                 ),
@@ -178,7 +178,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     if (ok == true) {
                       await auth.logout();
                       if (!context.mounted) return;
-                      Navigator.of(context).pushNamedAndRemoveUntil('/login', (r) => false);
+                      context.go('/login');
                     }
                   },
                 ),
