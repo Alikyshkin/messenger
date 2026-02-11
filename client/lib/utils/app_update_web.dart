@@ -4,66 +4,39 @@ import 'package:flutter/foundation.dart';
 
 /// Утилита для проверки обновлений и очистки кеша в Flutter Web
 class AppUpdateWeb {
-  /// Проверяет наличие обновлений и при необходимости перезагружает страницу с очисткой кеша
+  /// Проверяет наличие обновлений и перезагружает страницу с очисткой кеша
+  /// Вызывается при выходе из звонка для синхронизации интерфейса и обновлений
   static Future<void> checkAndReloadIfNeeded() async {
     if (!kIsWeb) return;
     
     try {
-      // Проверяем наличие Service Worker для обновлений
-      if (html.window.navigator.serviceWorker != null) {
-        // Регистрируем Service Worker если он еще не зарегистрирован
-        try {
-          final registration = await html.window.navigator.serviceWorker?.ready;
-          if (registration != null) {
-            // Проверяем наличие обновлений через Service Worker
-            await registration.update();
-          }
-        } catch (_) {
-          // Игнорируем ошибки Service Worker
-        }
-      }
+      // Очищаем кеш перед перезагрузкой
+      await clearCache();
       
-      // Проверяем версию приложения через запрос к серверу
-      await _checkAppVersion();
-    } catch (_) {
-      // Игнорируем ошибки проверки обновлений
-    }
-  }
-  
-  /// Проверяет версию приложения и перезагружает если есть обновления
-  static Future<void> _checkAppVersion() async {
-    try {
-      // Запрашиваем версию приложения с сервера
-      final response = await html.HttpRequest.getString(
-        '${html.window.location.origin}/version.json?t=${DateTime.now().millisecondsSinceEpoch}',
-      );
+      // Небольшая задержка для завершения очистки кеша
+      await Future.delayed(const Duration(milliseconds: 100));
       
-      // Если версия изменилась, перезагружаем страницу с очисткой кеша
-      // Для простоты всегда перезагружаем при выходе из звонка для синхронизации
-      await _reloadWithCacheClear();
+      // Перезагружаем страницу с очисткой кеша
+      // Добавляем параметр для принудительной перезагрузки без кеша
+      final url = html.Uri.parse(html.window.location.href);
+      final newUrl = url.replace(queryParameters: {
+        ...url.queryParameters,
+        '_reload': DateTime.now().millisecondsSinceEpoch.toString(),
+        '_nocache': '1',
+      });
+      
+      // Перезагружаем страницу
+      html.window.location.href = newUrl.toString();
     } catch (_) {
-      // Если не удалось проверить версию, все равно перезагружаем для синхронизации
-      await _reloadWithCacheClear();
+      // Если произошла ошибка, просто перезагружаем страницу
+      html.window.location.reload();
     }
-  }
-  
-  /// Перезагружает страницу с очисткой кеша
-  static Future<void> _reloadWithCacheClear() async {
-    // Добавляем параметр для очистки кеша
-    final url = html.Uri.parse(html.window.location.href);
-    final newUrl = url.replace(queryParameters: {
-      ...url.queryParameters,
-      '_reload': DateTime.now().millisecondsSinceEpoch.toString(),
-    });
-    
-    // Перезагружаем страницу с очисткой кеша
-    html.window.location.reload();
   }
   
   /// Принудительно перезагружает страницу с очисткой кеша
   static void forceReloadWithCacheClear() {
     if (!kIsWeb) return;
-    html.window.location.reload();
+    checkAndReloadIfNeeded();
   }
   
   /// Очищает кеш браузера для текущего домена
@@ -72,16 +45,27 @@ class AppUpdateWeb {
     
     try {
       // Очищаем кеш через Cache API если доступен
-      if (html.window.navigator.serviceWorker != null) {
-        final registration = await html.window.navigator.serviceWorker?.ready;
-        if (registration != null) {
-          // Очищаем кеш Service Worker
-          final cacheNames = await html.window.caches?.keys();
-          if (cacheNames != null) {
-            for (final cacheName in cacheNames) {
-              await html.window.caches?.delete(cacheName);
-            }
+      if (html.window.caches != null) {
+        final cacheNames = await html.window.caches!.keys();
+        for (final cacheName in cacheNames) {
+          try {
+            await html.window.caches!.delete(cacheName);
+          } catch (_) {
+            // Игнорируем ошибки удаления отдельных кешей
           }
+        }
+      }
+      
+      // Очищаем кеш Service Worker если доступен
+      if (html.window.navigator.serviceWorker != null) {
+        try {
+          final registration = await html.window.navigator.serviceWorker?.ready;
+          if (registration != null) {
+            // Проверяем наличие обновлений через Service Worker
+            await registration.update();
+          }
+        } catch (_) {
+          // Игнорируем ошибки Service Worker
         }
       }
     } catch (_) {
