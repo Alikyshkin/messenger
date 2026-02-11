@@ -133,7 +133,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return OfflineIndicator(
+      child: Scaffold(
       appBar: AppBar(
         title: Text(context.tr('chats')),
         actions: [
@@ -312,6 +313,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         },
                       ),
+      ),
       ),
     );
   }

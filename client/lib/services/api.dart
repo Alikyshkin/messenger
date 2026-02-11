@@ -246,6 +246,27 @@ class Api {
     return jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
   }
 
+  /// Получить статус синхронизации
+  Future<Map<String, dynamic>> getSyncStatus() async {
+    final r = await http.get(Uri.parse('$base/sync/status'), headers: _headers);
+    _checkResponse(r);
+    return jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+  }
+
+  /// Синхронизировать сообщения
+  Future<Map<String, dynamic>> syncMessages(String lastSyncTime, {List<int>? peerIds}) async {
+    final r = await http.post(
+      Uri.parse('$base/sync/messages'),
+      headers: _headers,
+      body: jsonEncode({
+        'lastSyncTime': lastSyncTime,
+        if (peerIds != null) 'peerIds': peerIds,
+      }),
+    );
+    _checkResponse(r);
+    return jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+  }
+
   Future<void> markMessagesRead(int peerId) async {
     final r = await http.patch(
       Uri.parse('$base/messages/$peerId/read'),
