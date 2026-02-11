@@ -34,7 +34,8 @@ class CallControlButton extends StatelessWidget {
       onPressed: onPressed,
       icon: Icons.mic,
       disabledIcon: Icons.mic_off,
-      tooltip: tooltip ?? (isEnabled ? 'Выключить микрофон' : 'Включить микрофон'),
+      tooltip:
+          tooltip ?? (isEnabled ? 'Выключить микрофон' : 'Включить микрофон'),
       isEnabled: isEnabled,
     );
   }
@@ -64,7 +65,9 @@ class CallControlButton extends StatelessWidget {
       onPressed: onPressed,
       icon: Icons.screen_share,
       disabledIcon: Icons.stop_screen_share,
-      tooltip: tooltip ?? (isEnabled ? 'Остановить демонстрацию' : 'Демонстрация экрана'),
+      tooltip:
+          tooltip ??
+          (isEnabled ? 'Остановить демонстрацию' : 'Демонстрация экрана'),
       isEnabled: isEnabled,
       enabledColor: Colors.orange.shade700,
     );
@@ -103,17 +106,20 @@ class CallControlButton extends StatelessWidget {
     final theme = Theme.of(context);
     final defaultSize = size ?? 56.0;
     final iconSize = size != null ? size! * 0.5 : 28.0;
-    
+
     // Цвета по умолчанию из темы
-    final defaultEnabledColor = enabledColor ?? 
-        (theme.brightness == Brightness.dark 
-            ? Colors.grey.shade700 
+    final defaultEnabledColor =
+        enabledColor ??
+        (theme.brightness == Brightness.dark
+            ? Colors.grey.shade700
             : Colors.grey.shade600);
     final defaultDisabledColor = disabledColor ?? Colors.red.shade700;
-    
-    final backgroundColor = isEnabled ? defaultEnabledColor : defaultDisabledColor;
+
+    final backgroundColor = isEnabled
+        ? defaultEnabledColor
+        : defaultDisabledColor;
     final iconToShow = isEnabled ? icon : (disabledIcon ?? icon);
-    
+
     return IconButton.filled(
       onPressed: onPressed,
       icon: Icon(iconToShow),

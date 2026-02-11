@@ -8,17 +8,26 @@ void main() {
       // Проверка парсинга ответа с пагинацией
       final response = {
         'data': [
-          {'id': 1, 'content': 'Test', 'sender_id': 1, 'receiver_id': 2, 'created_at': '2024-01-01T00:00:00Z', 'is_mine': false, 'message_type': 'text', 'reactions': []}
+          {
+            'id': 1,
+            'content': 'Test',
+            'sender_id': 1,
+            'receiver_id': 2,
+            'created_at': '2024-01-01T00:00:00Z',
+            'is_mine': false,
+            'message_type': 'text',
+            'reactions': [],
+          },
         ],
-        'pagination': {'limit': 100, 'hasMore': false, 'total': 1}
+        'pagination': {'limit': 100, 'hasMore': false, 'total': 1},
       };
-      
+
       final json = jsonEncode(response);
       final decoded = jsonDecode(json);
-      final list = decoded is Map<String, dynamic> 
+      final list = decoded is Map<String, dynamic>
           ? (decoded['data'] as List<dynamic>? ?? [])
           : (decoded as List<dynamic>);
-      
+
       expect(list.length, 1);
       expect(list[0]['content'], 'Test');
     });
@@ -26,15 +35,24 @@ void main() {
     test('API Response Parsing - Messages as direct array', () {
       // Проверка парсинга прямого массива
       final response = [
-        {'id': 1, 'content': 'Test', 'sender_id': 1, 'receiver_id': 2, 'created_at': '2024-01-01T00:00:00Z', 'is_mine': false, 'message_type': 'text', 'reactions': []}
+        {
+          'id': 1,
+          'content': 'Test',
+          'sender_id': 1,
+          'receiver_id': 2,
+          'created_at': '2024-01-01T00:00:00Z',
+          'is_mine': false,
+          'message_type': 'text',
+          'reactions': [],
+        },
       ];
-      
+
       final json = jsonEncode(response);
       final decoded = jsonDecode(json);
-      final list = decoded is Map<String, dynamic> 
+      final list = decoded is Map<String, dynamic>
           ? (decoded['data'] as List<dynamic>? ?? [])
           : (decoded as List<dynamic>);
-      
+
       expect(list.length, 1);
       expect(list[0]['content'], 'Test');
     });
@@ -43,7 +61,7 @@ void main() {
       // Проверка определения сетевых ошибок
       final statusCode = 500;
       final isNetworkError = statusCode >= 400 && statusCode < 500;
-      
+
       expect(isNetworkError, true);
     });
 
@@ -51,10 +69,10 @@ void main() {
       // Проверка обработки успешного статуса с ошибкой парсинга
       final statusCode = 201;
       final hasParsingError = true;
-      
+
       // Сообщение отправлено, но есть ошибка парсинга
       final shouldNotGoToOutbox = statusCode == 201;
-      
+
       expect(shouldNotGoToOutbox, true);
       expect(hasParsingError, true);
     });
@@ -64,7 +82,7 @@ void main() {
       final messageContent = 'Test message';
       final receiverId = 2;
       final statusCode = 201;
-      
+
       expect(messageContent.isNotEmpty, true);
       expect(receiverId > 0, true);
       expect(statusCode, 201);
@@ -74,7 +92,7 @@ void main() {
       // Проверка обработки сетевой ошибки
       final messageContent = 'Test message';
       final isNetworkError = true;
-      
+
       if (isNetworkError) {
         // Должно попасть в outbox
         expect(isNetworkError, true);
@@ -85,7 +103,7 @@ void main() {
       // Проверка инициализации исходящего звонка
       final peerId = 2;
       final isIncoming = false;
-      
+
       expect(peerId > 0, true);
       expect(isIncoming, false);
     });
@@ -94,7 +112,7 @@ void main() {
       // Проверка обработки входящего звонка
       final fromUserId = 2;
       final signalType = 'offer';
-      
+
       expect(fromUserId > 0, true);
       expect(signalType, 'offer');
     });
@@ -103,23 +121,26 @@ void main() {
       // Проверка обмена WebRTC сигналами
       final offer = {'type': 'offer', 'sdp': 'test_sdp'};
       final answer = {'type': 'answer', 'sdp': 'test_sdp'};
-      
+
       expect(offer['type'], 'offer');
       expect(answer['type'], 'answer');
     });
 
     test('Data Loading - Empty response handling', () {
       // Проверка обработки пустого ответа
-      final emptyResponse = {'data': [], 'pagination': {'limit': 100, 'hasMore': false, 'total': 0}};
+      final emptyResponse = {
+        'data': [],
+        'pagination': {'limit': 100, 'hasMore': false, 'total': 0},
+      };
       final list = emptyResponse['data'] as List;
-      
+
       expect(list.isEmpty, true);
     });
 
     test('Data Loading - Error response handling', () {
       // Проверка обработки ответа с ошибкой
       final errorResponse = {'error': 'Ошибка загрузки'};
-      
+
       expect(errorResponse.containsKey('error'), true);
       expect(errorResponse['error'], 'Ошибка загрузки');
     });
@@ -130,7 +151,7 @@ void main() {
       final formValid = true;
       final loading = false;
       final canSubmit = formValid && !loading;
-      
+
       expect(canSubmit, true);
     });
 
@@ -138,7 +159,7 @@ void main() {
       final usernameValid = true;
       final passwordValid = true;
       final canSubmit = usernameValid && passwordValid;
-      
+
       expect(canSubmit, true);
     });
 
@@ -146,14 +167,14 @@ void main() {
       final hasContent = true;
       final notSending = true;
       final canSend = hasContent && notSending;
-      
+
       expect(canSend, true);
     });
 
     test('Call button - checks permissions', () {
       final hasPermissions = true;
       final canCall = hasPermissions;
-      
+
       expect(canCall, true);
     });
   });
@@ -162,28 +183,28 @@ void main() {
     test('Network timeout handling', () {
       final timeout = true;
       final shouldRetry = timeout;
-      
+
       expect(shouldRetry, true);
     });
 
     test('Server error handling', () {
       final statusCode = 500;
       final isServerError = statusCode >= 500;
-      
+
       expect(isServerError, true);
     });
 
     test('Authentication error handling', () {
       final statusCode = 401;
       final isAuthError = statusCode == 401;
-      
+
       expect(isAuthError, true);
     });
 
     test('Validation error handling', () {
       final statusCode = 400;
       final isValidationError = statusCode == 400;
-      
+
       expect(isValidationError, true);
     });
   });

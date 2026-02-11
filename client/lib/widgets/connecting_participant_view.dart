@@ -27,10 +27,7 @@ class ConnectingParticipantView extends StatelessWidget {
             user: user,
             radius: avatarRadius,
             backgroundColor: Colors.blue.shade700,
-            textStyle: TextStyle(
-              color: Colors.white,
-              fontSize: fontSize,
-            ),
+            textStyle: TextStyle(color: Colors.white, fontSize: fontSize),
           ),
           const SizedBox(height: 24),
           Text(

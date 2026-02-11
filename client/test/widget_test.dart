@@ -5,9 +5,7 @@ void main() {
   testWidgets('MaterialApp renders', (WidgetTester tester) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: Center(child: Text('Test')),
-        ),
+        home: Scaffold(body: Center(child: Text('Test'))),
       ),
     );
     expect(find.byType(MaterialApp), findsOneWidget);

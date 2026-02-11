@@ -6,18 +6,10 @@ import 'minimized_call_widget.dart';
 class MinimizedCallOverlay extends StatelessWidget {
   final Widget child;
 
-  const MinimizedCallOverlay({
-    super.key,
-    required this.child,
-  });
+  const MinimizedCallOverlay({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        child,
-        const MinimizedCallWidget(),
-      ],
-    );
+    return Stack(children: [child, const MinimizedCallWidget()]);
   }
 }

@@ -33,12 +33,15 @@ class UserAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final avatarUrl = user?.avatarUrl;
     final displayName = user?.displayName ?? fallbackText ?? '?';
-    final bgColor = backgroundColor ?? Theme.of(context).colorScheme.primaryContainer;
-    final style = textStyle ?? TextStyle(
-      color: Theme.of(context).colorScheme.onPrimaryContainer,
-      fontSize: radius * 0.6,
-      fontWeight: FontWeight.w600,
-    );
+    final bgColor =
+        backgroundColor ?? Theme.of(context).colorScheme.primaryContainer;
+    final style =
+        textStyle ??
+        TextStyle(
+          color: Theme.of(context).colorScheme.onPrimaryContainer,
+          fontSize: radius * 0.6,
+          fontWeight: FontWeight.w600,
+        );
 
     return CircleAvatar(
       radius: radius,

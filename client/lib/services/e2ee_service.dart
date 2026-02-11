@@ -52,13 +52,23 @@ class E2EEService {
   }
 
   /// Зашифровать текст для получателя (его публичный ключ в base64). Возвращает "e2ee:" + base64 или null.
-  Future<String?> encrypt(String plaintext, String? recipientPublicKeyBase64) async {
-    if (recipientPublicKeyBase64 == null || recipientPublicKeyBase64.isEmpty) return null;
+  Future<String?> encrypt(
+    String plaintext,
+    String? recipientPublicKeyBase64,
+  ) async {
+    if (recipientPublicKeyBase64 == null || recipientPublicKeyBase64.isEmpty)
+      return null;
     final keyPair = await _loadKeyPair();
     if (keyPair == null) return null;
     try {
-      final theirPublic = SimplePublicKey(base64Decode(recipientPublicKeyBase64), type: KeyPairType.x25519);
-      final sharedSecret = await _x25519.sharedSecretKey(keyPair: keyPair as KeyPair, remotePublicKey: theirPublic);
+      final theirPublic = SimplePublicKey(
+        base64Decode(recipientPublicKeyBase64),
+        type: KeyPairType.x25519,
+      );
+      final sharedSecret = await _x25519.sharedSecretKey(
+        keyPair: keyPair as KeyPair,
+        remotePublicKey: theirPublic,
+      );
       final sharedBytes = Uint8List.fromList(await sharedSecret.extractBytes());
       final aesKeyBytes = await _hkdf(sharedBytes, _aesKeyLen);
       final secretKey = SecretKey(aesKeyBytes);
@@ -69,10 +79,20 @@ class E2EEService {
         secretKey: secretKey,
         nonce: nonce,
       );
-      final combined = Uint8List(nonce.length + secretBox.cipherText.length + secretBox.mac.bytes.length);
+      final combined = Uint8List(
+        nonce.length + secretBox.cipherText.length + secretBox.mac.bytes.length,
+      );
       combined.setRange(0, nonce.length, nonce);
-      combined.setRange(nonce.length, nonce.length + secretBox.cipherText.length, secretBox.cipherText);
-      combined.setRange(nonce.length + secretBox.cipherText.length, combined.length, secretBox.mac.bytes);
+      combined.setRange(
+        nonce.length,
+        nonce.length + secretBox.cipherText.length,
+        secretBox.cipherText,
+      );
+      combined.setRange(
+        nonce.length + secretBox.cipherText.length,
+        combined.length,
+        secretBox.mac.bytes,
+      );
       return _prefix + base64Encode(combined);
     } catch (_) {
       return null;
@@ -81,13 +101,20 @@ class E2EEService {
 
   /// Расшифровать текст от отправителя (его публичный ключ в base64). Возвращает plaintext или null.
   Future<String?> decrypt(String content, String? senderPublicKeyBase64) async {
-    if (senderPublicKeyBase64 == null || senderPublicKeyBase64.isEmpty) return null;
+    if (senderPublicKeyBase64 == null || senderPublicKeyBase64.isEmpty)
+      return null;
     if (!content.startsWith(_prefix)) return null;
     final keyPair = await _loadKeyPair();
     if (keyPair == null) return null;
     try {
-      final theirPublic = SimplePublicKey(base64Decode(senderPublicKeyBase64), type: KeyPairType.x25519);
-      final sharedSecret = await _x25519.sharedSecretKey(keyPair: keyPair as KeyPair, remotePublicKey: theirPublic);
+      final theirPublic = SimplePublicKey(
+        base64Decode(senderPublicKeyBase64),
+        type: KeyPairType.x25519,
+      );
+      final sharedSecret = await _x25519.sharedSecretKey(
+        keyPair: keyPair as KeyPair,
+        remotePublicKey: theirPublic,
+      );
       final sharedBytes = Uint8List.fromList(await sharedSecret.extractBytes());
       final aesKeyBytes = await _hkdf(sharedBytes, _aesKeyLen);
       final secretKey = SecretKey(aesKeyBytes);
@@ -101,7 +128,9 @@ class E2EEService {
       final cipherText = combined.sublist(nonceLen, combined.length - macLen);
       final secretBox = SecretBox(cipherText, nonce: nonce, mac: mac);
       final decrypted = await _aes.decrypt(secretBox, secretKey: secretKey);
-      final bytes = decrypted is Uint8List ? decrypted : Uint8List.fromList(decrypted);
+      final bytes = decrypted is Uint8List
+          ? decrypted
+          : Uint8List.fromList(decrypted);
       return utf8.decode(bytes);
     } catch (_) {
       return null;
@@ -111,18 +140,32 @@ class E2EEService {
   bool isEncrypted(String content) => content.startsWith(_prefix);
 
   /// Зашифровать байты (файл, голос, видео) для получателя. Формат: "E2EE" + nonce + ciphertext + tag.
-  Future<Uint8List?> encryptBytes(Uint8List plaintext, String? recipientPublicKeyBase64) async {
-    if (recipientPublicKeyBase64 == null || recipientPublicKeyBase64.isEmpty) return null;
+  Future<Uint8List?> encryptBytes(
+    Uint8List plaintext,
+    String? recipientPublicKeyBase64,
+  ) async {
+    if (recipientPublicKeyBase64 == null || recipientPublicKeyBase64.isEmpty)
+      return null;
     final keyPair = await _loadKeyPair();
     if (keyPair == null) return null;
     try {
-      final theirPublic = SimplePublicKey(base64Decode(recipientPublicKeyBase64), type: KeyPairType.x25519);
-      final sharedSecret = await _x25519.sharedSecretKey(keyPair: keyPair as KeyPair, remotePublicKey: theirPublic);
+      final theirPublic = SimplePublicKey(
+        base64Decode(recipientPublicKeyBase64),
+        type: KeyPairType.x25519,
+      );
+      final sharedSecret = await _x25519.sharedSecretKey(
+        keyPair: keyPair as KeyPair,
+        remotePublicKey: theirPublic,
+      );
       final sharedBytes = Uint8List.fromList(await sharedSecret.extractBytes());
       final aesKeyBytes = await _hkdfBytes(sharedBytes, _aesKeyLen);
       final secretKey = SecretKey(aesKeyBytes);
       final nonce = _aes.newNonce();
-      final secretBox = await _aes.encrypt(plaintext, secretKey: secretKey, nonce: nonce);
+      final secretBox = await _aes.encrypt(
+        plaintext,
+        secretKey: secretKey,
+        nonce: nonce,
+      );
       const magic = [0x45, 0x32, 0x45, 0x45]; // "E2EE"
       return Uint8List.fromList([
         ...magic,
@@ -136,18 +179,31 @@ class E2EEService {
   }
 
   /// Расшифровать байты вложения. otherPublicKey: для своих сообщений — publicKey получателя, для входящих — отправителя.
-  Future<Uint8List?> decryptBytes(Uint8List ciphertext, String? otherPublicKeyBase64) async {
-    if (otherPublicKeyBase64 == null || otherPublicKeyBase64.isEmpty) return null;
+  Future<Uint8List?> decryptBytes(
+    Uint8List ciphertext,
+    String? otherPublicKeyBase64,
+  ) async {
+    if (otherPublicKeyBase64 == null || otherPublicKeyBase64.isEmpty)
+      return null;
     if (ciphertext.length < 4 + 12 + 16) return null;
     const magic = [0x45, 0x32, 0x45, 0x45];
-    if (ciphertext[0] != magic[0] || ciphertext[1] != magic[1] || ciphertext[2] != magic[2] || ciphertext[3] != magic[3]) {
+    if (ciphertext[0] != magic[0] ||
+        ciphertext[1] != magic[1] ||
+        ciphertext[2] != magic[2] ||
+        ciphertext[3] != magic[3]) {
       return null;
     }
     final keyPair = await _loadKeyPair();
     if (keyPair == null) return null;
     try {
-      final theirPublic = SimplePublicKey(base64Decode(otherPublicKeyBase64), type: KeyPairType.x25519);
-      final sharedSecret = await _x25519.sharedSecretKey(keyPair: keyPair as KeyPair, remotePublicKey: theirPublic);
+      final theirPublic = SimplePublicKey(
+        base64Decode(otherPublicKeyBase64),
+        type: KeyPairType.x25519,
+      );
+      final sharedSecret = await _x25519.sharedSecretKey(
+        keyPair: keyPair as KeyPair,
+        remotePublicKey: theirPublic,
+      );
       final sharedBytes = Uint8List.fromList(await sharedSecret.extractBytes());
       final aesKeyBytes = await _hkdfBytes(sharedBytes, _aesKeyLen);
       final secretKey = SecretKey(aesKeyBytes);

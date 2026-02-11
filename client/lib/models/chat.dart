@@ -55,7 +55,9 @@ class ChatPreview {
     return ChatPreview(
       peer: peer,
       group: group,
-      lastMessage: LastMessage.fromJson(json['last_message'] as Map<String, dynamic>?),
+      lastMessage: LastMessage.fromJson(
+        json['last_message'] as Map<String, dynamic>?,
+      ),
       unreadCount: json['unread_count'] as int? ?? 0,
     );
   }

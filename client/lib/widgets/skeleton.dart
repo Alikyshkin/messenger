@@ -35,22 +35,11 @@ class SkeletonChatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme.surfaceContainerHighest;
     return ListTile(
-      leading: CircleAvatar(
-        radius: 24,
-        backgroundColor: color,
-      ),
-      title: SkeletonBox(
-        width: 140,
-        height: 16,
-        borderRadius: 4,
-      ),
+      leading: CircleAvatar(radius: 24, backgroundColor: color),
+      title: SkeletonBox(width: 140, height: 16, borderRadius: 4),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 6),
-        child: SkeletonBox(
-          width: 200,
-          height: 14,
-          borderRadius: 4,
-        ),
+        child: SkeletonBox(width: 200, height: 14, borderRadius: 4),
       ),
     );
   }
@@ -64,22 +53,11 @@ class SkeletonContactTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = Theme.of(context).colorScheme.surfaceContainerHighest;
     return ListTile(
-      leading: CircleAvatar(
-        radius: 24,
-        backgroundColor: color,
-      ),
-      title: SkeletonBox(
-        width: 120,
-        height: 16,
-        borderRadius: 4,
-      ),
+      leading: CircleAvatar(radius: 24, backgroundColor: color),
+      title: SkeletonBox(width: 120, height: 16, borderRadius: 4),
       subtitle: Padding(
         padding: const EdgeInsets.only(top: 4),
-        child: SkeletonBox(
-          width: 160,
-          height: 12,
-          borderRadius: 4,
-        ),
+        child: SkeletonBox(width: 160, height: 12, borderRadius: 4),
       ),
     );
   }

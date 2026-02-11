@@ -76,9 +76,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   Future<void> _create() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr('group_name_hint'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('group_name_hint'))));
       return;
     }
     if (_selectedIds.isEmpty) {
@@ -102,9 +102,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
       Navigator.of(context).pop();
-      await Navigator.of(context).push(
-        AppPageRoute(builder: (_) => GroupChatScreen(group: group)),
-      );
+      await Navigator.of(
+        context,
+      ).push(AppPageRoute(builder: (_) => GroupChatScreen(group: group)));
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -124,13 +124,14 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           if (_loading)
             const Padding(
               padding: EdgeInsets.all(16),
-              child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             )
           else
-            TextButton(
-              onPressed: _create,
-              child: Text(context.tr('create')),
-            ),
+            TextButton(onPressed: _create, child: Text(context.tr('create'))),
         ],
       ),
       body: ListView(
@@ -144,7 +145,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                 children: [
                   CircleAvatar(
                     radius: 52,
-                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer,
                     backgroundImage: _avatarBytes != null
                         ? MemoryImage(_avatarBytes!)
                         : null,
@@ -152,7 +155,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                         ? Icon(
                             Icons.camera_alt,
                             size: 48,
-                            color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onPrimaryContainer.withOpacity(0.7),
                           )
                         : null,
                   ),
@@ -225,7 +230,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                     ? NetworkImage(u.avatarUrl!)
                     : null,
                 child: u.avatarUrl == null || u.avatarUrl!.isEmpty
-                    ? Text((u.displayName.isNotEmpty ? u.displayName[0] : '@').toUpperCase())
+                    ? Text(
+                        (u.displayName.isNotEmpty ? u.displayName[0] : '@')
+                            .toUpperCase(),
+                      )
                     : null,
               ),
             );

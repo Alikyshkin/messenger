@@ -16,11 +16,7 @@ import '../services/call_minimized_service.dart';
 import '../services/app_update_service.dart';
 
 /// Режим отображения видео: докладчик (большой удалённый), обычный, рядом слева-справа.
-enum CallLayout {
-  speaker,
-  normal,
-  sideBySide,
-}
+enum CallLayout { speaker, normal, sideBySide }
 
 /// Экран звонка в стиле Телемост: видео и микрофон выключены по умолчанию,
 /// демонстрация экрана, настройки, вкладка участники, переключение вида.
@@ -43,7 +39,6 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> {
-
   WsService? _ws;
   StreamSubscription<CallSignal>? _signalSub;
   RTCPeerConnection? _pc;
@@ -54,7 +49,8 @@ class _CallScreenState extends State<CallScreen> {
   final RTCVideoRenderer _screenRenderer = RTCVideoRenderer();
   bool _renderersInitialized = false;
   late Future<void> _renderersFuture;
-  String _state = 'init'; // init | calling | ringing | connected | ended | peer_disconnected
+  String _state =
+      'init'; // init | calling | ringing | connected | ended | peer_disconnected
   String? _error;
   final List<Map<String, dynamic>> _pendingCandidates = [];
   bool _offerReceived = false; // Флаг для защиты от дублирующих offer
@@ -81,7 +77,7 @@ class _CallScreenState extends State<CallScreen> {
   List<MediaDeviceInfo> _mediaDevices = [];
   String? _selectedVideoDeviceId;
   String? _selectedAudioDeviceId;
-  
+
   /// Переключение между передней и задней камерой.
   bool _isFrontCamera = true;
 
@@ -114,13 +110,13 @@ class _CallScreenState extends State<CallScreen> {
     setState(() => _state = 'calling');
     try {
       await _renderersFuture;
-      
+
       // Получаем медиа только если еще не получили
       if (_localStream == null) {
         await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
         _applyInitialMute();
       }
-      
+
       _pc = await createPeerConnection(WebRTCConstants.iceServers, {});
       _setupPeerConnection();
       for (var track in _localStream!.getTracks()) {
@@ -135,7 +131,7 @@ class _CallScreenState extends State<CallScreen> {
         'sdp': offer.sdp,
         'type': offer.type,
       }, widget.isVideoCall);
-      
+
       // Устанавливаем флаг подключения после отправки offer
       setState(() => _isConnecting = true);
     } catch (e) {
@@ -165,13 +161,17 @@ class _CallScreenState extends State<CallScreen> {
     if (videoTracks.isNotEmpty) _cameraVideoTrack = videoTracks.first;
   }
 
-
-  Future<void> _getUserMedia({String? videoDeviceId, String? audioDeviceId}) async {
+  Future<void> _getUserMedia({
+    String? videoDeviceId,
+    String? audioDeviceId,
+  }) async {
     final Map<String, dynamic> mediaConstraints = {
       'audio': audioDeviceId != null && audioDeviceId.isNotEmpty
-          ? {'deviceId': {'exact': audioDeviceId}}
+          ? {
+              'deviceId': {'exact': audioDeviceId},
+            }
           : true,
-      'video': widget.isVideoCall 
+      'video': widget.isVideoCall
           ? MediaUtils.buildVideoConstraints(
               isFrontCamera: _isFrontCamera,
               videoDeviceId: videoDeviceId,
@@ -179,7 +179,9 @@ class _CallScreenState extends State<CallScreen> {
           : false,
     };
     try {
-      _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
+      _localStream = await navigator.mediaDevices.getUserMedia(
+        mediaConstraints,
+      );
     } catch (e) {
       throw Exception(MediaUtils.getMediaErrorMessage(e));
     }
@@ -201,7 +203,7 @@ class _CallScreenState extends State<CallScreen> {
     }
     setState(() => _cameraEnabled = !_cameraEnabled);
   }
-  
+
   /// Переключение между передней и задней камерой.
   Future<void> _switchCamera() async {
     if (_localStream == null || _screenShareEnabled || _pc == null) return;
@@ -259,10 +261,9 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _startScreenShare() async {
     try {
-      final screenStream = await navigator.mediaDevices.getDisplayMedia(<String, dynamic>{
-        'video': true,
-        'audio': false,
-      });
+      final screenStream = await navigator.mediaDevices.getDisplayMedia(
+        <String, dynamic>{'video': true, 'audio': false},
+      );
       final screenVideoTracks = screenStream.getVideoTracks();
       if (screenVideoTracks.isEmpty) {
         await screenStream.dispose();
@@ -335,11 +336,15 @@ class _CallScreenState extends State<CallScreen> {
       }, widget.isVideoCall);
     };
     _pc!.onTrack = (event) {
-      print('onTrack event: ${event.track.kind}, streams: ${event.streams.length}');
+      print(
+        'onTrack event: ${event.track.kind}, streams: ${event.streams.length}',
+      );
       if (event.streams.isNotEmpty) {
         final stream = event.streams.first;
         _remoteStream = stream;
-        print('Remote stream received: ${stream.id}, tracks: ${stream.getTracks().length}');
+        print(
+          'Remote stream received: ${stream.id}, tracks: ${stream.getTracks().length}',
+        );
         if (_renderersInitialized) {
           _remoteRenderer.srcObject = stream;
         }
@@ -348,7 +353,9 @@ class _CallScreenState extends State<CallScreen> {
         }
       } else {
         // Если потоков нет, но есть трек - это нестандартная ситуация
-        print('Track without stream: ${event.track.kind}, enabled: ${event.track.enabled}');
+        print(
+          'Track without stream: ${event.track.kind}, enabled: ${event.track.enabled}',
+        );
         // Обновляем состояние, возможно поток появится позже
         if (mounted) {
           setState(() {});
@@ -374,7 +381,8 @@ class _CallScreenState extends State<CallScreen> {
           state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
         // Только при полном провале или закрытии завершаем звонок
         if (mounted) _endCall();
-      } else if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
+      } else if (state ==
+              RTCIceConnectionState.RTCIceConnectionStateConnected ||
           state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
         // Восстановление соединения
         if (mounted) {
@@ -401,7 +409,7 @@ class _CallScreenState extends State<CallScreen> {
         _pc = null;
         _offerReceived = false;
         _isConnecting = false;
-        
+
         // Проверяем обновления когда собеседник вышел из звонка
         try {
           context.read<AppUpdateService>().checkForUpdates();
@@ -427,26 +435,28 @@ class _CallScreenState extends State<CallScreen> {
         // Сбрасываем флаг для обработки нового offer
         _offerReceived = false;
       }
-      
+
       // Защита от дублирующих offer
       if (_offerReceived && _pc != null) {
         print('Duplicate offer received, ignoring');
         return;
       }
       _offerReceived = true;
-      
+
       try {
         setState(() => _isConnecting = true);
         await _renderersFuture;
-        
+
         // Получаем медиа только если еще не получили
         if (_localStream == null) {
           await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
         }
-        
+
         _pc = await createPeerConnection(WebRTCConstants.iceServers, {});
         _setupPeerConnection();
-        print('Adding local tracks (handle offer): ${_localStream!.getTracks().length}');
+        print(
+          'Adding local tracks (handle offer): ${_localStream!.getTracks().length}',
+        );
         // Добавляем треки в PeerConnection перед применением mute
         for (var track in _localStream!.getTracks()) {
           print('Adding track: ${track.kind}, enabled: ${track.enabled}');
@@ -462,11 +472,13 @@ class _CallScreenState extends State<CallScreen> {
         // Обрабатываем отложенные ICE кандидаты перед созданием answer
         for (var c in _pendingCandidates) {
           try {
-            await _pc!.addCandidate(RTCIceCandidate(
-              c['candidate'] as String,
-              c['sdpMid'] as String?,
-              c['sdpMLineIndex'] as int?,
-            ));
+            await _pc!.addCandidate(
+              RTCIceCandidate(
+                c['candidate'] as String,
+                c['sdpMid'] as String?,
+                c['sdpMLineIndex'] as int?,
+              ),
+            );
           } catch (e) {
             print('Error adding pending candidate: $e');
           }
@@ -511,11 +523,13 @@ class _CallScreenState extends State<CallScreen> {
         // Обрабатываем отложенные ICE кандидаты
         for (var c in _pendingCandidates) {
           try {
-            await _pc!.addCandidate(RTCIceCandidate(
-              c['candidate'] as String,
-              c['sdpMid'] as String?,
-              c['sdpMLineIndex'] as int?,
-            ));
+            await _pc!.addCandidate(
+              RTCIceCandidate(
+                c['candidate'] as String,
+                c['sdpMid'] as String?,
+                c['sdpMLineIndex'] as int?,
+              ),
+            );
           } catch (e) {
             print('Error adding pending candidate: $e');
           }
@@ -525,7 +539,8 @@ class _CallScreenState extends State<CallScreen> {
           AppSoundService.instance.stopRingtone();
           setState(() {
             _state = 'connected';
-            _isConnecting = false; // Соединение установлено после получения answer
+            _isConnecting =
+                false; // Соединение установлено после получения answer
           });
         }
       } catch (e) {
@@ -564,17 +579,19 @@ class _CallScreenState extends State<CallScreen> {
     });
     try {
       await _renderersFuture;
-      
+
       // Получаем медиа только если еще не получили
       if (_localStream == null) {
         await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
       }
-      
+
       _pc = await createPeerConnection(WebRTCConstants.iceServers, {});
       _setupPeerConnection();
       // Добавляем треки в PeerConnection перед применением mute
       for (var track in _localStream!.getTracks()) {
-        print('Adding track to PeerConnection (accept): ${track.kind}, enabled: ${track.enabled}');
+        print(
+          'Adding track to PeerConnection (accept): ${track.kind}, enabled: ${track.enabled}',
+        );
         await _pc!.addTrack(track, _localStream!);
       }
       // Применяем mute после добавления треков
@@ -587,11 +604,13 @@ class _CallScreenState extends State<CallScreen> {
       // Обрабатываем отложенные ICE кандидаты перед созданием answer
       for (var c in _pendingCandidates) {
         try {
-          await _pc!.addCandidate(RTCIceCandidate(
-            c['candidate'] as String,
-            c['sdpMid'] as String?,
-            c['sdpMLineIndex'] as int?,
-          ));
+          await _pc!.addCandidate(
+            RTCIceCandidate(
+              c['candidate'] as String,
+              c['sdpMid'] as String?,
+              c['sdpMLineIndex'] as int?,
+            ),
+          );
         } catch (e) {
           print('Error adding pending candidate: $e');
         }
@@ -636,7 +655,6 @@ class _CallScreenState extends State<CallScreen> {
     _endCall();
   }
 
-
   Future<void> _endCall() async {
     AppSoundService.instance.stopRingtone();
     _signalSub?.cancel();
@@ -659,7 +677,7 @@ class _CallScreenState extends State<CallScreen> {
       setState(() => _state = 'ended');
       Navigator.of(context).pop();
     }
-    
+
     // Проверяем обновления при выходе из звонка
     try {
       context.read<AppUpdateService>().checkForUpdates();
@@ -723,7 +741,10 @@ class _CallScreenState extends State<CallScreen> {
     }
 
     final myName = context.read<AuthService>().user?.displayName ?? 'Я';
-    final isControlsVisible = _state == 'calling' || _state == 'connected' || _state == 'peer_disconnected';
+    final isControlsVisible =
+        _state == 'calling' ||
+        _state == 'connected' ||
+        _state == 'peer_disconnected';
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
@@ -735,12 +756,13 @@ class _CallScreenState extends State<CallScreen> {
             if (widget.isVideoCall) _buildOverlayTitle(),
             // Показываем превью локального видео только для видеозвонков в режиме докладчика или обычном режиме когда есть удаленное видео
             // НЕ показываем в режиме "рядом" (там локальное видео уже в основном layout)
-            if (widget.isVideoCall && 
-                _state == 'connected' && 
-                _renderersInitialized && 
-                _remoteStream != null && 
+            if (widget.isVideoCall &&
+                _state == 'connected' &&
+                _renderersInitialized &&
+                _remoteStream != null &&
                 _layout != CallLayout.sideBySide &&
-                _localStream != null) _buildLocalPreview(isControlsVisible),
+                _localStream != null)
+              _buildLocalPreview(isControlsVisible),
             if (_state == 'ringing') _buildIncomingControls(),
             if (isControlsVisible) ...[
               if (widget.isVideoCall) _buildLayoutSwitcher(),
@@ -755,7 +777,9 @@ class _CallScreenState extends State<CallScreen> {
 
   Widget _buildVideoLayout() {
     if (!_renderersInitialized) {
-      return const Center(child: CircularProgressIndicator(color: Colors.white));
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.white),
+      );
     }
     // Для голосовых звонков показываем аватар вместо видео
     if (!widget.isVideoCall) {
@@ -769,7 +793,7 @@ class _CallScreenState extends State<CallScreen> {
         return _buildSpeakerLayout();
     }
   }
-  
+
   Widget _buildVoiceCallLayout() {
     final showRemote = _state == 'connected' && _remoteStream != null;
     return Container(
@@ -781,12 +805,18 @@ class _CallScreenState extends State<CallScreen> {
             CircleAvatar(
               radius: 80,
               backgroundColor: Colors.blue.shade700,
-              backgroundImage: widget.peer.avatarUrl != null && widget.peer.avatarUrl!.isNotEmpty
+              backgroundImage:
+                  widget.peer.avatarUrl != null &&
+                      widget.peer.avatarUrl!.isNotEmpty
                   ? NetworkImage(widget.peer.avatarUrl!)
                   : null,
-              child: widget.peer.avatarUrl == null || widget.peer.avatarUrl!.isEmpty
+              child:
+                  widget.peer.avatarUrl == null ||
+                      widget.peer.avatarUrl!.isEmpty
                   ? Text(
-                      widget.peer.displayName.isNotEmpty ? widget.peer.displayName[0].toUpperCase() : '?',
+                      widget.peer.displayName.isNotEmpty
+                          ? widget.peer.displayName[0].toUpperCase()
+                          : '?',
                       style: const TextStyle(color: Colors.white, fontSize: 48),
                     )
                   : null,
@@ -794,7 +824,11 @@ class _CallScreenState extends State<CallScreen> {
             const SizedBox(height: 24),
             Text(
               widget.peer.displayName,
-              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             if (showRemote)
@@ -856,12 +890,21 @@ class _CallScreenState extends State<CallScreen> {
     // Показываем локальное видео когда:
     // 1. Есть локальный поток и (звонок calling/connected/peer_disconnected) И нет удаленного потока ИЛИ
     // 2. Есть локальный поток и есть удаленный поток (для режима докладчика локальное показывается отдельно)
-    final showLocal = _localStream != null && 
-                      ((_state == 'calling' || _state == 'connected' || _state == 'peer_disconnected') && !showRemote || 
-                       (_state == 'connected' && showRemote && _layout == CallLayout.speaker));
+    final showLocal =
+        _localStream != null &&
+        ((_state == 'calling' ||
+                    _state == 'connected' ||
+                    _state == 'peer_disconnected') &&
+                !showRemote ||
+            (_state == 'connected' &&
+                showRemote &&
+                _layout == CallLayout.speaker));
     final isConnecting = _state == 'connected' && _isConnecting && !showRemote;
-    final isWaiting = _state == 'calling' || (_state == 'connected' && !showRemote && !isConnecting) || _state == 'peer_disconnected';
-    
+    final isWaiting =
+        _state == 'calling' ||
+        (_state == 'connected' && !showRemote && !isConnecting) ||
+        _state == 'peer_disconnected';
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -892,36 +935,58 @@ class _CallScreenState extends State<CallScreen> {
                         CircleAvatar(
                           radius: 50,
                           backgroundColor: Colors.blue.shade700,
-                          backgroundImage: widget.peer.avatarUrl != null && widget.peer.avatarUrl!.isNotEmpty
+                          backgroundImage:
+                              widget.peer.avatarUrl != null &&
+                                  widget.peer.avatarUrl!.isNotEmpty
                               ? NetworkImage(widget.peer.avatarUrl!)
                               : null,
-                          child: widget.peer.avatarUrl == null || widget.peer.avatarUrl!.isEmpty
+                          child:
+                              widget.peer.avatarUrl == null ||
+                                  widget.peer.avatarUrl!.isEmpty
                               ? Text(
-                                  widget.peer.displayName.isNotEmpty ? widget.peer.displayName[0].toUpperCase() : '?',
-                                  style: const TextStyle(color: Colors.white, fontSize: 32),
+                                  widget.peer.displayName.isNotEmpty
+                                      ? widget.peer.displayName[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 32,
+                                  ),
                                 )
                               : null,
                         ),
                         const SizedBox(height: 16),
                         Text(
                           widget.peer.displayName,
-                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         if (_state == 'calling')
                           const Text(
                             'Ожидание подключения...',
-                            style: TextStyle(color: Colors.white70, fontSize: 14),
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
                           )
                         else if (_state == 'peer_disconnected')
                           const Text(
                             'Собеседник отключился. Ожидание переподключения...',
-                            style: TextStyle(color: Colors.white70, fontSize: 14),
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
                           )
                         else
                           const Text(
                             'Подключение...',
-                            style: TextStyle(color: Colors.white70, fontSize: 14),
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
                           ),
                       ],
                     ),
@@ -964,8 +1029,11 @@ class _CallScreenState extends State<CallScreen> {
     final showRemote = _state == 'connected' && _remoteStream != null;
     final showLocal = _localStream != null || _screenShareEnabled;
     final isConnecting = _state == 'connected' && _isConnecting && !showRemote;
-    final isWaiting = _state == 'calling' || (_state == 'connected' && !showRemote && !isConnecting) || _state == 'peer_disconnected';
-    
+    final isWaiting =
+        _state == 'calling' ||
+        (_state == 'connected' && !showRemote && !isConnecting) ||
+        _state == 'peer_disconnected';
+
     return Row(
       children: [
         Expanded(
@@ -973,12 +1041,21 @@ class _CallScreenState extends State<CallScreen> {
             color: Colors.black,
             child: showLocal
                 ? (_screenShareEnabled
-                    ? RTCVideoView(_screenRenderer,
-                        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain)
-                    : RTCVideoView(_localRenderer,
-                        mirror: _isFrontCamera, // Зеркалим только переднюю камеру
-                        objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover))
-                : const Center(child: Text('Вы', style: TextStyle(color: Colors.white70))),
+                      ? RTCVideoView(
+                          _screenRenderer,
+                          objectFit: RTCVideoViewObjectFit
+                              .RTCVideoViewObjectFitContain,
+                        )
+                      : RTCVideoView(
+                          _localRenderer,
+                          mirror:
+                              _isFrontCamera, // Зеркалим только переднюю камеру
+                          objectFit:
+                              RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                        ))
+                : const Center(
+                    child: Text('Вы', style: TextStyle(color: Colors.white70)),
+                  ),
           ),
         ),
         Container(width: 2, color: Colors.grey.shade800),
@@ -986,22 +1063,24 @@ class _CallScreenState extends State<CallScreen> {
           child: Container(
             color: Colors.black,
             child: showRemote
-                ? RTCVideoView(_remoteRenderer,
-                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover)
+                ? RTCVideoView(
+                    _remoteRenderer,
+                    objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                  )
                 : isConnecting
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const CircularProgressIndicator(color: Colors.orange),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Подключение...',
-                              style: TextStyle(color: Colors.white70, fontSize: 12),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CircularProgressIndicator(color: Colors.orange),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Подключение...',
+                          style: TextStyle(color: Colors.white70, fontSize: 12),
                         ),
-                      )
+                      ],
+                    ),
+                  )
                 : Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -1009,31 +1088,46 @@ class _CallScreenState extends State<CallScreen> {
                         CircleAvatar(
                           radius: 30,
                           backgroundColor: Colors.blue.shade700,
-                          backgroundImage: widget.peer.avatarUrl != null && widget.peer.avatarUrl!.isNotEmpty
+                          backgroundImage:
+                              widget.peer.avatarUrl != null &&
+                                  widget.peer.avatarUrl!.isNotEmpty
                               ? NetworkImage(widget.peer.avatarUrl!)
                               : null,
-                          child: widget.peer.avatarUrl == null || widget.peer.avatarUrl!.isEmpty
+                          child:
+                              widget.peer.avatarUrl == null ||
+                                  widget.peer.avatarUrl!.isEmpty
                               ? Text(
-                                  widget.peer.displayName.isNotEmpty ? widget.peer.displayName[0].toUpperCase() : '?',
-                                  style: const TextStyle(color: Colors.white, fontSize: 20),
+                                  widget.peer.displayName.isNotEmpty
+                                      ? widget.peer.displayName[0].toUpperCase()
+                                      : '?',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                  ),
                                 )
                               : null,
                         ),
                         const SizedBox(height: 8),
                         Text(
                           widget.peer.displayName,
-                          style: const TextStyle(color: Colors.white70, fontSize: 14),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
                         ),
                         if (isWaiting)
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
-                              _state == 'calling' 
-                                  ? 'Ожидание...' 
+                              _state == 'calling'
+                                  ? 'Ожидание...'
                                   : _state == 'peer_disconnected'
-                                      ? 'Отключен'
-                                      : 'Подключение...',
-                              style: const TextStyle(color: Colors.white54, fontSize: 12),
+                                  ? 'Отключен'
+                                  : 'Подключение...',
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                       ],
@@ -1066,12 +1160,16 @@ class _CallScreenState extends State<CallScreen> {
                   _state == 'calling'
                       ? 'Вызов...'
                       : _state == 'ringing'
-                          ? widget.isVideoCall ? 'Входящий видеозвонок' : 'Входящий звонок'
-                          : _state == 'connected'
-                              ? widget.isVideoCall ? 'Видеозвонок' : 'Голосовой звонок'
-                              : _state == 'peer_disconnected'
-                                  ? 'Ожидание переподключения...'
-                                  : '...',
+                      ? widget.isVideoCall
+                            ? 'Входящий видеозвонок'
+                            : 'Входящий звонок'
+                      : _state == 'connected'
+                      ? widget.isVideoCall
+                            ? 'Видеозвонок'
+                            : 'Голосовой звонок'
+                      : _state == 'peer_disconnected'
+                      ? 'Ожидание переподключения...'
+                      : '...',
                   style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
@@ -1104,11 +1202,15 @@ class _CallScreenState extends State<CallScreen> {
           width: 120,
           height: 160,
           child: _screenShareEnabled
-              ? RTCVideoView(_screenRenderer,
-                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain)
-              : RTCVideoView(_localRenderer,
+              ? RTCVideoView(
+                  _screenRenderer,
+                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+                )
+              : RTCVideoView(
+                  _localRenderer,
                   mirror: _isFrontCamera, // Зеркалим только переднюю камеру
-                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
+                  objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                ),
         ),
       ),
     );
@@ -1119,9 +1221,7 @@ class _CallScreenState extends State<CallScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CallActionButton.reject(
-            onPressed: _rejectCall,
-          ),
+          CallActionButton.reject(onPressed: _rejectCall),
           const SizedBox(width: 32),
           CallActionButton.accept(
             onPressed: _acceptCall,
@@ -1273,7 +1373,10 @@ class _CallScreenState extends State<CallScreen> {
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: Colors.blue.shade700,
-        child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?', style: const TextStyle(color: Colors.white)),
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: const TextStyle(color: Colors.white),
+        ),
       ),
       title: Text(name, style: const TextStyle(color: Colors.white)),
       subtitle: isMe
@@ -1286,9 +1389,17 @@ class _CallScreenState extends State<CallScreen> {
           ? Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(micOn == true ? Icons.mic : Icons.mic_off, color: micOn == true ? Colors.green : Colors.red, size: 20),
+                Icon(
+                  micOn == true ? Icons.mic : Icons.mic_off,
+                  color: micOn == true ? Colors.green : Colors.red,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
-                Icon(videoOn == true ? Icons.videocam : Icons.videocam_off, color: videoOn == true ? Colors.green : Colors.red, size: 20),
+                Icon(
+                  videoOn == true ? Icons.videocam : Icons.videocam_off,
+                  color: videoOn == true ? Colors.green : Colors.red,
+                  size: 20,
+                ),
               ],
             )
           : null,
@@ -1303,7 +1414,10 @@ class _CallScreenState extends State<CallScreen> {
       padding: const EdgeInsets.all(16),
       children: [
         if (videoInputs.isNotEmpty) ...[
-          const Text('Камера', style: TextStyle(color: Colors.white70, fontSize: 12)),
+          const Text(
+            'Камера',
+            style: TextStyle(color: Colors.white70, fontSize: 12),
+          ),
           const SizedBox(height: 4),
           DropdownButtonFormField<String>(
             value: _selectedVideoDeviceId ?? videoInputs.first.deviceId,
@@ -1314,15 +1428,24 @@ class _CallScreenState extends State<CallScreen> {
             dropdownColor: const Color(0xFF333333),
             style: const TextStyle(color: Colors.white),
             items: videoInputs
-                .map((d) => DropdownMenuItem(
-                      value: d.deviceId,
-                      child: Text(d.label.isNotEmpty ? d.label : 'Камера ${d.deviceId.substring(0, 8)}'),
-                    ))
+                .map(
+                  (d) => DropdownMenuItem(
+                    value: d.deviceId,
+                    child: Text(
+                      d.label.isNotEmpty
+                          ? d.label
+                          : 'Камера ${d.deviceId.substring(0, 8)}',
+                    ),
+                  ),
+                )
                 .toList(),
             onChanged: (id) {
               if (id == null) return;
               setState(() => _selectedVideoDeviceId = id);
-              _getUserMedia(videoDeviceId: id, audioDeviceId: _selectedAudioDeviceId).then((_) {
+              _getUserMedia(
+                videoDeviceId: id,
+                audioDeviceId: _selectedAudioDeviceId,
+              ).then((_) {
                 if (_pc != null && _localStream != null) {
                   final vTracks = _localStream!.getVideoTracks();
                   final newVideo = vTracks.isNotEmpty ? vTracks.first : null;
@@ -1344,7 +1467,10 @@ class _CallScreenState extends State<CallScreen> {
           const SizedBox(height: 16),
         ],
         if (audioInputs.isNotEmpty) ...[
-          const Text('Микрофон', style: TextStyle(color: Colors.white70, fontSize: 12)),
+          const Text(
+            'Микрофон',
+            style: TextStyle(color: Colors.white70, fontSize: 12),
+          ),
           const SizedBox(height: 4),
           DropdownButtonFormField<String>(
             value: _selectedAudioDeviceId ?? audioInputs.first.deviceId,
@@ -1355,15 +1481,24 @@ class _CallScreenState extends State<CallScreen> {
             dropdownColor: const Color(0xFF333333),
             style: const TextStyle(color: Colors.white),
             items: audioInputs
-                .map((d) => DropdownMenuItem(
-                      value: d.deviceId,
-                      child: Text(d.label.isNotEmpty ? d.label : 'Микрофон ${d.deviceId.substring(0, 8)}'),
-                    ))
+                .map(
+                  (d) => DropdownMenuItem(
+                    value: d.deviceId,
+                    child: Text(
+                      d.label.isNotEmpty
+                          ? d.label
+                          : 'Микрофон ${d.deviceId.substring(0, 8)}',
+                    ),
+                  ),
+                )
                 .toList(),
             onChanged: (id) {
               if (id == null) return;
               setState(() => _selectedAudioDeviceId = id);
-              _getUserMedia(videoDeviceId: _selectedVideoDeviceId, audioDeviceId: id).then((_) {
+              _getUserMedia(
+                videoDeviceId: _selectedVideoDeviceId,
+                audioDeviceId: id,
+              ).then((_) {
                 if (_pc != null && _localStream != null) {
                   final aTracks = _localStream!.getAudioTracks();
                   final newAudio = aTracks.isNotEmpty ? aTracks.first : null;
@@ -1385,7 +1520,10 @@ class _CallScreenState extends State<CallScreen> {
         if (videoInputs.isEmpty && audioInputs.isEmpty)
           const Padding(
             padding: EdgeInsets.all(16),
-            child: Text('Нет доступных устройств', style: TextStyle(color: Colors.white54)),
+            child: Text(
+              'Нет доступных устройств',
+              style: TextStyle(color: Colors.white54),
+            ),
           ),
       ],
     );

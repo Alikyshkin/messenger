@@ -6,10 +6,13 @@ class User {
   final String? avatarUrl;
   final String? publicKey;
   final String? email;
+
   /// День рождения в формате YYYY-MM-DD.
   final String? birthday;
+
   /// Номер телефона (только цифры).
   final String? phone;
+
   /// Количество друзей (контактов). Видно только число; список видит только владелец.
   final int? friendsCount;
 

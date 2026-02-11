@@ -30,10 +30,7 @@ void main() {
       final offerSignal = CallSignal(
         fromUserId: 1,
         type: 'offer',
-        signal: {
-          'type': 'offer',
-          'sdp': 'test_offer_sdp',
-        },
+        signal: {'type': 'offer', 'sdp': 'test_offer_sdp'},
       );
       expect(offerSignal.type, 'offer');
       expect(offerSignal.signal['type'], 'offer');
@@ -42,10 +39,7 @@ void main() {
       final answerSignal = CallSignal(
         fromUserId: 2,
         type: 'answer',
-        signal: {
-          'type': 'answer',
-          'sdp': 'test_answer_sdp',
-        },
+        signal: {'type': 'answer', 'sdp': 'test_answer_sdp'},
       );
       expect(answerSignal.type, 'answer');
       expect(answerSignal.signal['type'], 'answer');
@@ -58,52 +52,46 @@ void main() {
       expect(connected, true);
     });
 
-    test('Incoming call flow: receive offer -> accept -> send answer -> connected', () {
-      // 1. Получение входящего звонка
-      final incomingOffer = CallSignal(
-        fromUserId: 2,
-        type: 'offer',
-        signal: {
-          'type': 'offer',
-          'sdp': 'test_offer_sdp',
-        },
-      );
-      expect(incomingOffer.type, 'offer');
-      expect(incomingOffer.fromUserId, 2);
+    test(
+      'Incoming call flow: receive offer -> accept -> send answer -> connected',
+      () {
+        // 1. Получение входящего звонка
+        final incomingOffer = CallSignal(
+          fromUserId: 2,
+          type: 'offer',
+          signal: {'type': 'offer', 'sdp': 'test_offer_sdp'},
+        );
+        expect(incomingOffer.type, 'offer');
+        expect(incomingOffer.fromUserId, 2);
 
-      // 2. Принятие звонка
-      bool callAccepted = false;
-      callAccepted = true;
-      expect(callAccepted, true);
+        // 2. Принятие звонка
+        bool callAccepted = false;
+        callAccepted = true;
+        expect(callAccepted, true);
 
-      // 3. Отправка answer сигнала
-      final answerSignal = CallSignal(
-        fromUserId: 1,
-        type: 'answer',
-        signal: {
-          'type': 'answer',
-          'sdp': 'test_answer_sdp',
-        },
-      );
-      expect(answerSignal.type, 'answer');
+        // 3. Отправка answer сигнала
+        final answerSignal = CallSignal(
+          fromUserId: 1,
+          type: 'answer',
+          signal: {'type': 'answer', 'sdp': 'test_answer_sdp'},
+        );
+        expect(answerSignal.type, 'answer');
 
-      // 4. Установление соединения
-      bool connected = false;
-      if (incomingOffer.type == 'offer' && answerSignal.type == 'answer') {
-        connected = true;
-      }
-      expect(connected, true);
-    });
+        // 4. Установление соединения
+        bool connected = false;
+        if (incomingOffer.type == 'offer' && answerSignal.type == 'answer') {
+          connected = true;
+        }
+        expect(connected, true);
+      },
+    );
 
     test('Call rejection flow: receive offer -> reject -> call ended', () {
       // 1. Получение входящего звонка
       final incomingOffer = CallSignal(
         fromUserId: 2,
         type: 'offer',
-        signal: {
-          'type': 'offer',
-          'sdp': 'test_offer_sdp',
-        },
+        signal: {'type': 'offer', 'sdp': 'test_offer_sdp'},
       );
 
       // 2. Отклонение звонка

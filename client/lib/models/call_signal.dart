@@ -3,7 +3,8 @@ class CallSignal {
   final int fromUserId;
   final String signal; // 'offer' | 'answer' | 'ice' | 'hangup' | 'reject'
   final Map<String, dynamic>? payload;
-  final bool? isVideoCall; // true для видеозвонка, false для голосового, null для совместимости
+  final bool?
+  isVideoCall; // true для видеозвонка, false для голосового, null для совместимости
   final int? groupId; // ID группы для групповых звонков, null для приватных
 
   CallSignal({
@@ -29,7 +30,7 @@ class CallSignal {
         isVideoCall = isVideoCallValue != 0;
       }
     }
-    
+
     return CallSignal(
       fromUserId: json['fromUserId'] as int,
       signal: json['signal'] as String,

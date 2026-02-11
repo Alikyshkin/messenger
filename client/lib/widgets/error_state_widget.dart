@@ -26,9 +26,7 @@ class ErrorStateWidget extends StatelessWidget {
           children: [
             Text(
               message,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
-              ),
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
               textAlign: TextAlign.center,
             ),
             if (onRetry != null) ...[

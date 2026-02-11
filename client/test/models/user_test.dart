@@ -29,7 +29,13 @@ void main() {
     });
 
     test('copyWith preserves unchanged fields', () {
-      final u = User(id: 1, username: 'x', displayName: 'X', bio: 'b', email: 'x@x.com');
+      final u = User(
+        id: 1,
+        username: 'x',
+        displayName: 'X',
+        bio: 'b',
+        email: 'x@x.com',
+      );
       final u2 = u.copyWith(displayName: 'Y');
       expect(u2.username, 'x');
       expect(u2.displayName, 'Y');

@@ -70,12 +70,21 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       _drainIncoming(ws);
     }
+
     _wsUnsub = () => ws.removeListener(onUpdate);
     ws.addListener(onUpdate);
     _drainIncoming(ws);
   }
 
-  static const List<String> _reactionEmojis = ['👍', '👎', '❤️', '🔥', '😂', '😮', '😢'];
+  static const List<String> _reactionEmojis = [
+    '👍',
+    '👎',
+    '❤️',
+    '🔥',
+    '😂',
+    '😮',
+    '😢',
+  ];
 
   Future<void> _drainIncoming(WsService ws) async {
     final myId = context.read<AuthService>().user?.id;
@@ -122,7 +131,12 @@ class _ChatScreenState extends State<ChatScreen> {
     ReactionUpdate? ru;
     while ((ru = ws.takeReactionUpdateFor(widget.peer.id)) != null) {
       final idx = _messages.indexWhere((msg) => msg.id == ru!.messageId);
-      if (idx >= 0 && mounted) setState(() => _messages[idx] = _messages[idx].copyWith(reactions: ru!.reactions));
+      if (idx >= 0 && mounted)
+        setState(
+          () => _messages[idx] = _messages[idx].copyWith(
+            reactions: ru!.reactions,
+          ),
+        );
     }
     // Пользователь в чате — помечаем все сообщения прочитанными, чтобы при выходе не показывался счётчик непрочитанных
     if (mounted) {
@@ -288,10 +302,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _setReaction(Message m, String emoji) async {
     try {
-      final reactions = await Api(context.read<AuthService>().token).setMessageReaction(m.id, emoji);
+      final reactions = await Api(
+        context.read<AuthService>().token,
+      ).setMessageReaction(m.id, emoji);
       if (!mounted) return;
       final idx = _messages.indexWhere((msg) => msg.id == m.id);
-      if (idx >= 0) setState(() => _messages[idx] = _messages[idx].copyWith(reactions: reactions));
+      if (idx >= 0)
+        setState(
+          () => _messages[idx] = _messages[idx].copyWith(reactions: reactions),
+        );
     } catch (_) {}
   }
 
@@ -301,18 +320,31 @@ class _ChatScreenState extends State<ChatScreen> {
     final theme = Theme.of(context);
     return r.userIds.take(3).map((userId) {
       String? avatarUrl;
-      if (userId == widget.peer.id) avatarUrl = widget.peer.avatarUrl;
-      else if (userId == myId) avatarUrl = auth?.avatarUrl;
+      if (userId == widget.peer.id)
+        avatarUrl = widget.peer.avatarUrl;
+      else if (userId == myId)
+        avatarUrl = auth?.avatarUrl;
       return Padding(
         padding: const EdgeInsets.only(right: 2),
         child: CircleAvatar(
           radius: 8,
           backgroundColor: theme.colorScheme.surfaceContainerHighest,
-          backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+          backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+              ? NetworkImage(avatarUrl)
+              : null,
           child: avatarUrl == null || avatarUrl.isEmpty
               ? Text(
-                  userId == myId ? (auth?.displayName.isNotEmpty == true ? auth!.displayName[0].toUpperCase() : '?') : (widget.peer.displayName.isNotEmpty ? widget.peer.displayName[0].toUpperCase() : '?'),
-                  style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                  userId == myId
+                      ? (auth?.displayName.isNotEmpty == true
+                            ? auth!.displayName[0].toUpperCase()
+                            : '?')
+                      : (widget.peer.displayName.isNotEmpty
+                            ? widget.peer.displayName[0].toUpperCase()
+                            : '?'),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 )
               : null,
         ),
@@ -365,6 +397,7 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     }
+
     if (position != null) {
       final screen = MediaQuery.sizeOf(context);
       final menuPosition = RelativeRect.fromLTRB(
@@ -425,14 +458,20 @@ class _ChatScreenState extends State<ChatScreen> {
       chats = await Api(auth.token).getChats();
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ошибка загрузки чатов')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Ошибка загрузки чатов')));
       return;
     }
     if (!mounted) return;
     final peerId = widget.peer.id;
-    final others = chats.where((c) => c.peer?.id != null && c.peer!.id != peerId).toList();
+    final others = chats
+        .where((c) => c.peer?.id != null && c.peer!.id != peerId)
+        .toList();
     if (others.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Нет других чатов для пересылки')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Нет других чатов для пересылки')),
+      );
       return;
     }
     final selected = await showModalBottomSheet<ChatPreview>(
@@ -443,7 +482,10 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             const Padding(
               padding: EdgeInsets.all(16),
-              child: Text('Переслать в чат', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+              child: Text(
+                'Переслать в чат',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              ),
             ),
             ...others.map((chat) {
               final p = chat.peer;
@@ -463,10 +505,16 @@ class _ChatScreenState extends State<ChatScreen> {
     if (selectedPeer == null) return;
     final content = m.content;
     if (content.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Переслать можно только текстовые сообщения')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Переслать можно только текстовые сообщения'),
+        ),
+      );
       return;
     }
-    final fromName = m.isMine ? (auth.user?.displayName ?? auth.user?.username ?? 'Я') : widget.peer.displayName;
+    final fromName = m.isMine
+        ? (auth.user?.displayName ?? auth.user?.username ?? 'Я')
+        : widget.peer.displayName;
     setState(() => _sending = true);
     try {
       final api = Api(auth.token);
@@ -478,11 +526,17 @@ class _ChatScreenState extends State<ChatScreen> {
         forwardFromDisplayName: fromName,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Переслано в чат с ${selectedPeer.displayName}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Переслано в чат с ${selectedPeer.displayName}'),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка пересылки')),
+        SnackBar(
+          content: Text(e is ApiException ? e.message : 'Ошибка пересылки'),
+        ),
       );
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -493,7 +547,8 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_sending) return false;
     if (_text.text.trim().isNotEmpty) return true;
     if (_pendingAttachment != null) return true;
-    if (_pendingMultipleFiles != null && _pendingMultipleFiles!.isNotEmpty) return true;
+    if (_pendingMultipleFiles != null && _pendingMultipleFiles!.isNotEmpty)
+      return true;
     return false;
   }
 
@@ -540,7 +595,9 @@ class _ChatScreenState extends State<ChatScreen> {
         if (!mounted) return;
         setState(() => _sending = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка отправки')),
+          SnackBar(
+            content: Text(e is ApiException ? e.message : 'Ошибка отправки'),
+          ),
         );
       }
       return;
@@ -585,7 +642,9 @@ class _ChatScreenState extends State<ChatScreen> {
         if (!mounted) return;
         setState(() => _sending = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка отправки')),
+          SnackBar(
+            content: Text(e is ApiException ? e.message : 'Ошибка отправки'),
+          ),
         );
       }
       return;
@@ -597,7 +656,11 @@ class _ChatScreenState extends State<ChatScreen> {
         final encrypted = await _e2ee.encrypt(content, widget.peer.publicKey);
         if (encrypted != null) toSend = encrypted;
       }
-      final msg = await api.sendMessage(widget.peer.id, toSend, replyToId: replyToId);
+      final msg = await api.sendMessage(
+        widget.peer.id,
+        toSend,
+        replyToId: replyToId,
+      );
       if (!mounted) return;
       final toShow = toSend != content
           ? Message(
@@ -643,21 +706,21 @@ class _ChatScreenState extends State<ChatScreen> {
           // Сообщение отправлено, но была ошибка парсинга ответа
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Сообщение отправлено, но произошла ошибка при обработке ответа: ${e.message}'),
+              content: Text(
+                'Сообщение отправлено, но произошла ошибка при обработке ответа: ${e.message}',
+              ),
             ),
           );
           return;
         }
         // Для всех остальных ApiException (400, 401, 500 и т.д.) - запрос дошел до сервера
         // Это не "нет связи", а ошибка сервера/валидации - не добавляем в outbox
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message),
-          ),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
         return;
       }
-      
+
       // Проверяем, является ли это реальной сетевой ошибкой
       // (когда запрос вообще не дошел до сервера - нет интернета, таймаут и т.д.)
       if (ErrorUtils.isNetworkError(e)) {
@@ -665,15 +728,15 @@ class _ChatScreenState extends State<ChatScreen> {
         await LocalDb.addToOutbox(widget.peer.id, toSend);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Нет связи. Сообщение будет отправлено при появлении сети.'),
+            content: Text(
+              'Нет связи. Сообщение будет отправлено при появлении сети.',
+            ),
           ),
         );
       } else {
         // Для других ошибок просто показываем сообщение
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Ошибка отправки: ${e.toString()}'),
-          ),
+          SnackBar(content: Text('Ошибка отправки: ${e.toString()}')),
         );
       }
     }
@@ -705,10 +768,20 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       }
       final name = file.name.toLowerCase();
-      final isImage = name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.webp');
+      final isImage =
+          name.endsWith('.jpg') ||
+          name.endsWith('.jpeg') ||
+          name.endsWith('.png') ||
+          name.endsWith('.gif') ||
+          name.endsWith('.webp');
       if (!mounted) return;
       setState(() {
-        _pendingAttachment = PendingFile(bytes: bytes, filename: file.name, isImage: isImage, encrypted: encrypted);
+        _pendingAttachment = PendingFile(
+          bytes: bytes,
+          filename: file.name,
+          isImage: isImage,
+          encrypted: encrypted,
+        );
         _pendingMultipleFiles = null;
       });
       return;
@@ -725,8 +798,20 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       }
       final name = file.name.toLowerCase();
-      final isImage = name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.gif') || name.endsWith('.webp');
-      list.add(PendingFile(bytes: bytes, filename: file.name, isImage: isImage, encrypted: encrypted));
+      final isImage =
+          name.endsWith('.jpg') ||
+          name.endsWith('.jpeg') ||
+          name.endsWith('.png') ||
+          name.endsWith('.gif') ||
+          name.endsWith('.webp');
+      list.add(
+        PendingFile(
+          bytes: bytes,
+          filename: file.name,
+          isImage: isImage,
+          encrypted: encrypted,
+        ),
+      );
     }
     if (!mounted) return;
     setState(() {
@@ -737,8 +822,14 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _createPoll() async {
     if (_sending) return;
-    final result = await showDialog<_PollFormResult>(context: context, builder: (_) => const _CreatePollDialog());
-    if (result == null || result.question.trim().isEmpty || result.options.length < 2) return;
+    final result = await showDialog<_PollFormResult>(
+      context: context,
+      builder: (_) => const _CreatePollDialog(),
+    );
+    if (result == null ||
+        result.question.trim().isEmpty ||
+        result.options.length < 2)
+      return;
     setState(() => _sending = true);
     try {
       final api = Api(context.read<AuthService>().token);
@@ -758,7 +849,11 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       setState(() => _sending = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка создания опроса')),
+        SnackBar(
+          content: Text(
+            e is ApiException ? e.message : 'Ошибка создания опроса',
+          ),
+        ),
       );
     }
   }
@@ -768,8 +863,15 @@ class _ChatScreenState extends State<ChatScreen> {
     if (idx < 0) return;
     final m = _messages[idx];
     if (m.poll == null) return;
-    final newOptions = result.options.map((o) => PollOption(text: o.text, votes: o.votes, voted: o.voted)).toList();
-    final newPoll = PollData(id: m.poll!.id, question: m.poll!.question, options: newOptions, multiple: m.poll!.multiple);
+    final newOptions = result.options
+        .map((o) => PollOption(text: o.text, votes: o.votes, voted: o.voted))
+        .toList();
+    final newPoll = PollData(
+      id: m.poll!.id,
+      question: m.poll!.question,
+      options: newOptions,
+      multiple: m.poll!.multiple,
+    );
     final newMsg = Message(
       id: m.id,
       senderId: m.senderId,
@@ -813,8 +915,14 @@ class _ChatScreenState extends State<ChatScreen> {
       }
       final path = kIsWeb
           ? 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a'
-          : p.join((await getTemporaryDirectory()).path, 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a');
-      await _audioRecorder.start(const RecordConfig(encoder: AudioEncoder.aacLc, sampleRate: 44100), path: path);
+          : p.join(
+              (await getTemporaryDirectory()).path,
+              'voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
+            );
+      await _audioRecorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc, sampleRate: 44100),
+        path: path,
+      );
       if (!mounted) return;
       setState(() {
         _isRecording = true;
@@ -824,7 +932,13 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().contains('Permission') ? 'Нет доступа к микрофону' : 'Ошибка записи')),
+        SnackBar(
+          content: Text(
+            e.toString().contains('Permission')
+                ? 'Нет доступа к микрофону'
+                : 'Ошибка записи',
+          ),
+        ),
       );
     }
   }
@@ -865,7 +979,13 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       }
       if (!mounted) return;
-      setState(() => _pendingAttachment = PendingVoice(bytes: voiceBytes, durationSec: durationSec, encrypted: encrypted));
+      setState(
+        () => _pendingAttachment = PendingVoice(
+          bytes: voiceBytes,
+          durationSec: durationSec,
+          encrypted: encrypted,
+        ),
+      );
     } catch (_) {}
   }
 
@@ -873,7 +993,10 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_sending) return;
     final result = await Navigator.of(context).push<Map<String, dynamic>>(
       AppPageRoute(
-        builder: (_) => RecordVideoNoteScreen(peerId: widget.peer.id, peerPublicKey: widget.peer.publicKey),
+        builder: (_) => RecordVideoNoteScreen(
+          peerId: widget.peer.id,
+          peerPublicKey: widget.peer.publicKey,
+        ),
       ),
     );
     if (result == null || !mounted) return;
@@ -888,7 +1011,9 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final appBarBg = isDark ? theme.colorScheme.surfaceContainerHighest : theme.colorScheme.primary;
+    final appBarBg = isDark
+        ? theme.colorScheme.surfaceContainerHighest
+        : theme.colorScheme.primary;
     final appBarFg = isDark ? theme.colorScheme.onSurface : Colors.white;
     return Scaffold(
       appBar: AppBar(
@@ -899,12 +1024,22 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             CircleAvatar(
               radius: 20,
-              backgroundColor: isDark ? theme.colorScheme.onSurface.withValues(alpha: 0.2) : Colors.white24,
-              backgroundImage: widget.peer.avatarUrl != null && widget.peer.avatarUrl!.isNotEmpty
+              backgroundColor: isDark
+                  ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
+                  : Colors.white24,
+              backgroundImage:
+                  widget.peer.avatarUrl != null &&
+                      widget.peer.avatarUrl!.isNotEmpty
                   ? NetworkImage(widget.peer.avatarUrl!)
                   : null,
-              child: widget.peer.avatarUrl == null || widget.peer.avatarUrl!.isEmpty
-                  ? Icon(Icons.person, color: appBarFg.withValues(alpha: 0.8), size: 24)
+              child:
+                  widget.peer.avatarUrl == null ||
+                      widget.peer.avatarUrl!.isEmpty
+                  ? Icon(
+                      Icons.person,
+                      color: appBarFg.withValues(alpha: 0.8),
+                      size: 24,
+                    )
                   : null,
             ),
             const SizedBox(width: 12),
@@ -943,7 +1078,9 @@ class _ChatScreenState extends State<ChatScreen> {
             tooltip: 'Профиль',
             onPressed: () {
               Navigator.of(context).push(
-                AppPageRoute(builder: (_) => UserProfileScreen(user: widget.peer)),
+                AppPageRoute(
+                  builder: (_) => UserProfileScreen(user: widget.peer),
+                ),
               );
             },
           ),
@@ -952,7 +1089,13 @@ class _ChatScreenState extends State<ChatScreen> {
             tooltip: 'Голосовой звонок',
             onPressed: () {
               Navigator.of(context).push(
-                AppPageRoute(builder: (_) => CallScreen(peer: widget.peer, isIncoming: false, isVideoCall: false)),
+                AppPageRoute(
+                  builder: (_) => CallScreen(
+                    peer: widget.peer,
+                    isIncoming: false,
+                    isVideoCall: false,
+                  ),
+                ),
               );
             },
           ),
@@ -961,7 +1104,13 @@ class _ChatScreenState extends State<ChatScreen> {
             tooltip: 'Видеозвонок',
             onPressed: () {
               Navigator.of(context).push(
-                AppPageRoute(builder: (_) => CallScreen(peer: widget.peer, isIncoming: false, isVideoCall: true)),
+                AppPageRoute(
+                  builder: (_) => CallScreen(
+                    peer: widget.peer,
+                    isIncoming: false,
+                    isVideoCall: true,
+                  ),
+                ),
               );
             },
           ),
@@ -972,239 +1121,400 @@ class _ChatScreenState extends State<ChatScreen> {
           Expanded(
             child: _loading && _messages.isEmpty
                 ? ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     itemCount: 10,
-                    itemBuilder: (context, i) => SkeletonMessageBubble(isRight: i.isOdd),
+                    itemBuilder: (context, i) =>
+                        SkeletonMessageBubble(isRight: i.isOdd),
                   )
                 : _error != null && _messages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _error!,
-                              style: TextStyle(color: Theme.of(context).colorScheme.error),
-                            ),
-                            const SizedBox(height: 16),
-                            TextButton(
-                              onPressed: _load,
-                              child: const Text('Повторить'),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _error!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                         ),
-                      )
-                    : ListView.builder(
-                        controller: _scroll,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, i) {
-                          final m = _messages[i];
-                          // Специальное отображение для пропущенных звонков
-                          if (m.messageType == 'missed_call') {
-                            return Center(
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
-                                  borderRadius: BorderRadius.circular(20),
+                        const SizedBox(height: 16),
+                        TextButton(
+                          onPressed: _load,
+                          child: const Text('Повторить'),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scroll,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, i) {
+                      final m = _messages[i];
+                      // Специальное отображение для пропущенных звонков
+                      if (m.messageType == 'missed_call') {
+                        return Center(
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest
+                                  .withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.phone_missed,
+                                  size: 16,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.7),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.phone_missed,
-                                      size: 16,
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      m.isMine ? 'Пропущенный звонок' : 'Пропущенный звонок',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                const SizedBox(width: 8),
+                                Text(
+                                  m.isMine
+                                      ? 'Пропущенный звонок'
+                                      : 'Пропущенный звонок',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withOpacity(0.7),
                                         fontStyle: FontStyle.italic,
                                       ),
-                                    ),
-                                  ],
                                 ),
-                              ),
-                            );
-                          }
-                          return Align(
-                            alignment: m.isMine ? Alignment.centerRight : Alignment.centerLeft,
-                            child: GestureDetector(
-                              onLongPress: () => _showMessageActions(m),
-                              onSecondaryTapDown: (details) => _showMessageActions(m, details.globalPosition),
-                              child: Container(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                constraints: BoxConstraints(
-                                  maxWidth: MediaQuery.of(context).size.width * 0.75,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: m.isMine
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(context).colorScheme.surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(18),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.25 : 0.06),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    if (m.isForwarded) ...[
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.forward, size: 14, color: (m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface).withOpacity(0.8)),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            'От ${m.forwardFromDisplayName ?? '?'}',
-                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              color: (m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface).withOpacity(0.8),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 6),
-                                    ],
-                                    if (m.replyToId != null && (m.replyToContent != null || m.replyToSenderName != null)) ...[
-                                      Container(
-                                        width: double.infinity,
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: (m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface).withOpacity(0.12),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            if (m.replyToSenderName != null)
-                                              Text(
-                                                m.replyToSenderName!,
-                                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                                                  color: m.isMine ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.primary,
-                                                ),
-                                              ),
-                                            if (m.replyToContent != null && m.replyToContent!.isNotEmpty)
-                                              Text(
-                                                _safeMessageContent(m.replyToContent),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                  color: (m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface).withOpacity(0.9),
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                    ],
-                                    if (m.isPoll && m.poll != null)
-                                      _buildPollBubble(m)
-                                    else if (m.isVoice)
-                                      VoiceMessageBubble(
-                                        audioUrl: m.attachmentEncrypted ? null : m.attachmentUrl,
-                                        audioBytesFuture: m.attachmentEncrypted
-                                            ? _getAttachmentBytes(m).then((b) => b?.toList() ?? <int>[])
-                                            : null,
-                                        durationSec: m.attachmentDurationSec ?? 0,
-                                        isMine: m.isMine,
-                                      )
-                                    else if (m.isVideoNote)
-                                      _buildVideoNoteBubble(m)
-                                    else ...[
-                                    if (m.content.isNotEmpty && !_isFilePlaceholderContent(m))
-                                      SelectableText(
-                                        _safeMessageContent(m.content),
-                                        style: TextStyle(
-                                          color: m.isMine
-                                              ? Theme.of(context).colorScheme.onPrimary
-                                              : Theme.of(context).colorScheme.onSurface,
-                                        ),
-                                      ),
-                                    if (m.hasAttachment) ...[
-                                      if (m.content.isNotEmpty && !_isFilePlaceholderContent(m)) const SizedBox(height: 8),
-                                      _buildAttachment(m),
-                                    ],
-                                  ],
-                                  if (m.reactions.isNotEmpty) ...[
-                                    const SizedBox(height: 6),
-                                    Wrap(
-                                      spacing: 6,
-                                      runSpacing: 4,
-                                      children: m.reactions.map((r) {
-                                        final myId = context.read<AuthService>().user?.id;
-                                        final hasMine = myId != null && r.userIds.contains(myId);
-                                        return InkWell(
-                                          onTap: () {
-                                            if (hasMine) _setReaction(m, r.emoji);
-                                          },
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: (m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.surface).withOpacity(0.2),
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                ..._reactionAvatars(context, r),
-                                                const SizedBox(width: 4),
-                                                Text('${r.emoji} ${r.count > 1 ? r.count : ''}', style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                                  color: m.isMine ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface,
-                                                )),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        _formatTime(m.createdAt),
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          color: m.isMine
-                                              ? Theme.of(context).colorScheme.onPrimary.withOpacity(0.8)
-                                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                                        ),
-                                      ),
-                                      if (m.isMine) ...[
-                                        const SizedBox(width: 4),
-                                        Icon(
-                                          m.readAt != null ? Icons.done_all : Icons.done,
-                                          size: 14,
-                                          color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.8),
-                                        ),
-                                        const SizedBox(width: 2),
-                                        Text(
-                                          m.readAt != null ? 'Прочитано' : 'Отправлено',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.8),
-                                            fontSize: 11,
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ],
-                              ),
+                              ],
                             ),
                           ),
-                          );
-                        },
-                      ),
+                        );
+                      }
+                      return Align(
+                        alignment: m.isMine
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: GestureDetector(
+                          onLongPress: () => _showMessageActions(m),
+                          onSecondaryTapDown: (details) =>
+                              _showMessageActions(m, details.globalPosition),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            constraints: BoxConstraints(
+                              maxWidth:
+                                  MediaQuery.of(context).size.width * 0.75,
+                            ),
+                            decoration: BoxDecoration(
+                              color: m.isMine
+                                  ? Theme.of(context).colorScheme.primary
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(
+                                    alpha:
+                                        Theme.of(context).brightness ==
+                                            Brightness.dark
+                                        ? 0.25
+                                        : 0.06,
+                                  ),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                if (m.isForwarded) ...[
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.forward,
+                                        size: 14,
+                                        color:
+                                            (m.isMine
+                                                    ? Theme.of(
+                                                        context,
+                                                      ).colorScheme.onPrimary
+                                                    : Theme.of(
+                                                        context,
+                                                      ).colorScheme.onSurface)
+                                                .withOpacity(0.8),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'От ${m.forwardFromDisplayName ?? '?'}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color:
+                                                  (m.isMine
+                                                          ? Theme.of(context)
+                                                                .colorScheme
+                                                                .onPrimary
+                                                          : Theme.of(context)
+                                                                .colorScheme
+                                                                .onSurface)
+                                                      .withOpacity(0.8),
+                                            ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                ],
+                                if (m.replyToId != null &&
+                                    (m.replyToContent != null ||
+                                        m.replyToSenderName != null)) ...[
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          (m.isMine
+                                                  ? Theme.of(
+                                                      context,
+                                                    ).colorScheme.onPrimary
+                                                  : Theme.of(
+                                                      context,
+                                                    ).colorScheme.onSurface)
+                                              .withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (m.replyToSenderName != null)
+                                          Text(
+                                            m.replyToSenderName!,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelMedium
+                                                ?.copyWith(
+                                                  color: m.isMine
+                                                      ? Theme.of(
+                                                          context,
+                                                        ).colorScheme.primary
+                                                      : Theme.of(
+                                                          context,
+                                                        ).colorScheme.primary,
+                                                ),
+                                          ),
+                                        if (m.replyToContent != null &&
+                                            m.replyToContent!.isNotEmpty)
+                                          Text(
+                                            _safeMessageContent(
+                                              m.replyToContent,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  color:
+                                                      (m.isMine
+                                                              ? Theme.of(
+                                                                      context,
+                                                                    )
+                                                                    .colorScheme
+                                                                    .onPrimary
+                                                              : Theme.of(
+                                                                      context,
+                                                                    )
+                                                                    .colorScheme
+                                                                    .onSurface)
+                                                          .withOpacity(0.9),
+                                                ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                ],
+                                if (m.isPoll && m.poll != null)
+                                  _buildPollBubble(m)
+                                else if (m.isVoice)
+                                  VoiceMessageBubble(
+                                    audioUrl: m.attachmentEncrypted
+                                        ? null
+                                        : m.attachmentUrl,
+                                    audioBytesFuture: m.attachmentEncrypted
+                                        ? _getAttachmentBytes(
+                                            m,
+                                          ).then((b) => b?.toList() ?? <int>[])
+                                        : null,
+                                    durationSec: m.attachmentDurationSec ?? 0,
+                                    isMine: m.isMine,
+                                  )
+                                else if (m.isVideoNote)
+                                  _buildVideoNoteBubble(m)
+                                else ...[
+                                  if (m.content.isNotEmpty &&
+                                      !_isFilePlaceholderContent(m))
+                                    SelectableText(
+                                      _safeMessageContent(m.content),
+                                      style: TextStyle(
+                                        color: m.isMine
+                                            ? Theme.of(
+                                                context,
+                                              ).colorScheme.onPrimary
+                                            : Theme.of(
+                                                context,
+                                              ).colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  if (m.hasAttachment) ...[
+                                    if (m.content.isNotEmpty &&
+                                        !_isFilePlaceholderContent(m))
+                                      const SizedBox(height: 8),
+                                    _buildAttachment(m),
+                                  ],
+                                ],
+                                if (m.reactions.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: m.reactions.map((r) {
+                                      final myId = context
+                                          .read<AuthService>()
+                                          .user
+                                          ?.id;
+                                      final hasMine =
+                                          myId != null &&
+                                          r.userIds.contains(myId);
+                                      return InkWell(
+                                        onTap: () {
+                                          if (hasMine) _setReaction(m, r.emoji);
+                                        },
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 4,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color:
+                                                (m.isMine
+                                                        ? Theme.of(context)
+                                                              .colorScheme
+                                                              .onPrimary
+                                                        : Theme.of(
+                                                            context,
+                                                          ).colorScheme.surface)
+                                                    .withOpacity(0.2),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              ..._reactionAvatars(context, r),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                '${r.emoji} ${r.count > 1 ? r.count : ''}',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .labelSmall
+                                                    ?.copyWith(
+                                                      color: m.isMine
+                                                          ? Theme.of(context)
+                                                                .colorScheme
+                                                                .onPrimary
+                                                          : Theme.of(context)
+                                                                .colorScheme
+                                                                .onSurface,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                                ],
+                                const SizedBox(height: 4),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      _formatTime(m.createdAt),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: m.isMine
+                                                ? Theme.of(context)
+                                                      .colorScheme
+                                                      .onPrimary
+                                                      .withOpacity(0.8)
+                                                : Theme.of(context)
+                                                      .colorScheme
+                                                      .onSurfaceVariant,
+                                          ),
+                                    ),
+                                    if (m.isMine) ...[
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        m.readAt != null
+                                            ? Icons.done_all
+                                            : Icons.done,
+                                        size: 14,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary
+                                            .withOpacity(0.8),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      Text(
+                                        m.readAt != null
+                                            ? 'Прочитано'
+                                            : 'Отправлено',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .onPrimary
+                                                  .withOpacity(0.8),
+                                              fontSize: 11,
+                                            ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
           if (_replyingTo != null)
             Container(
@@ -1214,7 +1524,11 @@ class _ChatScreenState extends State<ChatScreen> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
@@ -1225,15 +1539,20 @@ class _ChatScreenState extends State<ChatScreen> {
                       children: [
                         Text(
                           'Ответ на ${_replyingTo!.isMine ? 'ваше сообщение' : widget.peer.displayName}',
-                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.labelMedium
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                         ),
                         if (_replyingTo!.content.isNotEmpty)
                           Text(
                             () {
-                              final safe = _safeMessageContent(_replyingTo!.content);
-                              return safe.length > 60 ? '${safe.substring(0, 57)}...' : safe;
+                              final safe = _safeMessageContent(
+                                _replyingTo!.content,
+                              );
+                              return safe.length > 60
+                                  ? '${safe.substring(0, 57)}...'
+                                  : safe;
                             }(),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -1250,7 +1569,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
-          if (_pendingMultipleFiles != null && _pendingMultipleFiles!.isNotEmpty)
+          if (_pendingMultipleFiles != null &&
+              _pendingMultipleFiles!.isNotEmpty)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -1258,14 +1578,26 @@ class _ChatScreenState extends State<ChatScreen> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
                   if (_pendingMultipleFiles!.length == 1)
-                    Icon(Icons.insert_drive_file, color: Theme.of(context).colorScheme.primary, size: 40)
+                    Icon(
+                      Icons.insert_drive_file,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 40,
+                    )
                   else
-                    Icon(Icons.photo_library, color: Theme.of(context).colorScheme.primary, size: 40),
+                    Icon(
+                      Icons.photo_library,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 40,
+                    ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -1279,7 +1611,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.close),
-                    onPressed: () => setState(() => _pendingMultipleFiles = null),
+                    onPressed: () =>
+                        setState(() => _pendingMultipleFiles = null),
                     tooltip: 'Убрать вложения',
                   ),
                 ],
@@ -1293,12 +1626,17 @@ class _ChatScreenState extends State<ChatScreen> {
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.outline.withValues(alpha: 0.3),
+                ),
               ),
               child: Row(
                 children: [
                   if (_pendingAttachment is PendingFile) ...[
-                    if ((_pendingAttachment! as PendingFile).isImage && !(_pendingAttachment! as PendingFile).encrypted)
+                    if ((_pendingAttachment! as PendingFile).isImage &&
+                        !(_pendingAttachment! as PendingFile).encrypted)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: Image.memory(
@@ -1309,12 +1647,22 @@ class _ChatScreenState extends State<ChatScreen> {
                         ),
                       )
                     else
-                      Icon(Icons.insert_drive_file, color: Theme.of(context).colorScheme.primary, size: 40),
+                      Icon(
+                        Icons.insert_drive_file,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 40,
+                      ),
                   ] else if (_pendingAttachment is PendingVoice) ...[
-                    Icon(Icons.mic, color: Theme.of(context).colorScheme.primary, size: 32),
+                    Icon(
+                      Icons.mic,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 32,
+                    ),
                     const SizedBox(width: 8),
                     Text(
-                      _formatDuration((_pendingAttachment! as PendingVoice).durationSec),
+                      _formatDuration(
+                        (_pendingAttachment! as PendingVoice).durationSec,
+                      ),
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
@@ -1345,7 +1693,11 @@ class _ChatScreenState extends State<ChatScreen> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.06),
+                  color: Colors.black.withValues(
+                    alpha: Theme.of(context).brightness == Brightness.dark
+                        ? 0.3
+                        : 0.06,
+                  ),
                   blurRadius: 12,
                   offset: const Offset(0, 2),
                 ),
@@ -1371,23 +1723,56 @@ class _ChatScreenState extends State<ChatScreen> {
                     }
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(value: 'file', child: Row(children: [Icon(Icons.photo_library_outlined), SizedBox(width: 12), Text('Фото или файл')])),
-                    const PopupMenuItem(value: 'poll', child: Row(children: [Icon(Icons.poll_outlined), SizedBox(width: 12), Text('Опрос')])),
-                    const PopupMenuItem(value: 'video', child: Row(children: [Icon(Icons.videocam_rounded), SizedBox(width: 12), Text('Видеокружок')])),
+                    const PopupMenuItem(
+                      value: 'file',
+                      child: Row(
+                        children: [
+                          Icon(Icons.photo_library_outlined),
+                          SizedBox(width: 12),
+                          Text('Фото или файл'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'poll',
+                      child: Row(
+                        children: [
+                          Icon(Icons.poll_outlined),
+                          SizedBox(width: 12),
+                          Text('Опрос'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'video',
+                      child: Row(
+                        children: [
+                          Icon(Icons.videocam_rounded),
+                          SizedBox(width: 12),
+                          Text('Видеокружок'),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
                 GestureDetector(
                   onLongPressStart: (_) => _startVoiceRecord(),
                   onLongPressEnd: (_) => _stopVoiceRecord(),
                   child: IconButton(
-                    onPressed: _sending ? null : () {
-                      if (_isRecording) _stopVoiceRecord();
-                      else _startVoiceRecord();
-                    },
+                    onPressed: _sending
+                        ? null
+                        : () {
+                            if (_isRecording)
+                              _stopVoiceRecord();
+                            else
+                              _startVoiceRecord();
+                          },
                     icon: _isRecording
                         ? const Icon(Icons.stop_circle, color: Colors.red)
                         : const Icon(Icons.mic_none),
-                    tooltip: _isRecording ? 'Остановить запись' : 'Нажмите для записи голосового (или удерживайте)',
+                    tooltip: _isRecording
+                        ? 'Остановить запись'
+                        : 'Нажмите для записи голосового (или удерживайте)',
                   ),
                 ),
                 Expanded(
@@ -1417,9 +1802,12 @@ class _ChatScreenState extends State<ChatScreen> {
                         const SizedBox(width: 8),
                         Text(
                           'Отправка…',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                         ),
                       ],
                     ),
@@ -1427,7 +1815,14 @@ class _ChatScreenState extends State<ChatScreen> {
                 else
                   IconButton(
                     onPressed: _sending ? null : () => _send(),
-                    icon: Icon(Icons.send, color: _canSend ? null : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.38)),
+                    icon: Icon(
+                      Icons.send,
+                      color: _canSend
+                          ? null
+                          : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.38),
+                    ),
                     tooltip: 'Отправить',
                   ),
               ],
@@ -1464,7 +1859,10 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             Icon(Icons.poll_outlined, size: 18, color: textColor),
             const SizedBox(width: 6),
-            Text('Опрос', style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.8))),
+            Text(
+              'Опрос',
+              style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.8)),
+            ),
           ],
         ),
         const SizedBox(height: 6),
@@ -1489,7 +1887,10 @@ class _ChatScreenState extends State<ChatScreen> {
               },
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   border: Border.all(color: textColor.withOpacity(0.3)),
                   borderRadius: BorderRadius.circular(8),
@@ -1497,12 +1898,18 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(opt.text, style: TextStyle(color: textColor, fontSize: 14)),
+                      child: Text(
+                        opt.text,
+                        style: TextStyle(color: textColor, fontSize: 14),
+                      ),
                     ),
                     if (totalVotes > 0)
                       Text(
                         '${opt.votes}',
-                        style: TextStyle(fontSize: 12, color: textColor.withOpacity(0.8)),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: textColor.withOpacity(0.8),
+                        ),
                       ),
                     if (opt.voted) ...[
                       const SizedBox(width: 4),
@@ -1526,8 +1933,12 @@ class _ChatScreenState extends State<ChatScreen> {
         ? Theme.of(context).colorScheme.onPrimary
         : Theme.of(context).colorScheme.onSurface;
     if (m.attachmentEncrypted) {
-      final cacheKey = '${widget.peer.id}_${m.id}_${m.attachmentFilename ?? ""}';
-      final future = _attachmentFutureCache.putIfAbsent(cacheKey, () => _getAttachmentBytes(m));
+      final cacheKey =
+          '${widget.peer.id}_${m.id}_${m.attachmentFilename ?? ""}';
+      final future = _attachmentFutureCache.putIfAbsent(
+        cacheKey,
+        () => _getAttachmentBytes(m),
+      );
       return FutureBuilder<Uint8List?>(
         future: future,
         builder: (context, snapshot) {
@@ -1535,7 +1946,14 @@ class _ChatScreenState extends State<ChatScreen> {
             return Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: textColor)),
+                SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: textColor,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Text(name, style: TextStyle(color: textColor, fontSize: 12)),
               ],
@@ -1549,7 +1967,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 behavior: HitTestBehavior.opaque,
                 onTap: () {
                   Navigator.of(context).push(
-                    AppPageRoute(builder: (_) => ImagePreviewScreen(imageBytes: bytes, filename: name)),
+                    AppPageRoute(
+                      builder: (_) =>
+                          ImagePreviewScreen(imageBytes: bytes, filename: name),
+                    ),
                   );
                 },
                 child: Image.memory(
@@ -1562,7 +1983,10 @@ class _ChatScreenState extends State<ChatScreen> {
                     children: [
                       Icon(Icons.broken_image, color: textColor, size: 48),
                       const SizedBox(width: 8),
-                      Text(name, style: TextStyle(color: textColor, fontSize: 12)),
+                      Text(
+                        name,
+                        style: TextStyle(color: textColor, fontSize: 12),
+                      ),
                     ],
                   ),
                 ),
@@ -1600,7 +2024,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 builder: (_) => ImagePreviewScreen(
                   imageUrl: url,
                   filename: name,
-                  bytesFuture: Api.getAttachmentBytes(url).then((list) => Uint8List.fromList(list)),
+                  bytesFuture: Api.getAttachmentBytes(
+                    url,
+                  ).then((list) => Uint8List.fromList(list)),
                 ),
               ),
             );
@@ -1618,7 +2044,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 child: Center(
                   child: CircularProgressIndicator(
                     value: progress.expectedTotalBytes != null
-                        ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1)
+                        ? progress.cumulativeBytesLoaded /
+                              (progress.expectedTotalBytes ?? 1)
                         : null,
                   ),
                 ),
@@ -1659,10 +2086,15 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       await saveOrDownloadFile(bytes, filename);
       if (mounted && kIsWeb) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Файл сохранён в загрузки')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Файл сохранён в загрузки')),
+        );
       }
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Не удалось открыть файл')));
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Не удалось открыть файл')),
+        );
     }
   }
 
@@ -1672,7 +2104,11 @@ class _ChatScreenState extends State<ChatScreen> {
     final ext = parts.length > 1 ? parts.last : '';
     if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].contains(ext)) return true;
     // Файлы без расширения или с типичными именами с камеры/галереи
-    if (ext.isEmpty && (lower.startsWith('img') || lower.startsWith('photo') || lower == 'image')) return true;
+    if (ext.isEmpty &&
+        (lower.startsWith('img') ||
+            lower.startsWith('photo') ||
+            lower == 'image'))
+      return true;
     return false;
   }
 
@@ -1711,14 +2147,17 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Текст для отображения: не показываем шифротекст и «кракозябры» после неудачной расшифровки.
-  static const String _undecryptedPlaceholder = 'Сообщение не удалось расшифровать';
+  static const String _undecryptedPlaceholder =
+      'Сообщение не удалось расшифровать';
 
   String _safeMessageContent(String? content) {
     if (content == null || content.isEmpty) return '';
     if (content.startsWith('e2ee:')) return _undecryptedPlaceholder;
-    if (content.length > 24 && RegExp(r'^[A-Za-z0-9+/]+=*$').hasMatch(content)) return _undecryptedPlaceholder;
+    if (content.length > 24 && RegExp(r'^[A-Za-z0-9+/]+=*$').hasMatch(content))
+      return _undecryptedPlaceholder;
     final replacementCount = content.runes.where((r) => r == 0xFFFD).length;
-    if (content.isNotEmpty && replacementCount > content.length ~/ 2) return _undecryptedPlaceholder;
+    if (content.isNotEmpty && replacementCount > content.length ~/ 2)
+      return _undecryptedPlaceholder;
     return content;
   }
 }
@@ -1727,7 +2166,11 @@ class _PollFormResult {
   final String question;
   final List<String> options;
   final bool multiple;
-  _PollFormResult({required this.question, required this.options, required this.multiple});
+  _PollFormResult({
+    required this.question,
+    required this.options,
+    required this.multiple,
+  });
 }
 
 class _CreatePollDialog extends StatefulWidget {
@@ -1805,7 +2248,9 @@ class _CreatePollDialogState extends State<_CreatePollDialog> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.remove_circle_outline),
-                      onPressed: _optionControllers.length <= 2 ? null : () => _removeOption(i),
+                      onPressed: _optionControllers.length <= 2
+                          ? null
+                          : () => _removeOption(i),
                     ),
                   ],
                 ),
@@ -1836,14 +2281,25 @@ class _CreatePollDialogState extends State<_CreatePollDialog> {
         FilledButton(
           onPressed: () {
             final question = _questionController.text.trim();
-            final options = _optionControllers.map((c) => c.text.trim()).where((s) => s.isNotEmpty).toList();
+            final options = _optionControllers
+                .map((c) => c.text.trim())
+                .where((s) => s.isNotEmpty)
+                .toList();
             if (question.isEmpty || options.length < 2) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Введите вопрос и минимум 2 варианта')),
+                const SnackBar(
+                  content: Text('Введите вопрос и минимум 2 варианта'),
+                ),
               );
               return;
             }
-            Navigator.of(context).pop(_PollFormResult(question: question, options: options, multiple: _multiple));
+            Navigator.of(context).pop(
+              _PollFormResult(
+                question: question,
+                options: options,
+                multiple: _multiple,
+              ),
+            );
           },
           child: const Text('Создать'),
         ),

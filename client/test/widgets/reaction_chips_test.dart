@@ -30,12 +30,12 @@ class ReactionChips extends StatelessWidget {
 
 void main() {
   group('ReactionChips', () {
-    testWidgets('renders nothing when reactions empty', (WidgetTester tester) async {
+    testWidgets('renders nothing when reactions empty', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(
-            body: ReactionChips(reactions: []),
-          ),
+          home: Scaffold(body: ReactionChips(reactions: [])),
         ),
       );
       expect(find.byType(ReactionChips), findsOneWidget);
@@ -47,7 +47,9 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: ReactionChips(
-              reactions: [MessageReaction(emoji: '👍', userIds: [1, 2])],
+              reactions: [
+                MessageReaction(emoji: '👍', userIds: [1, 2]),
+              ],
             ),
           ),
         ),

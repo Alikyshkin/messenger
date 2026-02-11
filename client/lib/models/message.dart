@@ -96,14 +96,16 @@ class Message {
     PollData? poll;
     if (json['poll'] != null) {
       final p = json['poll'] as Map<String, dynamic>;
-      final opts = (p['options'] as List<dynamic>?)?.map((e) {
-        final o = e as Map<String, dynamic>;
-        return PollOption(
-          text: o['text'] as String,
-          votes: o['votes'] as int? ?? 0,
-          voted: o['voted'] as bool? ?? false,
-        );
-      }).toList() ?? [];
+      final opts =
+          (p['options'] as List<dynamic>?)?.map((e) {
+            final o = e as Map<String, dynamic>;
+            return PollOption(
+              text: o['text'] as String,
+              votes: o['votes'] as int? ?? 0,
+              voted: o['voted'] as bool? ?? false,
+            );
+          }).toList() ??
+          [];
       poll = PollData(
         id: p['id'] as int,
         question: p['question'] as String? ?? '',
@@ -148,7 +150,12 @@ class Message {
       final emoji = e['emoji'] as String?;
       final ids = e['user_ids'];
       if (emoji == null || emoji.isEmpty) continue;
-      final userIds = ids is List ? (ids.map((x) => (x is int) ? x : (x is num ? x.toInt() : null)).whereType<int>().toList()) : <int>[];
+      final userIds = ids is List
+          ? (ids
+                .map((x) => (x is int) ? x : (x is num ? x.toInt() : null))
+                .whereType<int>()
+                .toList())
+          : <int>[];
       list.add(MessageReaction(emoji: emoji, userIds: userIds));
     }
     return list;
@@ -157,7 +164,8 @@ class Message {
   bool get hasAttachment => attachmentUrl != null && attachmentUrl!.isNotEmpty;
   bool get isPoll => messageType == 'poll' && poll != null;
   bool get isVoice => attachmentKind == 'voice' && attachmentUrl != null;
-  bool get isVideoNote => attachmentKind == 'video_note' && attachmentUrl != null;
+  bool get isVideoNote =>
+      attachmentKind == 'video_note' && attachmentUrl != null;
 }
 
 class PollData {
@@ -165,7 +173,12 @@ class PollData {
   final String question;
   final List<PollOption> options;
   final bool multiple;
-  PollData({required this.id, required this.question, required this.options, required this.multiple});
+  PollData({
+    required this.id,
+    required this.question,
+    required this.options,
+    required this.multiple,
+  });
 }
 
 class PollOption {

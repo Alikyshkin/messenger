@@ -11,7 +11,12 @@ class ReactionUpdate {
   final int? peerId;
   final int? groupId;
   final List<MessageReaction> reactions;
-  ReactionUpdate({required this.messageId, this.peerId, this.groupId, required this.reactions});
+  ReactionUpdate({
+    required this.messageId,
+    this.peerId,
+    this.groupId,
+    required this.reactions,
+  });
 }
 
 class _ReactionUpdate {
@@ -19,7 +24,12 @@ class _ReactionUpdate {
   final int? peerId;
   final int? groupId;
   final List<MessageReaction> reactions;
-  _ReactionUpdate({required this.messageId, this.peerId, this.groupId, required this.reactions});
+  _ReactionUpdate({
+    required this.messageId,
+    this.peerId,
+    this.groupId,
+    required this.reactions,
+  });
 }
 
 class WsService extends ChangeNotifier {
@@ -30,21 +40,29 @@ class WsService extends ChangeNotifier {
   bool _allowReconnect = true;
   Timer? _reconnectTimer;
   int _reconnectAttempts = 0;
-  static const int _maxReconnectDelay = 30; // Максимальная задержка переподключения (секунды)
+  static const int _maxReconnectDelay =
+      30; // Максимальная задержка переподключения (секунды)
   final List<Message> _incoming = [];
   final List<_ReactionUpdate> _reactionUpdates = [];
-  final List<Map<String, dynamic>> _pendingCallSignals = []; // Очередь сигналов звонка при отсутствии соединения
-  final StreamController<CallSignal> _callSignalController = StreamController<CallSignal>.broadcast();
-  final StreamController<void> _newMessageController = StreamController<void>.broadcast();
-  final StreamController<Message> _newMessagePayloadController = StreamController<Message>.broadcast();
+  final List<Map<String, dynamic>> _pendingCallSignals =
+      []; // Очередь сигналов звонка при отсутствии соединения
+  final StreamController<CallSignal> _callSignalController =
+      StreamController<CallSignal>.broadcast();
+  final StreamController<void> _newMessageController =
+      StreamController<void>.broadcast();
+  final StreamController<Message> _newMessagePayloadController =
+      StreamController<Message>.broadcast();
 
   bool get connected => _connected;
   List<Message> get pendingIncoming => List.unmodifiable(_incoming);
   Stream<CallSignal> get callSignals => _callSignalController.stream;
+
   /// Срабатывает при получении любого нового сообщения (чтобы обновить список чатов и счётчик непрочитанных).
   Stream<void> get onNewMessage => _newMessageController.stream;
+
   /// То же сообщение с данными (для уведомлений и звука).
-  Stream<Message> get onNewMessageWithPayload => _newMessagePayloadController.stream;
+  Stream<Message> get onNewMessageWithPayload =>
+      _newMessagePayloadController.stream;
 
   void connect(String token) {
     if (_token == token && _connected) return;
@@ -97,11 +115,12 @@ class WsService extends ChangeNotifier {
     if (!_allowReconnect || _token.isEmpty) return;
     _reconnectTimer?.cancel();
     // Экспоненциальный backoff: 3s, 6s, 12s, 24s, максимум 30s
-    final delaySeconds = _reconnectAttempts == 0 
-        ? 3 
-        : (_reconnectAttempts <= 4 
-            ? (3 * (1 << (_reconnectAttempts - 1)))
-            : _maxReconnectDelay).clamp(3, _maxReconnectDelay);
+    final delaySeconds = _reconnectAttempts == 0
+        ? 3
+        : (_reconnectAttempts <= 4
+                  ? (3 * (1 << (_reconnectAttempts - 1)))
+                  : _maxReconnectDelay)
+              .clamp(3, _maxReconnectDelay);
     _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
       _reconnectTimer = null;
       if (!_connected && _allowReconnect && _token.isNotEmpty) _doConnect();
@@ -131,32 +150,48 @@ class WsService extends ChangeNotifier {
         _incoming.add(msg);
         notifyListeners();
         if (!_newMessageController.isClosed) _newMessageController.add(null);
-        if (!_newMessagePayloadController.isClosed) _newMessagePayloadController.add(msg);
-      } else if (map['type'] == 'new_group_message' && map['group_id'] != null && map['message'] != null) {
+        if (!_newMessagePayloadController.isClosed)
+          _newMessagePayloadController.add(msg);
+      } else if (map['type'] == 'new_group_message' &&
+          map['group_id'] != null &&
+          map['message'] != null) {
         final msgMap = map['message'] as Map<String, dynamic>;
         msgMap['group_id'] = map['group_id'];
         final msg = Message.fromJson(msgMap);
         _incoming.add(msg);
         notifyListeners();
         if (!_newMessageController.isClosed) _newMessageController.add(null);
-        if (!_newMessagePayloadController.isClosed) _newMessagePayloadController.add(msg);
-      } else if (map['type'] == 'call_signal' && map['fromUserId'] != null && map['signal'] != null) {
+        if (!_newMessagePayloadController.isClosed)
+          _newMessagePayloadController.add(msg);
+      } else if (map['type'] == 'call_signal' &&
+          map['fromUserId'] != null &&
+          map['signal'] != null) {
         _callSignalController.add(CallSignal.fromJson(map));
-      } else if (map['type'] == 'reaction' && map['message_id'] != null && map['peer_id'] != null && map['reactions'] != null) {
+      } else if (map['type'] == 'reaction' &&
+          map['message_id'] != null &&
+          map['peer_id'] != null &&
+          map['reactions'] != null) {
         final reactions = _parseReactions(map['reactions']);
-        _reactionUpdates.add(_ReactionUpdate(
-          messageId: map['message_id'] as int,
-          peerId: map['peer_id'] as int,
-          reactions: reactions,
-        ));
+        _reactionUpdates.add(
+          _ReactionUpdate(
+            messageId: map['message_id'] as int,
+            peerId: map['peer_id'] as int,
+            reactions: reactions,
+          ),
+        );
         notifyListeners();
-      } else if (map['type'] == 'group_reaction' && map['group_id'] != null && map['message_id'] != null && map['reactions'] != null) {
+      } else if (map['type'] == 'group_reaction' &&
+          map['group_id'] != null &&
+          map['message_id'] != null &&
+          map['reactions'] != null) {
         final reactions = _parseReactions(map['reactions']);
-        _reactionUpdates.add(_ReactionUpdate(
-          messageId: map['message_id'] as int,
-          groupId: map['group_id'] as int,
-          reactions: reactions,
-        ));
+        _reactionUpdates.add(
+          _ReactionUpdate(
+            messageId: map['message_id'] as int,
+            groupId: map['group_id'] as int,
+            reactions: reactions,
+          ),
+        );
         notifyListeners();
       }
     } catch (_) {}
@@ -171,14 +206,23 @@ class WsService extends ChangeNotifier {
       final ids = e['user_ids'];
       if (emoji == null || emoji.isEmpty) continue;
       final userIds = ids is List
-          ? (ids.map((x) => x is int ? x : (x is num ? x.toInt() : null)).whereType<int>().toList())
+          ? (ids
+                .map((x) => x is int ? x : (x is num ? x.toInt() : null))
+                .whereType<int>()
+                .toList())
           : <int>[];
       list.add(MessageReaction(emoji: emoji, userIds: userIds));
     }
     return list;
   }
 
-  void sendCallSignal(int toUserId, String signal, [Map<String, dynamic>? payload, bool? isVideoCall, int? groupId]) {
+  void sendCallSignal(
+    int toUserId,
+    String signal, [
+    Map<String, dynamic>? payload,
+    bool? isVideoCall,
+    int? groupId,
+  ]) {
     final message = {
       'type': 'call_signal',
       'toUserId': toUserId,
@@ -187,7 +231,7 @@ class WsService extends ChangeNotifier {
       if (isVideoCall != null) 'isVideoCall': isVideoCall,
       if (groupId != null) 'groupId': groupId,
     };
-    
+
     if (_connected && _channel != null) {
       try {
         _channel!.sink.add(jsonEncode(message));
@@ -196,16 +240,21 @@ class WsService extends ChangeNotifier {
         // Если отправка не удалась, добавляем в очередь
       }
     }
-    
+
     // Если соединение отсутствует или отправка не удалась, сохраняем в очередь
     // (кроме hangup/reject - их не нужно сохранять)
     if (signal != 'hangup' && signal != 'reject') {
       _pendingCallSignals.add(message);
     }
   }
-  
+
   /// Отправить групповой сигнал звонка всем участникам группы
-  void sendGroupCallSignal(int groupId, String signal, [Map<String, dynamic>? payload, bool? isVideoCall]) {
+  void sendGroupCallSignal(
+    int groupId,
+    String signal, [
+    Map<String, dynamic>? payload,
+    bool? isVideoCall,
+  ]) {
     final message = {
       'type': 'group_call_signal',
       'groupId': groupId,
@@ -213,7 +262,7 @@ class WsService extends ChangeNotifier {
       if (payload != null) 'payload': payload,
       if (isVideoCall != null) 'isVideoCall': isVideoCall,
     };
-    
+
     if (_connected && _channel != null) {
       try {
         _channel!.sink.add(jsonEncode(message));
@@ -222,7 +271,7 @@ class WsService extends ChangeNotifier {
         // Если отправка не удалась, добавляем в очередь
       }
     }
-    
+
     // Если соединение отсутствует или отправка не удалась, сохраняем в очередь
     // (кроме hangup/reject - их не нужно сохранять)
     if (signal != 'hangup' && signal != 'reject') {
@@ -231,7 +280,10 @@ class WsService extends ChangeNotifier {
   }
 
   Message? takeIncomingFor(int peerId) {
-    final i = _incoming.indexWhere((m) => m.groupId == null && (m.senderId == peerId || m.receiverId == peerId));
+    final i = _incoming.indexWhere(
+      (m) =>
+          m.groupId == null && (m.senderId == peerId || m.receiverId == peerId),
+    );
     if (i < 0) return null;
     return _incoming.removeAt(i);
   }
@@ -243,11 +295,17 @@ class WsService extends ChangeNotifier {
   }
 
   ReactionUpdate? takeReactionUpdateFor(int peerId) {
-    final i = _reactionUpdates.indexWhere((u) => u.peerId == peerId && u.groupId == null);
+    final i = _reactionUpdates.indexWhere(
+      (u) => u.peerId == peerId && u.groupId == null,
+    );
     if (i < 0) return null;
     final u = _reactionUpdates.removeAt(i);
     notifyListeners();
-    return ReactionUpdate(messageId: u.messageId, peerId: u.peerId, reactions: u.reactions);
+    return ReactionUpdate(
+      messageId: u.messageId,
+      peerId: u.peerId,
+      reactions: u.reactions,
+    );
   }
 
   ReactionUpdate? takeGroupReactionUpdateFor(int groupId) {
@@ -255,7 +313,11 @@ class WsService extends ChangeNotifier {
     if (i < 0) return null;
     final u = _reactionUpdates.removeAt(i);
     notifyListeners();
-    return ReactionUpdate(messageId: u.messageId, groupId: u.groupId, reactions: u.reactions);
+    return ReactionUpdate(
+      messageId: u.messageId,
+      groupId: u.groupId,
+      reactions: u.reactions,
+    );
   }
 
   void clearPending() {

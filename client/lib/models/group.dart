@@ -25,7 +25,9 @@ class Group {
     List<GroupMember>? members;
     if (json['members'] != null) {
       final list = json['members'] as List<dynamic>;
-      members = list.map((e) => GroupMember.fromJson(e as Map<String, dynamic>)).toList();
+      members = list
+          .map((e) => GroupMember.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     return Group(
       id: json['id'] as int,
@@ -61,7 +63,8 @@ class GroupMember {
     return GroupMember(
       id: json['id'] as int,
       username: json['username'] as String? ?? '',
-      displayName: json['display_name'] as String? ?? json['username'] as String? ?? '',
+      displayName:
+          json['display_name'] as String? ?? json['username'] as String? ?? '',
       avatarUrl: json['avatar_url'] as String?,
       publicKey: json['public_key'] as String?,
       role: json['role'] as String? ?? 'member',

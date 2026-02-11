@@ -23,7 +23,11 @@ class ContactsContent extends StatefulWidget {
   final VoidCallback? onFriendRequestChanged;
   final NavigatorState? navigator;
 
-  const ContactsContent({super.key, this.onFriendRequestChanged, this.navigator});
+  const ContactsContent({
+    super.key,
+    this.onFriendRequestChanged,
+    this.navigator,
+  });
 
   @override
   State<ContactsContent> createState() => _ContactsContentState();
@@ -85,11 +89,16 @@ class _ContactsContentState extends State<ContactsContent> {
 
   Future<void> _confirmRemove(BuildContext context, User u) async {
     final auth = context.read<AuthService>();
+    final navigator = widget.navigator;
+    final dialogContext = navigator?.context ?? context;
     final ok = await showDialog<bool>(
-      context: context,
+      context: dialogContext,
+      useRootNavigator: navigator != null ? false : true,
       builder: (ctx) => AlertDialog(
         title: Text(context.tr('remove_friend_title')),
-        content: Text(context.tr('remove_friend_body').replaceFirst('%s', u.displayName)),
+        content: Text(
+          context.tr('remove_friend_body').replaceFirst('%s', u.displayName),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
@@ -125,9 +134,9 @@ class _ContactsContentState extends State<ContactsContent> {
                 padding: const EdgeInsets.only(left: 16),
                 child: Text(
                   context.tr('contacts'),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
               Row(
@@ -139,7 +148,9 @@ class _ContactsContentState extends State<ContactsContent> {
                     onPressed: () async {
                       final nav = widget.navigator ?? Navigator.of(context);
                       await nav.push(
-                        MaterialPageRoute(builder: (_) => const PossibleFriendsScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const PossibleFriendsScreen(),
+                        ),
                       );
                       _load();
                     },
@@ -150,7 +161,9 @@ class _ContactsContentState extends State<ContactsContent> {
                     onPressed: () async {
                       final nav = widget.navigator ?? Navigator.of(context);
                       await nav.push(
-                        MaterialPageRoute(builder: (_) => const AddContactScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const AddContactScreen(),
+                        ),
                       );
                       _load();
                     },
@@ -165,116 +178,155 @@ class _ContactsContentState extends State<ContactsContent> {
               ? ListView.builder(
                   padding: AppSpacing.listPadding,
                   itemCount: 12,
-                  itemBuilder: (_, __) => const Card(child: SkeletonContactTile()),
+                  itemBuilder: (_, __) =>
+                      const Card(child: SkeletonContactTile()),
                 )
               : _error != null
-                  ? ErrorStateWidget(
-                      message: _error!,
-                      onRetry: _load,
-                      retryLabel: context.tr('retry'),
-                    )
-                  : _contacts.isEmpty && _requests.isEmpty
-                      ? EmptyStateWidget(
-                          message: context.tr('no_friends_add_hint'),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _load,
-                          child: ListView(
-                            padding: AppSpacing.listPadding,
-                            children: [
-                              if (_requests.isNotEmpty) ...[
-                                SectionCard(
-                                  title: context.tr('friend_requests'),
-                                  children: _requests.map((req) => ListTile(
-                                    contentPadding: AppSpacing.listItemPadding,
-                                    leading: CircleAvatar(
-                                      radius: AppSizes.avatarMD,
-                                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                      child: Text(
-                                        req.displayName.isNotEmpty ? req.displayName[0].toUpperCase() : '?',
-                                        style: TextStyle(
-                                          color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                    title: Text(
-                                      req.displayName,
-                                      style: const TextStyle(fontWeight: FontWeight.w500),
-                                    ),
-                                    subtitle: Text(
-                                      '@${req.username}',
+              ? ErrorStateWidget(
+                  message: _error!,
+                  onRetry: _load,
+                  retryLabel: context.tr('retry'),
+                )
+              : _contacts.isEmpty && _requests.isEmpty
+              ? EmptyStateWidget(message: context.tr('no_friends_add_hint'))
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView(
+                    padding: AppSpacing.listPadding,
+                    children: [
+                      if (_requests.isNotEmpty) ...[
+                        SectionCard(
+                          title: context.tr('friend_requests'),
+                          children: _requests
+                              .map(
+                                (req) => ListTile(
+                                  contentPadding: AppSpacing.listItemPadding,
+                                  leading: CircleAvatar(
+                                    radius: AppSizes.avatarMD,
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.primaryContainer,
+                                    child: Text(
+                                      req.displayName.isNotEmpty
+                                          ? req.displayName[0].toUpperCase()
+                                          : '?',
                                       style: TextStyle(
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                        fontSize: 14,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onPrimaryContainer,
+                                        fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        TextButton(
-                                          onPressed: () => _reject(req.id),
-                                          child: Text(context.tr('reject')),
-                                        ),
-                                        AppSpacing.spacingHorizontalSM,
-                                        FilledButton(
-                                          onPressed: () => _accept(req.id),
-                                          child: Text(context.tr('accept')),
-                                        ),
-                                      ],
+                                  ),
+                                  title: Text(
+                                    req.displayName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
                                     ),
-                                  )).toList(),
-                                ),
-                                AppSpacing.spacingVerticalMD,
-                              ],
-                              if (_contacts.isNotEmpty) ...[
-                                SectionCard(
-                                  title: context.tr('friends'),
-                                  children: _contacts.map((u) => UserListTile(
-                                    user: u,
-                                    avatarRadius: AppSizes.avatarMD,
-                                    onTap: () {
-                                      final nav = widget.navigator ?? Navigator.of(context);
-                                      nav.push(
-                                        AppPageRoute(builder: (_) => UserProfileScreen(user: u)),
-                                      );
-                                    },
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: const Icon(Icons.person_outline),
-                                          onPressed: () {
-                                            final nav = widget.navigator ?? Navigator.of(context);
-                                            nav.push(
-                                              AppPageRoute(builder: (_) => UserProfileScreen(user: u)),
-                                            );
-                                          },
-                                          tooltip: context.tr('profile_tooltip'),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.message_outlined),
-                                          onPressed: () {
-                                            final nav = widget.navigator ?? Navigator.of(context);
-                                            nav.push(
-                                              AppPageRoute(builder: (_) => ChatScreen(peer: u)),
-                                            );
-                                          },
-                                          tooltip: context.tr('write'),
-                                        ),
-                                        IconButton(
-                                          icon: const Icon(Icons.person_remove_outlined),
-                                          tooltip: context.tr('remove_friend_tooltip'),
-                                          onPressed: () => _confirmRemove(context, u),
-                                        ),
-                                      ],
+                                  ),
+                                  subtitle: Text(
+                                    '@${req.username}',
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                      fontSize: 14,
                                     ),
-                                  )).toList(),
+                                  ),
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      TextButton(
+                                        onPressed: () => _reject(req.id),
+                                        child: Text(context.tr('reject')),
+                                      ),
+                                      AppSpacing.spacingHorizontalSM,
+                                      FilledButton(
+                                        onPressed: () => _accept(req.id),
+                                        child: Text(context.tr('accept')),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ],
-                          ),
+                              )
+                              .toList(),
                         ),
+                        AppSpacing.spacingVerticalMD,
+                      ],
+                      if (_contacts.isNotEmpty) ...[
+                        SectionCard(
+                          title: context.tr('friends'),
+                          children: _contacts
+                              .map(
+                                (u) => UserListTile(
+                                  user: u,
+                                  avatarRadius: AppSizes.avatarMD,
+                                  onTap: () {
+                                    final nav =
+                                        widget.navigator ??
+                                        Navigator.of(context);
+                                    nav.push(
+                                      AppPageRoute(
+                                        builder: (_) =>
+                                            UserProfileScreen(user: u),
+                                      ),
+                                    );
+                                  },
+                                  trailing: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.person_outline),
+                                        onPressed: () {
+                                          final nav =
+                                              widget.navigator ??
+                                              Navigator.of(context);
+                                          nav.push(
+                                            AppPageRoute(
+                                              builder: (_) =>
+                                                  UserProfileScreen(user: u),
+                                            ),
+                                          );
+                                        },
+                                        tooltip: context.tr('profile_tooltip'),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.message_outlined,
+                                        ),
+                                        onPressed: () {
+                                          final nav =
+                                              widget.navigator ??
+                                              Navigator.of(context);
+                                          nav.push(
+                                            AppPageRoute(
+                                              builder: (_) =>
+                                                  ChatScreen(peer: u),
+                                            ),
+                                          );
+                                        },
+                                        tooltip: context.tr('write'),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.person_remove_outlined,
+                                        ),
+                                        tooltip: context.tr(
+                                          'remove_friend_tooltip',
+                                        ),
+                                        onPressed: () =>
+                                            _confirmRemove(context, u),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
         ),
       ],
     );

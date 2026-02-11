@@ -69,98 +69,114 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    context.tr('messenger'),
-                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.primary,
+                  children: [
+                    Text(
+                      context.tr('messenger'),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 32),
-                  Card(
-                    margin: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TextFormField(
-                            controller: _username,
-                            decoration: InputDecoration(
-                              labelText: context.tr('username'),
-                              border: const OutlineInputBorder(),
-                            ),
-                            textInputAction: TextInputAction.next,
-                            autocorrect: false,
-                            enableInteractiveSelection: true,
-                            enableSuggestions: false,
-                            validator: (v) =>
-                                v == null || v.trim().isEmpty ? context.tr('enter_username') : null,
-                          ),
-                          const SizedBox(height: 16),
-                          TextFormField(
-                            controller: _password,
-                            decoration: InputDecoration(
-                              labelText: context.tr('password'),
-                              border: const OutlineInputBorder(),
-                              suffixIcon: IconButton(
-                                icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
-                                onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
-                                tooltip: _passwordVisible ? 'Скрыть пароль' : 'Показать пароль',
+                    const SizedBox(height: 32),
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            TextFormField(
+                              controller: _username,
+                              decoration: InputDecoration(
+                                labelText: context.tr('username'),
+                                border: const OutlineInputBorder(),
                               ),
+                              textInputAction: TextInputAction.next,
+                              autocorrect: false,
+                              enableInteractiveSelection: true,
+                              enableSuggestions: false,
+                              validator: (v) => v == null || v.trim().isEmpty
+                                  ? context.tr('enter_username')
+                                  : null,
                             ),
-                            obscureText: !_passwordVisible,
-                            enableInteractiveSelection: true,
-                            enableSuggestions: false,
-                            autocorrect: false,
-                            onFieldSubmitted: (_) => _submit(),
-                            validator: (v) =>
-                                v == null || v.isEmpty ? context.tr('enter_password') : null,
-                          ),
-                          if (_error != null) ...[
                             const SizedBox(height: 16),
-                            Text(
-                              _error!,
-                              style: TextStyle(color: Theme.of(context).colorScheme.error),
+                            TextFormField(
+                              controller: _password,
+                              decoration: InputDecoration(
+                                labelText: context.tr('password'),
+                                border: const OutlineInputBorder(),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    _passwordVisible
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                  ),
+                                  onPressed: () => setState(
+                                    () => _passwordVisible = !_passwordVisible,
+                                  ),
+                                  tooltip: _passwordVisible
+                                      ? 'Скрыть пароль'
+                                      : 'Показать пароль',
+                                ),
+                              ),
+                              obscureText: !_passwordVisible,
+                              enableInteractiveSelection: true,
+                              enableSuggestions: false,
+                              autocorrect: false,
+                              onFieldSubmitted: (_) => _submit(),
+                              validator: (v) => v == null || v.isEmpty
+                                  ? context.tr('enter_password')
+                                  : null,
+                            ),
+                            if (_error != null) ...[
+                              const SizedBox(height: 16),
+                              Text(
+                                _error!,
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                            FilledButton(
+                              onPressed: _loading
+                                  ? null
+                                  : () {
+                                      if (_formKey.currentState!.validate())
+                                        _submit();
+                                    },
+                              child: _loading
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    )
+                                  : Text(context.tr('login_btn')),
+                            ),
+                            const SizedBox(height: 12),
+                            TextButton(
+                              onPressed: _loading
+                                  ? null
+                                  : () {
+                                      context.push('/forgot-password');
+                                    },
+                              child: Text(context.tr('forgot_password')),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                context.push('/register');
+                              },
+                              child: Text(context.tr('no_account_register')),
                             ),
                           ],
-                          const SizedBox(height: 24),
-                          FilledButton(
-                            onPressed: _loading
-                                ? null
-                                : () {
-                                    if (_formKey.currentState!.validate()) _submit();
-                                  },
-                            child: _loading
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                  )
-                                : Text(context.tr('login_btn')),
-                          ),
-                          const SizedBox(height: 12),
-                          TextButton(
-                            onPressed: _loading
-                                ? null
-                                : () {
-                                    context.push('/forgot-password');
-                                  },
-                            child: Text(context.tr('forgot_password')),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              context.push('/register');
-                            },
-                            child: Text(context.tr('no_account_register')),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
                 ),
               ),
             ),

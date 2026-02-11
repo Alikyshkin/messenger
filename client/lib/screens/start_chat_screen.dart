@@ -60,15 +60,18 @@ class _StartChatScreenState extends State<StartChatScreen> {
 
   void _openChat(User u) {
     Navigator.of(context).pop();
-    Navigator.of(context).push(
-      AppPageRoute(builder: (_) => ChatScreen(peer: u)),
-    );
+    Navigator.of(
+      context,
+    ).push(AppPageRoute(builder: (_) => ChatScreen(peer: u)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(leading: const AppBackButton(), title: Text(context.tr('new_chat'))),
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: Text(context.tr('new_chat')),
+      ),
       body: Column(
         children: [
           Padding(

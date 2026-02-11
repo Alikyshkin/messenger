@@ -3,6 +3,9 @@ bool get isPageVisible => true;
 
 Future<bool> requestNotificationPermission() async => false;
 
-Future<void> showPageNotification({required String title, required String body}) async {}
+Future<void> showPageNotification({
+  required String title,
+  required String body,
+}) async {}
 
 Future<void> focusWindow() async {}

@@ -13,7 +13,11 @@ class RecordVideoNoteScreen extends StatefulWidget {
   final int peerId;
   final String? peerPublicKey;
 
-  const RecordVideoNoteScreen({super.key, required this.peerId, this.peerPublicKey});
+  const RecordVideoNoteScreen({
+    super.key,
+    required this.peerId,
+    this.peerPublicKey,
+  });
 
   @override
   State<RecordVideoNoteScreen> createState() => _RecordVideoNoteScreenState();
@@ -40,7 +44,8 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
       // В браузере камера работает только по HTTPS; по HTTP браузер блокирует доступ
       return 'Видеокружок в браузере доступен только по HTTPS. Откройте сайт по https:// или используйте приложение на телефоне.';
     }
-    if (e.toString().toLowerCase().contains('permission')) return 'Нет доступа к камере. Разрешите доступ в настройках.';
+    if (e.toString().toLowerCase().contains('permission'))
+      return 'Нет доступа к камере. Разрешите доступ в настройках.';
     return 'Ошибка камеры. Проверьте, что приложению разрешён доступ к камере.';
   }
 
@@ -82,7 +87,8 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
   }
 
   Future<void> _startRecording() async {
-    if (_controller == null || !_controller!.value.isInitialized || _recording) return;
+    if (_controller == null || !_controller!.value.isInitialized || _recording)
+      return;
     try {
       await _controller!.startVideoRecording();
       setState(() {
@@ -111,18 +117,29 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
       var encrypted = false;
       if (widget.peerPublicKey != null) {
         final e2ee = E2EEService();
-        final enc = await e2ee.encryptBytes(Uint8List.fromList(bytes), widget.peerPublicKey);
+        final enc = await e2ee.encryptBytes(
+          Uint8List.fromList(bytes),
+          widget.peerPublicKey,
+        );
         if (enc != null) {
           bytes = enc;
           encrypted = true;
         }
       }
       final name = xFile.name;
-      final filename = name.isNotEmpty ? name : 'video_note_${DateTime.now().millisecondsSinceEpoch}.mp4';
+      final filename = name.isNotEmpty
+          ? name
+          : 'video_note_${DateTime.now().millisecondsSinceEpoch}.mp4';
       final durationSec = _recordSeconds > 0 ? _recordSeconds : 1;
       final auth = context.read<AuthService>();
       final api = Api(auth.token);
-      final msg = await api.sendVideoNoteMessage(widget.peerId, bytes, filename, durationSec, attachmentEncrypted: encrypted);
+      final msg = await api.sendVideoNoteMessage(
+        widget.peerId,
+        bytes,
+        filename,
+        durationSec,
+        attachmentEncrypted: encrypted,
+      );
       if (!mounted) return;
       Navigator.of(context).pop({'message': msg});
     } catch (e) {
@@ -157,12 +174,18 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
     }
     if (_error != null && _controller == null) {
       return Scaffold(
-        appBar: AppBar(leading: const AppBackButton(), title: const Text('Видеокружок')),
+        appBar: AppBar(
+          leading: const AppBackButton(),
+          title: const Text('Видеокружок'),
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
               const SizedBox(height: 16),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -231,10 +254,18 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
                         padding: const EdgeInsets.all(12),
                         child: Row(
                           children: [
-                            Expanded(child: Text(_error!, style: const TextStyle(color: Colors.white))),
+                            Expanded(
+                              child: Text(
+                                _error!,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
                             TextButton(
                               onPressed: () => setState(() => _error = null),
-                              child: const Text('Понятно', style: TextStyle(color: Colors.white)),
+                              child: const Text(
+                                'Понятно',
+                                style: TextStyle(color: Colors.white),
+                              ),
                             ),
                           ],
                         ),
@@ -256,7 +287,11 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
                               shape: BoxShape.circle,
                               color: Colors.white,
                             ),
-                            child: const Icon(Icons.fiber_manual_record, color: Colors.red, size: 48),
+                            child: const Icon(
+                              Icons.fiber_manual_record,
+                              color: Colors.red,
+                              size: 48,
+                            ),
                           ),
                         )
                       else if (_recording)
@@ -270,15 +305,25 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
                                 height: 80,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 4),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 4,
+                                  ),
                                 ),
-                                child: const Icon(Icons.stop, color: Colors.white, size: 52),
+                                child: const Icon(
+                                  Icons.stop,
+                                  color: Colors.white,
+                                  size: 52,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 8),
                             const Text(
                               'Нажмите, чтобы остановить и отправить',
-                              style: TextStyle(color: Colors.white70, fontSize: 14),
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
                             ),
                           ],
                         )
@@ -287,7 +332,9 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
                           width: 80,
                           height: 80,
                           child: Center(
-                            child: CircularProgressIndicator(color: Colors.white),
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                     ],

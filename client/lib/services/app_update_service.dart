@@ -16,16 +16,18 @@ class AppUpdateService extends ChangeNotifier {
   Timer? _checkTimer;
   DateTime? _lastCheckTime;
   bool _isChecking = false;
-  static const Duration _minCheckInterval = Duration(seconds: 30); // Минимальный интервал между проверками
-  
+  static const Duration _minCheckInterval = Duration(
+    seconds: 30,
+  ); // Минимальный интервал между проверками
+
   String? get latestVersion => _latestVersion;
   String? get currentVersion => _currentVersion;
   bool get hasUpdate => _hasUpdate;
-  
+
   AppUpdateService() {
     _init();
   }
-  
+
   Future<void> _init() async {
     // Получаем текущую версию приложения
     if (kIsWeb) {
@@ -40,14 +42,14 @@ class AppUpdateService extends ChangeNotifier {
         _currentVersion = AppVersion.displayVersion;
       }
     }
-    
+
     // Начинаем периодическую проверку обновлений
     _startPeriodicCheck();
-    
+
     // Проверяем сразу при запуске
     checkForUpdates();
   }
-  
+
   /// Запускает периодическую проверку обновлений (каждые 5 минут)
   void _startPeriodicCheck() {
     _checkTimer?.cancel();
@@ -55,13 +57,13 @@ class AppUpdateService extends ChangeNotifier {
       checkForUpdates();
     });
   }
-  
+
   /// Проверяет наличие обновлений на сервере
   /// Использует троттлинг чтобы не проверять слишком часто
   Future<void> checkForUpdates() async {
     // Если уже идет проверка, пропускаем
     if (_isChecking) return;
-    
+
     // Если прошло недостаточно времени с последней проверки, пропускаем
     if (_lastCheckTime != null) {
       final timeSinceLastCheck = DateTime.now().difference(_lastCheckTime!);
@@ -69,19 +71,19 @@ class AppUpdateService extends ChangeNotifier {
         return;
       }
     }
-    
+
     _isChecking = true;
     _lastCheckTime = DateTime.now();
-    
+
     try {
-      final response = await http.get(
-        Uri.parse('$apiBaseUrl/version'),
-      ).timeout(const Duration(seconds: 10));
-      
+      final response = await http
+          .get(Uri.parse('$apiBaseUrl/version'))
+          .timeout(const Duration(seconds: 10));
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
         final serverVersion = data['version'] as String?;
-        
+
         if (serverVersion != null && serverVersion != _currentVersion) {
           _latestVersion = serverVersion;
           _hasUpdate = true;
@@ -97,13 +99,13 @@ class AppUpdateService extends ChangeNotifier {
       _isChecking = false;
     }
   }
-  
+
   /// Закрывает уведомление об обновлении (без обновления)
   void dismissUpdate() {
     _hasUpdate = false;
     notifyListeners();
   }
-  
+
   /// Обновляет приложение (перезагружает страницу на Web)
   Future<void> updateApp() async {
     if (kIsWeb) {
@@ -112,7 +114,7 @@ class AppUpdateService extends ChangeNotifier {
     }
     // На других платформах можно добавить логику обновления через store
   }
-  
+
   @override
   void dispose() {
     _checkTimer?.cancel();

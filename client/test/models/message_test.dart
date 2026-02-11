@@ -116,8 +116,14 @@ void main() {
         'is_mine': true,
         'message_type': 'text',
         'reactions': [
-          {'emoji': '👍', 'user_ids': [2, 3]},
-          {'emoji': '❤️', 'user_ids': [1]},
+          {
+            'emoji': '👍',
+            'user_ids': [2, 3],
+          },
+          {
+            'emoji': '❤️',
+            'user_ids': [1],
+          },
         ],
       };
       final m = Message.fromJson(json);
@@ -150,10 +156,17 @@ void main() {
         'content': 'x',
         'created_at': '',
         'is_mine': false,
-        'reactions': [{'emoji': '👍', 'user_ids': [2]}],
+        'reactions': [
+          {
+            'emoji': '👍',
+            'user_ids': [2],
+          },
+        ],
       });
       final updated = m.copyWith(
-        reactions: [MessageReaction(emoji: '❤️', userIds: [2, 3])],
+        reactions: [
+          MessageReaction(emoji: '❤️', userIds: [2, 3]),
+        ],
       );
       expect(updated.reactions.length, 1);
       expect(updated.reactions[0].emoji, '❤️');

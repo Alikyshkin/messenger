@@ -9,7 +9,8 @@ class AppUpdateDialogListener extends StatefulWidget {
   const AppUpdateDialogListener({super.key, required this.child});
 
   @override
-  State<AppUpdateDialogListener> createState() => _AppUpdateDialogListenerState();
+  State<AppUpdateDialogListener> createState() =>
+      _AppUpdateDialogListenerState();
 }
 
 class _AppUpdateDialogListenerState extends State<AppUpdateDialogListener> {
@@ -29,7 +30,7 @@ class _AppUpdateDialogListenerState extends State<AppUpdateDialogListener> {
             }
           });
         }
-        
+
         // Сбрасываем флаг если обновление было закрыто
         if (!updateService.hasUpdate && _hasShownDialog) {
           _hasShownDialog = false;
@@ -57,9 +58,9 @@ class _AppUpdateDialogListenerState extends State<AppUpdateDialogListener> {
               Expanded(
                 child: Text(
                   'Приложение обновилось',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -77,16 +78,16 @@ class _AppUpdateDialogListenerState extends State<AppUpdateDialogListener> {
                 Text(
                   'Версия: ${updateService.latestVersion}',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
               const SizedBox(height: 16),
               Text(
                 'Рекомендуется обновить приложение для получения последних улучшений и исправлений.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),

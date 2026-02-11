@@ -14,7 +14,10 @@ Future<bool> requestNotificationPermission() async {
   }
 }
 
-Future<void> showPageNotification({required String title, required String body}) async {
+Future<void> showPageNotification({
+  required String title,
+  required String body,
+}) async {
   try {
     if (html.Notification.permission != 'granted') return;
     html.Notification(title, body: body);

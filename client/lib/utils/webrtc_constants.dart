@@ -10,11 +10,7 @@ class WebRTCConstants {
 
   /// Минимальные требования к видео для Web
   static const webVideoConstraints = {
-    'mandatory': {
-      'minWidth': '640',
-      'minHeight': '480',
-      'minFrameRate': '24',
-    },
+    'mandatory': {'minWidth': '640', 'minHeight': '480', 'minFrameRate': '24'},
   };
 
   /// Минимальные требования к видео для мобильных платформ

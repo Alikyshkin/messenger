@@ -23,19 +23,23 @@ class CallLayoutButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     // Цвета по умолчанию из темы
-    final defaultSelectedColor = selectedColor ?? 
-        (theme.brightness == Brightness.dark 
-            ? Colors.blue.shade700 
+    final defaultSelectedColor =
+        selectedColor ??
+        (theme.brightness == Brightness.dark
+            ? Colors.blue.shade700
             : Colors.blue.shade600);
-    final defaultUnselectedColor = unselectedColor ?? 
-        (theme.brightness == Brightness.dark 
-            ? Colors.grey.shade800 
+    final defaultUnselectedColor =
+        unselectedColor ??
+        (theme.brightness == Brightness.dark
+            ? Colors.grey.shade800
             : Colors.grey.shade700);
-    
-    final backgroundColor = isSelected ? defaultSelectedColor : defaultUnselectedColor;
-    
+
+    final backgroundColor = isSelected
+        ? defaultSelectedColor
+        : defaultUnselectedColor;
+
     return Material(
       color: backgroundColor,
       borderRadius: BorderRadius.circular(8),

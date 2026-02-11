@@ -28,16 +28,20 @@ jobs:
       - name: Format check
         working-directory: ./client
         run: |
-          dart format . || {
-            echo "⚠️ Код не отформатирован. Пожалуйста, запустите 'dart format .' локально и закоммитьте изменения."
-            exit 1
-          }
-          # Проверяем, были ли изменения после форматирования
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "❌ Обнаружены неотформатированные файлы. Пожалуйста, запустите 'dart format .' локально."
+          # Запускаем форматирование с флагом --set-exit-if-changed
+          # Если файлы были изменены, команда вернет код 1
+          if ! dart format --set-exit-if-changed .; then
+            echo "❌ Обнаружены неотформатированные файлы."
+            echo "Пожалуйста, запустите 'dart format .' локально и закоммитьте изменения."
+            echo ""
+            echo "Изменения:"
+            git diff --stat
+            echo ""
+            echo "Diff:"
             git diff
             exit 1
           fi
+          echo "✅ Все файлы отформатированы корректно"
       
       - name: Analyze
         working-directory: ./client

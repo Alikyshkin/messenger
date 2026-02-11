@@ -25,7 +25,7 @@ class LocalDb {
         path,
         version: _version,
         onCreate: (db, version) async {
-        await db.execute('''
+          await db.execute('''
           CREATE TABLE chats (
             peer_id INTEGER PRIMARY KEY,
             peer_json TEXT NOT NULL,
@@ -37,7 +37,7 @@ class LocalDb {
             updated_at TEXT
           )
         ''');
-        await db.execute('''
+          await db.execute('''
           CREATE TABLE messages (
             id INTEGER PRIMARY KEY,
             peer_id INTEGER NOT NULL,
@@ -57,9 +57,13 @@ class LocalDb {
             poll_json TEXT
           )
         ''');
-        await db.execute('CREATE INDEX idx_messages_peer ON messages(peer_id)');
-        await db.execute('CREATE INDEX idx_messages_created ON messages(created_at)');
-        await db.execute('''
+          await db.execute(
+            'CREATE INDEX idx_messages_peer ON messages(peer_id)',
+          );
+          await db.execute(
+            'CREATE INDEX idx_messages_created ON messages(created_at)',
+          );
+          await db.execute('''
           CREATE TABLE outbox (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             peer_id INTEGER NOT NULL,
@@ -71,24 +75,54 @@ class LocalDb {
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) {
             try {
-              await db.execute('ALTER TABLE chats ADD COLUMN last_message_is_mine INTEGER');
+              await db.execute(
+                'ALTER TABLE chats ADD COLUMN last_message_is_mine INTEGER',
+              );
             } catch (_) {}
             try {
-              await db.execute('ALTER TABLE chats ADD COLUMN last_message_type TEXT');
+              await db.execute(
+                'ALTER TABLE chats ADD COLUMN last_message_type TEXT',
+              );
             } catch (_) {}
           }
           if (oldVersion < 3) {
             try {
-              await db.execute('ALTER TABLE messages ADD COLUMN attachment_encrypted INTEGER');
+              await db.execute(
+                'ALTER TABLE messages ADD COLUMN attachment_encrypted INTEGER',
+              );
             } catch (_) {}
           }
           if (oldVersion < 4) {
-            try { await db.execute('ALTER TABLE messages ADD COLUMN reply_to_id INTEGER'); } catch (_) {}
-            try { await db.execute('ALTER TABLE messages ADD COLUMN reply_to_content TEXT'); } catch (_) {}
-            try { await db.execute('ALTER TABLE messages ADD COLUMN reply_to_sender_name TEXT'); } catch (_) {}
-            try { await db.execute('ALTER TABLE messages ADD COLUMN is_forwarded INTEGER'); } catch (_) {}
-            try { await db.execute('ALTER TABLE messages ADD COLUMN forward_from_sender_id INTEGER'); } catch (_) {}
-            try { await db.execute('ALTER TABLE messages ADD COLUMN forward_from_display_name TEXT'); } catch (_) {}
+            try {
+              await db.execute(
+                'ALTER TABLE messages ADD COLUMN reply_to_id INTEGER',
+              );
+            } catch (_) {}
+            try {
+              await db.execute(
+                'ALTER TABLE messages ADD COLUMN reply_to_content TEXT',
+              );
+            } catch (_) {}
+            try {
+              await db.execute(
+                'ALTER TABLE messages ADD COLUMN reply_to_sender_name TEXT',
+              );
+            } catch (_) {}
+            try {
+              await db.execute(
+                'ALTER TABLE messages ADD COLUMN is_forwarded INTEGER',
+              );
+            } catch (_) {}
+            try {
+              await db.execute(
+                'ALTER TABLE messages ADD COLUMN forward_from_sender_id INTEGER',
+              );
+            } catch (_) {}
+            try {
+              await db.execute(
+                'ALTER TABLE messages ADD COLUMN forward_from_display_name TEXT',
+              );
+            } catch (_) {}
           }
         },
       );
@@ -124,27 +158,23 @@ class LocalDb {
     final peer = chat.peer;
     if (peer == null) return;
     final last = chat.lastMessage;
-    await db.insert(
-      'chats',
-      {
-        'peer_id': peer.id,
-        'peer_json': jsonEncode({
-          'id': peer.id,
-          'username': peer.username,
-          'display_name': peer.displayName,
-          'bio': peer.bio,
-          'avatar_url': peer.avatarUrl,
-          'public_key': peer.publicKey,
-        }),
-        'last_message_id': last?.id,
-        'last_message_preview': last?.content,
-        'last_message_at': last?.createdAt,
-        'last_message_is_mine': last?.isMine == true ? 1 : 0,
-        'last_message_type': last?.messageType,
-        'updated_at': last?.createdAt ?? DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('chats', {
+      'peer_id': peer.id,
+      'peer_json': jsonEncode({
+        'id': peer.id,
+        'username': peer.username,
+        'display_name': peer.displayName,
+        'bio': peer.bio,
+        'avatar_url': peer.avatarUrl,
+        'public_key': peer.publicKey,
+      }),
+      'last_message_id': last?.id,
+      'last_message_preview': last?.content,
+      'last_message_at': last?.createdAt,
+      'last_message_is_mine': last?.isMine == true ? 1 : 0,
+      'last_message_type': last?.messageType,
+      'updated_at': last?.createdAt ?? DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   static Future<List<ChatPreview>> getChats() async {
@@ -152,7 +182,9 @@ class LocalDb {
     if (db == null) return [];
     final rows = await db.query('chats', orderBy: 'updated_at DESC');
     return rows.map((r) {
-      final peer = User.fromJson(Map<String, dynamic>.from(jsonDecode(r['peer_json'] as String)));
+      final peer = User.fromJson(
+        Map<String, dynamic>.from(jsonDecode(r['peer_json'] as String)),
+      );
       LastMessage? last;
       if (r['last_message_id'] != null) {
         last = LastMessage(
@@ -174,14 +206,16 @@ class LocalDb {
     if (r['poll_json'] != null && (r['poll_json'] as String).isNotEmpty) {
       try {
         final p = jsonDecode(r['poll_json'] as String) as Map<String, dynamic>;
-        final opts = (p['options'] as List<dynamic>?)?.map((e) {
-          final o = e as Map<String, dynamic>;
-          return PollOption(
-            text: o['text'] as String,
-            votes: o['votes'] as int? ?? 0,
-            voted: o['voted'] as bool? ?? false,
-          );
-        }).toList() ?? [];
+        final opts =
+            (p['options'] as List<dynamic>?)?.map((e) {
+              final o = e as Map<String, dynamic>;
+              return PollOption(
+                text: o['text'] as String,
+                votes: o['votes'] as int? ?? 0,
+                voted: o['voted'] as bool? ?? false,
+              );
+            }).toList() ??
+            [];
         poll = PollData(
           id: p['id'] as int,
           question: p['question'] as String? ?? '',
@@ -219,40 +253,42 @@ class LocalDb {
   static Future<void> upsertMessage(Message m, int peerId) async {
     final db = await _getDb();
     if (db == null) return;
-    await db.insert(
-      'messages',
-      {
-        'id': m.id,
-        'peer_id': peerId,
-        'sender_id': m.senderId,
-        'receiver_id': m.receiverId,
-        'content': m.content,
-        'created_at': m.createdAt,
-        'read_at': m.readAt,
-        'is_mine': m.isMine ? 1 : 0,
-        'attachment_url': m.attachmentUrl,
-        'attachment_filename': m.attachmentFilename,
-        'message_type': m.messageType,
-        'poll_id': m.pollId,
-        'attachment_kind': m.attachmentKind,
-        'attachment_duration_sec': m.attachmentDurationSec,
-        'sender_public_key': m.senderPublicKey,
-        'attachment_encrypted': m.attachmentEncrypted ? 1 : 0,
-        'reply_to_id': m.replyToId,
-        'reply_to_content': m.replyToContent,
-        'reply_to_sender_name': m.replyToSenderName,
-        'is_forwarded': m.isForwarded ? 1 : 0,
-        'forward_from_sender_id': m.forwardFromSenderId,
-        'forward_from_display_name': m.forwardFromDisplayName,
-        'poll_json': m.poll != null ? jsonEncode({
-          'id': m.poll!.id,
-          'question': m.poll!.question,
-          'options': m.poll!.options.map((o) => {'text': o.text, 'votes': o.votes, 'voted': o.voted}).toList(),
-          'multiple': m.poll!.multiple,
-        }) : null,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('messages', {
+      'id': m.id,
+      'peer_id': peerId,
+      'sender_id': m.senderId,
+      'receiver_id': m.receiverId,
+      'content': m.content,
+      'created_at': m.createdAt,
+      'read_at': m.readAt,
+      'is_mine': m.isMine ? 1 : 0,
+      'attachment_url': m.attachmentUrl,
+      'attachment_filename': m.attachmentFilename,
+      'message_type': m.messageType,
+      'poll_id': m.pollId,
+      'attachment_kind': m.attachmentKind,
+      'attachment_duration_sec': m.attachmentDurationSec,
+      'sender_public_key': m.senderPublicKey,
+      'attachment_encrypted': m.attachmentEncrypted ? 1 : 0,
+      'reply_to_id': m.replyToId,
+      'reply_to_content': m.replyToContent,
+      'reply_to_sender_name': m.replyToSenderName,
+      'is_forwarded': m.isForwarded ? 1 : 0,
+      'forward_from_sender_id': m.forwardFromSenderId,
+      'forward_from_display_name': m.forwardFromDisplayName,
+      'poll_json': m.poll != null
+          ? jsonEncode({
+              'id': m.poll!.id,
+              'question': m.poll!.question,
+              'options': m.poll!.options
+                  .map(
+                    (o) => {'text': o.text, 'votes': o.votes, 'voted': o.voted},
+                  )
+                  .toList(),
+              'multiple': m.poll!.multiple,
+            })
+          : null,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   static Future<List<Message>> getMessages(int peerId) async {
@@ -264,13 +300,19 @@ class LocalDb {
       whereArgs: [peerId],
       orderBy: 'created_at ASC',
     );
-    return rows.map((r) => _messageFromRow(Map<String, dynamic>.from(r))).toList();
+    return rows
+        .map((r) => _messageFromRow(Map<String, dynamic>.from(r)))
+        .toList();
   }
 
   static Future<void> updateChatLastMessage(int peerId, Message last) async {
     final db = await _getDb();
     if (db == null) return;
-    final row = await db.query('chats', where: 'peer_id = ?', whereArgs: [peerId]);
+    final row = await db.query(
+      'chats',
+      where: 'peer_id = ?',
+      whereArgs: [peerId],
+    );
     if (row.isEmpty) return;
     await db.update(
       'chats',
@@ -293,12 +335,16 @@ class LocalDb {
     final db = await _getDb();
     if (db == null) return [];
     final rows = await db.query('outbox', orderBy: 'created_at ASC');
-    return rows.map((r) => OutboxItem(
-      id: r['id'] as int,
-      peerId: r['peer_id'] as int,
-      content: r['content'] as String,
-      createdAt: r['created_at'] as String,
-    )).toList();
+    return rows
+        .map(
+          (r) => OutboxItem(
+            id: r['id'] as int,
+            peerId: r['peer_id'] as int,
+            content: r['content'] as String,
+            createdAt: r['created_at'] as String,
+          ),
+        )
+        .toList();
   }
 
   static Future<int> addToOutbox(int peerId, String content) async {
@@ -323,5 +369,10 @@ class OutboxItem {
   final int peerId;
   final String content;
   final String createdAt;
-  OutboxItem({required this.id, required this.peerId, required this.content, required this.createdAt});
+  OutboxItem({
+    required this.id,
+    required this.peerId,
+    required this.content,
+    required this.createdAt,
+  });
 }

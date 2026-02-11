@@ -33,7 +33,7 @@ void main() {
                   'is_mine': false,
                   'message_type': 'text',
                   'reactions': [],
-                }
+                },
               ],
               'pagination': {'limit': 100, 'hasMore': false, 'total': 1},
             }),
@@ -51,11 +51,11 @@ void main() {
           "pagination": {"limit": 100, "hasMore": false, "total": 1}
         }
       ''');
-      
-      final list = json is Map<String, dynamic> 
+
+      final list = json is Map<String, dynamic>
           ? (json['data'] as List<dynamic>? ?? [])
           : (json as List<dynamic>);
-      
+
       expect(list.length, 1);
       expect(list[0]['content'], 'Test');
     });
@@ -64,11 +64,11 @@ void main() {
       final json = jsonDecode('''
         [{"id": 1, "sender_id": 1, "receiver_id": 2, "content": "Test", "created_at": "2024-01-01T00:00:00Z", "is_mine": false, "message_type": "text", "reactions": []}]
       ''');
-      
-      final list = json is Map<String, dynamic> 
+
+      final list = json is Map<String, dynamic>
           ? (json['data'] as List<dynamic>? ?? [])
           : (json as List<dynamic>);
-      
+
       expect(list.length, 1);
       expect(list[0]['content'], 'Test');
     });
@@ -88,7 +88,7 @@ void main() {
         }),
         201,
       );
-      
+
       expect(response.statusCode, 201);
       final data = jsonDecode(response.body);
       expect(data['content'], 'Test');
@@ -101,11 +101,11 @@ void main() {
           "pagination": {"limit": 100, "hasMore": false, "total": 1}
         }
       ''');
-      
-      final list = json is Map<String, dynamic> 
+
+      final list = json is Map<String, dynamic>
           ? (json['data'] as List<dynamic>? ?? [])
           : (json as List<dynamic>);
-      
+
       expect(list.length, 1);
     });
 
@@ -116,11 +116,11 @@ void main() {
           "pagination": {"limit": 100, "hasMore": false, "total": 1}
         }
       ''');
-      
-      final list = json is Map<String, dynamic> 
+
+      final list = json is Map<String, dynamic>
           ? (json['data'] as List<dynamic>? ?? [])
           : (json as List<dynamic>);
-      
+
       expect(list.length, 1);
     });
   });

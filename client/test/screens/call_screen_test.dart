@@ -28,7 +28,9 @@ void main() {
       testToken = 'test_token_123';
     });
 
-    testWidgets('CallScreen initializes for outgoing call', (WidgetTester tester) async {
+    testWidgets('CallScreen initializes for outgoing call', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: MultiProvider(
@@ -36,14 +38,9 @@ void main() {
               ChangeNotifierProvider(
                 create: (_) => AuthService()..setToken(testToken),
               ),
-              ChangeNotifierProvider(
-                create: (_) => WsService(),
-              ),
+              ChangeNotifierProvider(create: (_) => WsService()),
             ],
-            child: const CallScreen(
-              peer: testPeer,
-              isIncoming: false,
-            ),
+            child: const CallScreen(peer: testPeer, isIncoming: false),
           ),
         ),
       );
@@ -54,14 +51,13 @@ void main() {
       expect(find.byType(CallScreen), findsOneWidget);
     });
 
-    testWidgets('CallScreen initializes for incoming call', (WidgetTester tester) async {
+    testWidgets('CallScreen initializes for incoming call', (
+      WidgetTester tester,
+    ) async {
       final initialSignal = CallSignal(
         fromUserId: 2,
         type: 'offer',
-        signal: {
-          'type': 'offer',
-          'sdp': 'test_sdp',
-        },
+        signal: {'type': 'offer', 'sdp': 'test_sdp'},
       );
 
       await tester.pumpWidget(
@@ -71,9 +67,7 @@ void main() {
               ChangeNotifierProvider(
                 create: (_) => AuthService()..setToken(testToken),
               ),
-              ChangeNotifierProvider(
-                create: (_) => WsService(),
-              ),
+              ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: CallScreen(
               peer: testPeer,
@@ -90,14 +84,13 @@ void main() {
       expect(find.byType(CallScreen), findsOneWidget);
     });
 
-    testWidgets('CallScreen shows accept and reject buttons for incoming call', (WidgetTester tester) async {
+    testWidgets('CallScreen shows accept and reject buttons for incoming call', (
+      WidgetTester tester,
+    ) async {
       final initialSignal = CallSignal(
         fromUserId: 2,
         type: 'offer',
-        signal: {
-          'type': 'offer',
-          'sdp': 'test_sdp',
-        },
+        signal: {'type': 'offer', 'sdp': 'test_sdp'},
       );
 
       await tester.pumpWidget(
@@ -107,9 +100,7 @@ void main() {
               ChangeNotifierProvider(
                 create: (_) => AuthService()..setToken(testToken),
               ),
-              ChangeNotifierProvider(
-                create: (_) => WsService(),
-              ),
+              ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: CallScreen(
               peer: testPeer,
@@ -135,14 +126,9 @@ void main() {
               ChangeNotifierProvider(
                 create: (_) => AuthService()..setToken(testToken),
               ),
-              ChangeNotifierProvider(
-                create: (_) => WsService(),
-              ),
+              ChangeNotifierProvider(create: (_) => WsService()),
             ],
-            child: const CallScreen(
-              peer: testPeer,
-              isIncoming: false,
-            ),
+            child: const CallScreen(peer: testPeer, isIncoming: false),
           ),
         ),
       );
@@ -153,7 +139,9 @@ void main() {
       expect(find.byType(CallScreen), findsOneWidget);
     });
 
-    testWidgets('CallScreen handles WebRTC signal errors', (WidgetTester tester) async {
+    testWidgets('CallScreen handles WebRTC signal errors', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           home: MultiProvider(
@@ -161,14 +149,9 @@ void main() {
               ChangeNotifierProvider(
                 create: (_) => AuthService()..setToken(testToken),
               ),
-              ChangeNotifierProvider(
-                create: (_) => WsService(),
-              ),
+              ChangeNotifierProvider(create: (_) => WsService()),
             ],
-            child: const CallScreen(
-              peer: testPeer,
-              isIncoming: false,
-            ),
+            child: const CallScreen(peer: testPeer, isIncoming: false),
           ),
         ),
       );

@@ -21,11 +21,11 @@ class ErrorUtils {
     if (error is ApiException) {
       return error.message;
     }
-    
+
     if (isNetworkError(error)) {
       return 'Нет подключения к интернету. Проверьте соединение и попробуйте снова.';
     }
-    
+
     return error.toString();
   }
 
@@ -35,7 +35,7 @@ class ErrorUtils {
       // 5xx ошибки обычно можно повторить
       return error.statusCode >= 500 && error.statusCode < 600;
     }
-    
+
     // Сетевые ошибки можно повторить
     return isNetworkError(error);
   }

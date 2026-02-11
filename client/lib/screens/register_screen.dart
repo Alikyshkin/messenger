@@ -73,7 +73,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(leading: const AppBackButton(), title: Text(context.tr('register_title'))),
+      appBar: AppBar(
+        leading: const AppBackButton(),
+        title: Text(context.tr('register_title')),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           primary: true,
@@ -137,9 +140,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     labelText: context.tr('password'),
                     border: const OutlineInputBorder(),
                     suffixIcon: IconButton(
-                      icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
-                      onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
-                      tooltip: _passwordVisible ? 'Скрыть пароль' : 'Показать пароль',
+                      icon: Icon(
+                        _passwordVisible
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                      ),
+                      onPressed: () =>
+                          setState(() => _passwordVisible = !_passwordVisible),
+                      tooltip: _passwordVisible
+                          ? 'Скрыть пароль'
+                          : 'Показать пароль',
                     ),
                   ),
                   textInputAction: TextInputAction.done,
@@ -150,7 +160,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   enableInteractiveSelection: true,
                   onFieldSubmitted: (_) => _submit(),
                   validator: (v) {
-                    if (v == null || v.length < 6) return context.tr('min_6_chars');
+                    if (v == null || v.length < 6)
+                      return context.tr('min_6_chars');
                     return null;
                   },
                 ),
@@ -158,7 +169,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   const SizedBox(height: 16),
                   Text(
                     _error!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 24),

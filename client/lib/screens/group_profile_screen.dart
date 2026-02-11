@@ -73,7 +73,9 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is ApiException ? e.message : context.tr('error'))),
+        SnackBar(
+          content: Text(e is ApiException ? e.message : context.tr('error')),
+        ),
       );
     }
   }
@@ -92,7 +94,11 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
           if (_loading)
             const Padding(
               padding: EdgeInsets.all(16),
-              child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
             ),
         ],
       ),
@@ -110,7 +116,9 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
                   ? Icon(
                       Icons.group,
                       size: 48,
-                      color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onPrimaryContainer.withOpacity(0.7),
                     )
                   : null,
             ),
@@ -119,13 +127,20 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
           Center(
             child: Text(
               g.name,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
             ),
           ),
           const SizedBox(height: 8),
           Center(
             child: Text(
-              context.tr('members_count').replaceFirst('%s', '${g.memberCount ?? g.members?.length ?? 0}'),
+              context
+                  .tr('members_count')
+                  .replaceFirst(
+                    '%s',
+                    '${g.memberCount ?? g.members?.length ?? 0}',
+                  ),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -142,16 +157,15 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
             onTap: () {
               if (g.members == null || g.members!.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('В группе нет участников для звонка')),
+                  const SnackBar(
+                    content: Text('В группе нет участников для звонка'),
+                  ),
                 );
                 return;
               }
               Navigator.of(context).push(
                 AppPageRoute(
-                  builder: (_) => GroupCallScreen(
-                    group: g,
-                    isIncoming: false,
-                  ),
+                  builder: (_) => GroupCallScreen(group: g, isIncoming: false),
                 ),
               );
             },
@@ -165,32 +179,41 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            ...g.members!.map((member) => ListTile(
-                  leading: CircleAvatar(
-                    backgroundImage: member.avatarUrl != null && member.avatarUrl!.isNotEmpty
-                        ? NetworkImage(member.avatarUrl!)
-                        : null,
-                    child: member.avatarUrl == null || member.avatarUrl!.isEmpty
-                        ? Text((member.displayName.isNotEmpty ? member.displayName[0] : '@').toUpperCase())
-                        : null,
-                  ),
-                  title: Row(
-                    children: [
-                      Text(member.displayName),
-                      if (member.role == 'admin')
-                        Padding(
-                          padding: const EdgeInsets.only(left: 8),
-                          child: Text(
-                            '(admin)',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
+            ...g.members!.map(
+              (member) => ListTile(
+                leading: CircleAvatar(
+                  backgroundImage:
+                      member.avatarUrl != null && member.avatarUrl!.isNotEmpty
+                      ? NetworkImage(member.avatarUrl!)
+                      : null,
+                  child: member.avatarUrl == null || member.avatarUrl!.isEmpty
+                      ? Text(
+                          (member.displayName.isNotEmpty
+                                  ? member.displayName[0]
+                                  : '@')
+                              .toUpperCase(),
+                        )
+                      : null,
+                ),
+                title: Row(
+                  children: [
+                    Text(member.displayName),
+                    if (member.role == 'admin')
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: Text(
+                          '(admin)',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
                         ),
-                    ],
-                  ),
-                  subtitle: Text('@${member.username}'),
-                )),
+                      ),
+                  ],
+                ),
+                subtitle: Text('@${member.username}'),
+              ),
+            ),
           ],
           const SizedBox(height: 32),
           OutlinedButton.icon(

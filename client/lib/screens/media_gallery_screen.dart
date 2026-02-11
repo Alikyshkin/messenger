@@ -15,17 +15,18 @@ class MediaGalleryScreen extends StatefulWidget {
   final User? peer;
   final Group? group;
 
-  const MediaGalleryScreen({
-    super.key,
-    this.peer,
-    this.group,
-  }) : assert(peer != null || group != null, 'Either peer or group must be provided');
+  const MediaGalleryScreen({super.key, this.peer, this.group})
+    : assert(
+        peer != null || group != null,
+        'Either peer or group must be provided',
+      );
 
   @override
   State<MediaGalleryScreen> createState() => _MediaGalleryScreenState();
 }
 
-class _MediaGalleryScreenState extends State<MediaGalleryScreen> with SingleTickerProviderStateMixin {
+class _MediaGalleryScreenState extends State<MediaGalleryScreen>
+    with SingleTickerProviderStateMixin {
   List<MediaItem> _media = [];
   bool _loading = true;
   String? _error;
@@ -75,13 +76,25 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen> with SingleTick
       final offset = loadMore ? _media.length : 0;
 
       final response = widget.peer != null
-          ? await api.getMedia(widget.peer!.id, type: _selectedType, limit: 50, offset: offset)
-          : await api.getGroupMedia(widget.group!.id, type: _selectedType, limit: 50, offset: offset);
+          ? await api.getMedia(
+              widget.peer!.id,
+              type: _selectedType,
+              limit: 50,
+              offset: offset,
+            )
+          : await api.getGroupMedia(
+              widget.group!.id,
+              type: _selectedType,
+              limit: 50,
+              offset: offset,
+            );
 
       final data = response['data'] as List<dynamic>;
       final pagination = response['pagination'] as Map<String, dynamic>;
 
-      final newMedia = data.map((item) => MediaItem.fromJson(item as Map<String, dynamic>)).toList();
+      final newMedia = data
+          .map((item) => MediaItem.fromJson(item as Map<String, dynamic>))
+          .toList();
 
       if (!mounted) return;
 
@@ -125,7 +138,11 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen> with SingleTick
       // );
       // Пока просто показываем snackbar
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Просмотр видео будет доступен после установки video_player')),
+        const SnackBar(
+          content: Text(
+            'Просмотр видео будет доступен после установки video_player',
+          ),
+        ),
       );
     }
   }
@@ -135,9 +152,11 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen> with SingleTick
     return Scaffold(
       appBar: AppBar(
         leading: const AppBackButton(),
-        title: Text(widget.peer != null 
-          ? 'Медиа ${widget.peer!.displayName}' 
-          : 'Медиа ${widget.group!.name}'),
+        title: Text(
+          widget.peer != null
+              ? 'Медиа ${widget.peer!.displayName}'
+              : 'Медиа ${widget.group!.name}',
+        ),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
@@ -150,55 +169,60 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen> with SingleTick
       body: _loading && _media.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : _error != null && _media.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () => _loadMedia(),
-                        child: const Text('Повторить'),
-                      ),
-                    ],
-                  ),
-                )
-              : _media.isEmpty
-                  ? Center(
-                      child: Text(
-                        _selectedType == 'all' 
-                          ? 'Нет медиа файлов'
-                          : _selectedType == 'photo'
-                            ? 'Нет фотографий'
-                            : 'Нет видео',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: () => _loadMedia(),
-                      child: GridView.builder(
-                        padding: const EdgeInsets.all(8),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 4,
-                          mainAxisSpacing: 4,
-                        ),
-                        itemCount: _media.length + (_hasMore ? 1 : 0),
-                        itemBuilder: (context, index) {
-                          if (index == _media.length) {
-                            // Загружаем больше при прокрутке
-                            _loadMedia(loadMore: true);
-                            return const Center(child: CircularProgressIndicator());
-                          }
-
-                          final item = _media[index];
-                          return _MediaThumbnail(
-                            item: item,
-                            onTap: () => _openMedia(item, index),
-                          );
-                        },
-                      ),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _error!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
                     ),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => _loadMedia(),
+                    child: const Text('Повторить'),
+                  ),
+                ],
+              ),
+            )
+          : _media.isEmpty
+          ? Center(
+              child: Text(
+                _selectedType == 'all'
+                    ? 'Нет медиа файлов'
+                    : _selectedType == 'photo'
+                    ? 'Нет фотографий'
+                    : 'Нет видео',
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: () => _loadMedia(),
+              child: GridView.builder(
+                padding: const EdgeInsets.all(8),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 4,
+                  mainAxisSpacing: 4,
+                ),
+                itemCount: _media.length + (_hasMore ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == _media.length) {
+                    // Загружаем больше при прокрутке
+                    _loadMedia(loadMore: true);
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final item = _media[index];
+                  return _MediaThumbnail(
+                    item: item,
+                    onTap: () => _openMedia(item, index),
+                  );
+                },
+              ),
+            ),
     );
   }
 }
@@ -254,10 +278,7 @@ class _MediaThumbnail extends StatelessWidget {
   final MediaItem item;
   final VoidCallback onTap;
 
-  const _MediaThumbnail({
-    required this.item,
-    required this.onTap,
-  });
+  const _MediaThumbnail({required this.item, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -289,7 +310,11 @@ class _MediaThumbnail extends StatelessWidget {
                 Container(
                   color: Colors.black.withOpacity(0.3),
                   child: const Center(
-                    child: Icon(Icons.play_circle_filled, color: Colors.white, size: 40),
+                    child: Icon(
+                      Icons.play_circle_filled,
+                      color: Colors.white,
+                      size: 40,
+                    ),
                   ),
                 ),
                 if (item.durationSec != null)
@@ -297,14 +322,20 @@ class _MediaThumbnail extends StatelessWidget {
                     bottom: 4,
                     right: 4,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.7),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         _formatDuration(item.durationSec!),
-                        style: const TextStyle(color: Colors.white, fontSize: 10),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
                       ),
                     ),
                   ),

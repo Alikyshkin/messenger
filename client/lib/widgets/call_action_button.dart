@@ -63,7 +63,7 @@ class CallActionButton extends StatelessWidget {
     final defaultSize = size ?? 56.0;
     final iconSize = size != null ? size! * 0.5 : 28.0;
     final defaultPadding = padding ?? EdgeInsets.all(defaultSize * 0.25);
-    
+
     return IconButton.filled(
       onPressed: onPressed,
       icon: Icon(icon),

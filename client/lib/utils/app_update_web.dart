@@ -8,23 +8,25 @@ class AppUpdateWeb {
   /// Вызывается при выходе из звонка для синхронизации интерфейса и обновлений
   static Future<void> checkAndReloadIfNeeded() async {
     if (!kIsWeb) return;
-    
+
     try {
       // Очищаем кеш перед перезагрузкой
       await clearCache();
-      
+
       // Небольшая задержка для завершения очистки кеша
       await Future.delayed(const Duration(milliseconds: 100));
-      
+
       // Перезагружаем страницу с очисткой кеша
       // Добавляем параметр для принудительной перезагрузки без кеша
       final url = html.Uri.parse(html.window.location.href);
-      final newUrl = url.replace(queryParameters: {
-        ...url.queryParameters,
-        '_reload': DateTime.now().millisecondsSinceEpoch.toString(),
-        '_nocache': '1',
-      });
-      
+      final newUrl = url.replace(
+        queryParameters: {
+          ...url.queryParameters,
+          '_reload': DateTime.now().millisecondsSinceEpoch.toString(),
+          '_nocache': '1',
+        },
+      );
+
       // Перезагружаем страницу
       html.window.location.href = newUrl.toString();
     } catch (_) {
@@ -32,17 +34,17 @@ class AppUpdateWeb {
       html.window.location.reload();
     }
   }
-  
+
   /// Принудительно перезагружает страницу с очисткой кеша
   static void forceReloadWithCacheClear() {
     if (!kIsWeb) return;
     checkAndReloadIfNeeded();
   }
-  
+
   /// Очищает кеш браузера для текущего домена
   static Future<void> clearCache() async {
     if (!kIsWeb) return;
-    
+
     try {
       // Очищаем кеш через Cache API если доступен
       if (html.window.caches != null) {
@@ -55,7 +57,7 @@ class AppUpdateWeb {
           }
         }
       }
-      
+
       // Очищаем кеш Service Worker если доступен
       if (html.window.navigator.serviceWorker != null) {
         try {

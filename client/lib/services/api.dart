@@ -17,7 +17,10 @@ List<MessageReaction> _parseReactions(dynamic v) {
     final ids = e['user_ids'];
     if (emoji == null || emoji.isEmpty) continue;
     final userIds = ids is List
-        ? (ids.map((x) => x is int ? x : (x is num ? x.toInt() : null)).whereType<int>().toList())
+        ? (ids
+              .map((x) => x is int ? x : (x is num ? x.toInt() : null))
+              .whereType<int>()
+              .toList())
         : <int>[];
     list.add(MessageReaction(emoji: emoji, userIds: userIds));
   }
@@ -52,15 +55,22 @@ class Api {
     }
   }
 
-  Future<User> register(String username, String password, [String? displayName, String? email]) async {
+  Future<User> register(
+    String username,
+    String password, [
+    String? displayName,
+    String? email,
+  ]) async {
     final r = await http.post(
       Uri.parse('$base/auth/register'),
       headers: _headers,
       body: jsonEncode({
         'username': username,
         'password': password,
-        if (displayName != null && displayName.isNotEmpty) 'displayName': displayName,
-        if (email != null && email.trim().isNotEmpty) 'email': email.trim().toLowerCase(),
+        if (displayName != null && displayName.isNotEmpty)
+          'displayName': displayName,
+        if (email != null && email.trim().isNotEmpty)
+          'email': email.trim().toLowerCase(),
       }),
     );
     _checkResponse(r);
@@ -93,7 +103,15 @@ class Api {
     _checkResponse(r);
   }
 
-  Future<User> patchMe({String? displayName, String? username, String? bio, String? publicKey, String? email, String? birthday, String? phone}) async {
+  Future<User> patchMe({
+    String? displayName,
+    String? username,
+    String? bio,
+    String? publicKey,
+    String? email,
+    String? birthday,
+    String? phone,
+  }) async {
     final body = <String, dynamic>{};
     if (displayName != null) body['display_name'] = displayName;
     if (username != null) body['username'] = username;
@@ -117,11 +135,9 @@ class Api {
       Uri.parse('$base/users/me/avatar'),
     );
     request.headers['Authorization'] = 'Bearer $token';
-    request.files.add(http.MultipartFile.fromBytes(
-      'avatar',
-      fileBytes,
-      filename: filename,
-    ));
+    request.files.add(
+      http.MultipartFile.fromBytes('avatar', fileBytes, filename: filename),
+    );
     final streamed = await request.send();
     final r = await http.Response.fromStream(streamed);
     _checkResponse(r);
@@ -130,7 +146,10 @@ class Api {
 
   /// Публичный профиль пользователя (имя, био, аватар, количество друзей — без списка друзей).
   Future<User> getUserProfile(int userId) async {
-    final r = await http.get(Uri.parse('$base/users/$userId'), headers: _headers);
+    final r = await http.get(
+      Uri.parse('$base/users/$userId'),
+      headers: _headers,
+    );
     _checkResponse(r);
     return User.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
   }
@@ -150,7 +169,7 @@ class Api {
     _checkResponse(r);
     final json = jsonDecode(_utf8Body(r));
     // API возвращает { data: [...], pagination: {...} } или просто массив
-    final list = json is Map<String, dynamic> 
+    final list = json is Map<String, dynamic>
         ? (json['data'] as List<dynamic>? ?? [])
         : (json as List<dynamic>);
     return list.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
@@ -168,18 +187,28 @@ class Api {
   }
 
   Future<List<FriendRequest>> getFriendRequestsIncoming() async {
-    final r = await http.get(Uri.parse('$base/contacts/requests/incoming'), headers: _headers);
+    final r = await http.get(
+      Uri.parse('$base/contacts/requests/incoming'),
+      headers: _headers,
+    );
     _checkResponse(r);
     final list = jsonDecode(_utf8Body(r)) as List<dynamic>;
-    return list.map((e) => FriendRequest.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => FriendRequest.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// Идентификаторы пользователей, которым я отправил заявку в друзья (ожидают подтверждения).
   Future<List<int>> getFriendRequestsOutgoing() async {
-    final r = await http.get(Uri.parse('$base/contacts/requests/outgoing'), headers: _headers);
+    final r = await http.get(
+      Uri.parse('$base/contacts/requests/outgoing'),
+      headers: _headers,
+    );
     _checkResponse(r);
     final list = jsonDecode(_utf8Body(r)) as List<dynamic>;
-    return list.map((e) => (e as Map<String, dynamic>)['to_user_id'] as int).toList();
+    return list
+        .map((e) => (e as Map<String, dynamic>)['to_user_id'] as int)
+        .toList();
   }
 
   Future<void> acceptFriendRequest(int requestId) async {
@@ -218,13 +247,16 @@ class Api {
       _checkResponse(r);
       final json = jsonDecode(_utf8Body(r));
       // API может вернуть массив или объект с data
-      final list = json is Map<String, dynamic> 
+      final list = json is Map<String, dynamic>
           ? (json['data'] as List<dynamic>? ?? [])
           : (json as List<dynamic>? ?? []);
       return list.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException(500, 'Ошибка при поиске пользователей по телефонам: ${e.toString()}');
+      throw ApiException(
+        500,
+        'Ошибка при поиске пользователей по телефонам: ${e.toString()}',
+      );
     }
   }
 
@@ -233,31 +265,47 @@ class Api {
     _checkResponse(r);
     final json = jsonDecode(_utf8Body(r));
     // API возвращает { data: [...], pagination: {...} } или просто массив
-    final list = json is Map<String, dynamic> 
+    final list = json is Map<String, dynamic>
         ? (json['data'] as List<dynamic>? ?? [])
         : (json as List<dynamic>);
-    return list.map((e) => ChatPreview.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => ChatPreview.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   /// Получить медиа файлы из чата
-  Future<Map<String, dynamic>> getMedia(int peerId, {String type = 'all', int limit = 50, int offset = 0}) async {
-    final uri = Uri.parse('$base/media/$peerId').replace(queryParameters: {
-      'type': type,
-      'limit': limit.toString(),
-      'offset': offset.toString(),
-    });
+  Future<Map<String, dynamic>> getMedia(
+    int peerId, {
+    String type = 'all',
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final uri = Uri.parse('$base/media/$peerId').replace(
+      queryParameters: {
+        'type': type,
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      },
+    );
     final r = await http.get(uri, headers: _headers);
     _checkResponse(r);
     return jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
   }
 
   /// Получить медиа файлы из группового чата
-  Future<Map<String, dynamic>> getGroupMedia(int groupId, {String type = 'all', int limit = 50, int offset = 0}) async {
-    final uri = Uri.parse('$base/media/groups/$groupId').replace(queryParameters: {
-      'type': type,
-      'limit': limit.toString(),
-      'offset': offset.toString(),
-    });
+  Future<Map<String, dynamic>> getGroupMedia(
+    int groupId, {
+    String type = 'all',
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final uri = Uri.parse('$base/media/groups/$groupId').replace(
+      queryParameters: {
+        'type': type,
+        'limit': limit.toString(),
+        'offset': offset.toString(),
+      },
+    );
     final r = await http.get(uri, headers: _headers);
     _checkResponse(r);
     return jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
@@ -271,7 +319,10 @@ class Api {
   }
 
   /// Синхронизировать сообщения
-  Future<Map<String, dynamic>> syncMessages(String lastSyncTime, {List<int>? peerIds}) async {
+  Future<Map<String, dynamic>> syncMessages(
+    String lastSyncTime, {
+    List<int>? peerIds,
+  }) async {
     final r = await http.post(
       Uri.parse('$base/sync/messages'),
       headers: _headers,
@@ -292,7 +343,11 @@ class Api {
     _checkResponse(r);
   }
 
-  Future<List<Message>> getMessages(int peerId, {int? before, int limit = 100}) async {
+  Future<List<Message>> getMessages(
+    int peerId, {
+    int? before,
+    int limit = 100,
+  }) async {
     final params = <String, String>{'limit': limit.toString()};
     if (before != null) params['before'] = before.toString();
     final r = await http.get(
@@ -302,10 +357,12 @@ class Api {
     _checkResponse(r);
     final json = jsonDecode(_utf8Body(r));
     // API возвращает { data: [...], pagination: {...} } или просто массив
-    final list = json is Map<String, dynamic> 
+    final list = json is Map<String, dynamic>
         ? (json['data'] as List<dynamic>? ?? [])
         : (json as List<dynamic>);
-    return list.map((e) => Message.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => Message.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<Message> sendMessage(
@@ -323,8 +380,10 @@ class Api {
     if (replyToId != null) body['reply_to_id'] = replyToId;
     if (isForwarded) {
       body['is_forwarded'] = true;
-      if (forwardFromSenderId != null) body['forward_from_sender_id'] = forwardFromSenderId;
-      if (forwardFromDisplayName != null) body['forward_from_display_name'] = forwardFromDisplayName;
+      if (forwardFromSenderId != null)
+        body['forward_from_sender_id'] = forwardFromSenderId;
+      if (forwardFromDisplayName != null)
+        body['forward_from_display_name'] = forwardFromDisplayName;
     }
     http.Response? r;
     try {
@@ -345,7 +404,10 @@ class Api {
           return Message.fromJson(json);
         } catch (_) {
           // Если все равно не получается, выбрасываем ошибку парсинга
-          throw ApiException(500, 'Ошибка парсинга ответа сервера: ${e.toString()}');
+          throw ApiException(
+            500,
+            'Ошибка парсинга ответа сервера: ${e.toString()}',
+          );
         }
       }
       // Для всех остальных ошибок пробрасываем дальше
@@ -376,19 +438,14 @@ class Api {
     String filename, {
     bool attachmentEncrypted = false,
   }) async {
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$base/messages'),
-    );
+    final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['receiver_id'] = receiverId.toString();
     request.fields['content'] = content;
     if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
-    request.files.add(http.MultipartFile.fromBytes(
-      'file',
-      fileBytes,
-      filename: filename,
-    ));
+    request.files.add(
+      http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
+    );
     final streamed = await request.send();
     final r = await http.Response.fromStream(streamed);
     _checkResponse(r);
@@ -403,20 +460,15 @@ class Api {
     bool attachmentEncrypted = false,
   }) async {
     if (files.isEmpty) return [];
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$base/messages'),
-    );
+    final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['receiver_id'] = receiverId.toString();
     request.fields['content'] = content;
     if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
     for (final f in files) {
-      request.files.add(http.MultipartFile.fromBytes(
-        'file',
-        f.bytes,
-        filename: f.filename,
-      ));
+      request.files.add(
+        http.MultipartFile.fromBytes('file', f.bytes, filename: f.filename),
+      );
     }
     final streamed = await request.send();
     final r = await http.Response.fromStream(streamed);
@@ -424,7 +476,9 @@ class Api {
     final data = jsonDecode(_utf8Body(r));
     if (data is Map<String, dynamic> && data['messages'] != null) {
       final list = data['messages'] as List<dynamic>;
-      return list.map((e) => Message.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => Message.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     return [Message.fromJson(data as Map<String, dynamic>)];
   }
@@ -436,21 +490,16 @@ class Api {
     int durationSec, {
     bool attachmentEncrypted = false,
   }) async {
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$base/messages'),
-    );
+    final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['receiver_id'] = receiverId.toString();
     request.fields['content'] = '';
     request.fields['attachment_kind'] = 'voice';
     request.fields['attachment_duration_sec'] = durationSec.toString();
     if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
-    request.files.add(http.MultipartFile.fromBytes(
-      'file',
-      fileBytes,
-      filename: filename,
-    ));
+    request.files.add(
+      http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
+    );
     final streamed = await request.send();
     final r = await http.Response.fromStream(streamed);
     _checkResponse(r);
@@ -464,31 +513,29 @@ class Api {
     int durationSec, {
     bool attachmentEncrypted = false,
   }) async {
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$base/messages'),
-    );
+    final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['receiver_id'] = receiverId.toString();
     request.fields['content'] = '';
     request.fields['attachment_kind'] = 'video_note';
     request.fields['attachment_duration_sec'] = durationSec.toString();
     if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
-    request.files.add(http.MultipartFile.fromBytes(
-      'file',
-      fileBytes,
-      filename: filename,
-    ));
+    request.files.add(
+      http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
+    );
     final streamed = await request.send();
     final r = await http.Response.fromStream(streamed);
     _checkResponse(r);
     return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
   }
 
-  Future<List<MessageReaction>> setMessageReaction(int messageId, String emoji) async {
+  Future<List<MessageReaction>> setMessageReaction(
+    int messageId,
+    String emoji,
+  ) async {
     final r = await http.post(
       Uri.parse('$base/messages/$messageId/reaction'),
-      headers: { ..._headers, 'Content-Type': 'application/json' },
+      headers: {..._headers, 'Content-Type': 'application/json'},
       body: jsonEncode({'emoji': emoji}),
     );
     _checkResponse(r);
@@ -497,10 +544,14 @@ class Api {
     return _parseReactions(reactions);
   }
 
-  Future<List<MessageReaction>> setGroupMessageReaction(int groupId, int messageId, String emoji) async {
+  Future<List<MessageReaction>> setGroupMessageReaction(
+    int groupId,
+    int messageId,
+    String emoji,
+  ) async {
     final r = await http.post(
       Uri.parse('$base/groups/$groupId/messages/$messageId/reaction'),
-      headers: { ..._headers, 'Content-Type': 'application/json' },
+      headers: {..._headers, 'Content-Type': 'application/json'},
       body: jsonEncode({'emoji': emoji}),
     );
     _checkResponse(r);
@@ -526,18 +577,25 @@ class Api {
     _checkResponse(r);
   }
 
-  Future<void> changePassword(String currentPassword, String newPassword) async {
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
     final r = await http.post(
       Uri.parse('$base/auth/change-password'),
       headers: _headers,
-      body: jsonEncode({'currentPassword': currentPassword, 'newPassword': newPassword}),
+      body: jsonEncode({
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      }),
     );
     _checkResponse(r);
   }
 
   static Future<List<int>> getAttachmentBytes(String url) async {
     final r = await http.get(Uri.parse(url));
-    if (r.statusCode != 200) throw ApiException(r.statusCode, 'Ошибка загрузки');
+    if (r.statusCode != 200)
+      throw ApiException(r.statusCode, 'Ошибка загрузки');
     List<int> bytes = r.bodyBytes;
     if (url.endsWith('.gz')) {
       bytes = GZipDecoder().decodeBytes(bytes);
@@ -574,13 +632,18 @@ class Api {
     );
     _checkResponse(r);
     final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
-    final opts = (data['options'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final opts = (data['options'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
     return PollResult(
-      options: opts.map((o) => PollOptionResult(
-        text: o['text'] as String,
-        votes: o['votes'] as int,
-        voted: o['voted'] as bool? ?? false,
-      )).toList(),
+      options: opts
+          .map(
+            (o) => PollOptionResult(
+              text: o['text'] as String,
+              votes: o['votes'] as int,
+              voted: o['voted'] as bool? ?? false,
+            ),
+          )
+          .toList(),
     );
   }
 
@@ -592,17 +655,32 @@ class Api {
     return list.map((e) => Group.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  Future<Group> createGroup(String name, List<int> memberIds, {List<int>? avatarBytes, String? avatarFilename}) async {
-    if (avatarBytes != null && avatarBytes.isNotEmpty && avatarFilename != null) {
+  Future<Group> createGroup(
+    String name,
+    List<int> memberIds, {
+    List<int>? avatarBytes,
+    String? avatarFilename,
+  }) async {
+    if (avatarBytes != null &&
+        avatarBytes.isNotEmpty &&
+        avatarFilename != null) {
       final request = http.MultipartRequest('POST', Uri.parse('$base/groups'));
       request.headers['Authorization'] = 'Bearer $token';
       request.fields['name'] = name;
       request.fields['member_ids'] = jsonEncode(memberIds);
-      request.files.add(http.MultipartFile.fromBytes('avatar', avatarBytes, filename: avatarFilename));
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'avatar',
+          avatarBytes,
+          filename: avatarFilename,
+        ),
+      );
       final streamed = await request.send();
       final resp = await http.Response.fromStream(streamed);
       _checkResponse(resp);
-      return Group.fromJson(jsonDecode(_utf8Body(resp)) as Map<String, dynamic>);
+      return Group.fromJson(
+        jsonDecode(_utf8Body(resp)) as Map<String, dynamic>,
+      );
     }
     final r = await http.post(
       Uri.parse('$base/groups'),
@@ -614,25 +692,47 @@ class Api {
   }
 
   Future<Group> getGroup(int groupId) async {
-    final r = await http.get(Uri.parse('$base/groups/$groupId'), headers: _headers);
+    final r = await http.get(
+      Uri.parse('$base/groups/$groupId'),
+      headers: _headers,
+    );
     _checkResponse(r);
     return Group.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
   }
 
-  Future<Group> updateGroup(int groupId, {String? name, List<int>? avatarBytes, String? avatarFilename}) async {
-    if (avatarBytes != null && avatarBytes.isNotEmpty && avatarFilename != null) {
-      final request = http.MultipartRequest('PATCH', Uri.parse('$base/groups/$groupId'));
+  Future<Group> updateGroup(
+    int groupId, {
+    String? name,
+    List<int>? avatarBytes,
+    String? avatarFilename,
+  }) async {
+    if (avatarBytes != null &&
+        avatarBytes.isNotEmpty &&
+        avatarFilename != null) {
+      final request = http.MultipartRequest(
+        'PATCH',
+        Uri.parse('$base/groups/$groupId'),
+      );
       request.headers['Authorization'] = 'Bearer $token';
       if (name != null) request.fields['name'] = name;
-      request.files.add(http.MultipartFile.fromBytes('avatar', avatarBytes, filename: avatarFilename));
+      request.files.add(
+        http.MultipartFile.fromBytes(
+          'avatar',
+          avatarBytes,
+          filename: avatarFilename,
+        ),
+      );
       final streamed = await request.send();
       final resp = await http.Response.fromStream(streamed);
       _checkResponse(resp);
-      return Group.fromJson(jsonDecode(_utf8Body(resp)) as Map<String, dynamic>);
+      return Group.fromJson(
+        jsonDecode(_utf8Body(resp)) as Map<String, dynamic>,
+      );
     }
     final body = <String, dynamic>{};
     if (name != null) body['name'] = name;
-    if (body.isEmpty) throw ApiException(400, 'Укажите name и/или загрузите avatar');
+    if (body.isEmpty)
+      throw ApiException(400, 'Укажите name и/или загрузите avatar');
     final r = await http.patch(
       Uri.parse('$base/groups/$groupId'),
       headers: _headers,
@@ -659,20 +759,28 @@ class Api {
     _checkResponse(r);
   }
 
-  Future<List<Message>> getGroupMessages(int groupId, {int? before, int limit = 100}) async {
+  Future<List<Message>> getGroupMessages(
+    int groupId, {
+    int? before,
+    int limit = 100,
+  }) async {
     final params = <String, String>{'limit': limit.toString()};
     if (before != null) params['before'] = before.toString();
     final r = await http.get(
-      Uri.parse('$base/groups/$groupId/messages').replace(queryParameters: params),
+      Uri.parse(
+        '$base/groups/$groupId/messages',
+      ).replace(queryParameters: params),
       headers: _headers,
     );
     _checkResponse(r);
     final json = jsonDecode(_utf8Body(r));
     // API возвращает { data: [...], pagination: {...} } или просто массив
-    final list = json is Map<String, dynamic> 
+    final list = json is Map<String, dynamic>
         ? (json['data'] as List<dynamic>? ?? [])
         : (json as List<dynamic>);
-    return list.map((e) => Message.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => Message.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> markGroupMessagesRead(int groupId, int lastMessageId) async {
@@ -696,8 +804,10 @@ class Api {
     if (replyToId != null) body['reply_to_id'] = replyToId;
     if (isForwarded) {
       body['is_forwarded'] = true;
-      if (forwardFromSenderId != null) body['forward_from_sender_id'] = forwardFromSenderId;
-      if (forwardFromDisplayName != null) body['forward_from_display_name'] = forwardFromDisplayName;
+      if (forwardFromSenderId != null)
+        body['forward_from_sender_id'] = forwardFromSenderId;
+      if (forwardFromDisplayName != null)
+        body['forward_from_display_name'] = forwardFromDisplayName;
     }
     final r = await http.post(
       Uri.parse('$base/groups/$groupId/messages'),
@@ -715,11 +825,16 @@ class Api {
     String filename, {
     bool attachmentEncrypted = false,
   }) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$base/groups/$groupId/messages'));
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$base/groups/$groupId/messages'),
+    );
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['content'] = content;
     if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
-    request.files.add(http.MultipartFile.fromBytes('file', fileBytes, filename: filename));
+    request.files.add(
+      http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
+    );
     final streamed = await request.send();
     final r = await http.Response.fromStream(streamed);
     _checkResponse(r);
@@ -734,12 +849,17 @@ class Api {
     bool attachmentEncrypted = false,
   }) async {
     if (files.isEmpty) return [];
-    final request = http.MultipartRequest('POST', Uri.parse('$base/groups/$groupId/messages'));
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$base/groups/$groupId/messages'),
+    );
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['content'] = content;
     if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
     for (final f in files) {
-      request.files.add(http.MultipartFile.fromBytes('file', f.bytes, filename: f.filename));
+      request.files.add(
+        http.MultipartFile.fromBytes('file', f.bytes, filename: f.filename),
+      );
     }
     final streamed = await request.send();
     final r = await http.Response.fromStream(streamed);
@@ -747,7 +867,9 @@ class Api {
     final data = jsonDecode(_utf8Body(r));
     if (data is Map<String, dynamic> && data['messages'] != null) {
       final list = data['messages'] as List<dynamic>;
-      return list.map((e) => Message.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => Message.fromJson(e as Map<String, dynamic>))
+          .toList();
     }
     return [Message.fromJson(data as Map<String, dynamic>)];
   }
@@ -759,13 +881,18 @@ class Api {
     int durationSec, {
     bool attachmentEncrypted = false,
   }) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$base/groups/$groupId/messages'));
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$base/groups/$groupId/messages'),
+    );
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['content'] = '';
     request.fields['attachment_kind'] = 'voice';
     request.fields['attachment_duration_sec'] = durationSec.toString();
     if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
-    request.files.add(http.MultipartFile.fromBytes('file', fileBytes, filename: filename));
+    request.files.add(
+      http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
+    );
     final streamed = await request.send();
     final r = await http.Response.fromStream(streamed);
     _checkResponse(r);
@@ -779,13 +906,18 @@ class Api {
     int durationSec, {
     bool attachmentEncrypted = false,
   }) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$base/groups/$groupId/messages'));
+    final request = http.MultipartRequest(
+      'POST',
+      Uri.parse('$base/groups/$groupId/messages'),
+    );
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['content'] = '';
     request.fields['attachment_kind'] = 'video_note';
     request.fields['attachment_duration_sec'] = durationSec.toString();
     if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
-    request.files.add(http.MultipartFile.fromBytes('file', fileBytes, filename: filename));
+    request.files.add(
+      http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
+    );
     final streamed = await request.send();
     final r = await http.Response.fromStream(streamed);
     _checkResponse(r);
@@ -813,7 +945,11 @@ class Api {
     return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
   }
 
-  Future<PollResult> voteGroupPoll(int groupId, int pollId, int optionIndex) async {
+  Future<PollResult> voteGroupPoll(
+    int groupId,
+    int pollId,
+    int optionIndex,
+  ) async {
     final r = await http.post(
       Uri.parse('$base/groups/$groupId/polls/$pollId/vote'),
       headers: _headers,
@@ -821,13 +957,18 @@ class Api {
     );
     _checkResponse(r);
     final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
-    final opts = (data['options'] as List<dynamic>).cast<Map<String, dynamic>>();
+    final opts = (data['options'] as List<dynamic>)
+        .cast<Map<String, dynamic>>();
     return PollResult(
-      options: opts.map((o) => PollOptionResult(
-        text: o['text'] as String,
-        votes: o['votes'] as int,
-        voted: o['voted'] as bool? ?? false,
-      )).toList(),
+      options: opts
+          .map(
+            (o) => PollOptionResult(
+              text: o['text'] as String,
+              votes: o['votes'] as int,
+              voted: o['voted'] as bool? ?? false,
+            ),
+          )
+          .toList(),
     );
   }
 }
@@ -841,7 +982,11 @@ class PollOptionResult {
   final String text;
   final int votes;
   final bool voted;
-  PollOptionResult({required this.text, required this.votes, required this.voted});
+  PollOptionResult({
+    required this.text,
+    required this.votes,
+    required this.voted,
+  });
 }
 
 class AuthResponse {

@@ -40,6 +40,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       if (!mounted) return;
       _drainIncoming(ws);
     }
+
     _wsUnsub = () => ws.removeListener(onUpdate);
     ws.addListener(onUpdate);
     _drainIncoming(ws);
@@ -53,7 +54,15 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     super.dispose();
   }
 
-  static const List<String> _reactionEmojis = ['👍', '👎', '❤️', '🔥', '😂', '😮', '😢'];
+  static const List<String> _reactionEmojis = [
+    '👍',
+    '👎',
+    '❤️',
+    '🔥',
+    '😂',
+    '😮',
+    '😢',
+  ];
 
   Future<void> _drainIncoming(WsService ws) async {
     Message? m;
@@ -64,16 +73,26 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     ReactionUpdate? ru;
     while ((ru = ws.takeGroupReactionUpdateFor(widget.group.id)) != null) {
       final idx = _messages.indexWhere((msg) => msg.id == ru!.messageId);
-      if (idx >= 0 && mounted) setState(() => _messages[idx] = _messages[idx].copyWith(reactions: ru!.reactions));
+      if (idx >= 0 && mounted)
+        setState(
+          () => _messages[idx] = _messages[idx].copyWith(
+            reactions: ru!.reactions,
+          ),
+        );
     }
   }
 
   Future<void> _setGroupReaction(Message m, String emoji) async {
     try {
-      final reactions = await Api(context.read<AuthService>().token).setGroupMessageReaction(widget.group.id, m.id, emoji);
+      final reactions = await Api(
+        context.read<AuthService>().token,
+      ).setGroupMessageReaction(widget.group.id, m.id, emoji);
       if (!mounted) return;
       final idx = _messages.indexWhere((msg) => msg.id == m.id);
-      if (idx >= 0) setState(() => _messages[idx] = _messages[idx].copyWith(reactions: reactions));
+      if (idx >= 0)
+        setState(
+          () => _messages[idx] = _messages[idx].copyWith(reactions: reactions),
+        );
     } catch (_) {}
   }
 
@@ -86,11 +105,18 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       if (members != null) {
         GroupMember? member;
         for (final m in members) {
-          if (m.id == userId) { member = m; break; }
+          if (m.id == userId) {
+            member = m;
+            break;
+          }
         }
         if (member != null) {
           avatarUrl = member.avatarUrl;
-          initial = member.displayName.isNotEmpty ? member.displayName[0].toUpperCase() : (member.username.isNotEmpty ? member.username[0].toUpperCase() : '?');
+          initial = member.displayName.isNotEmpty
+              ? member.displayName[0].toUpperCase()
+              : (member.username.isNotEmpty
+                    ? member.username[0].toUpperCase()
+                    : '?');
         }
       }
       return Padding(
@@ -98,9 +124,17 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         child: CircleAvatar(
           radius: 8,
           backgroundColor: theme.colorScheme.surfaceContainerHighest,
-          backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+          backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+              ? NetworkImage(avatarUrl)
+              : null,
           child: avatarUrl == null || avatarUrl.isEmpty
-              ? Text(initial, style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurfaceVariant))
+              ? Text(
+                  initial,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                )
               : null,
         ),
       );
@@ -122,7 +156,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         _loading = false;
       });
       if (list.isNotEmpty) {
-        await Api(auth.token).markGroupMessagesRead(widget.group.id, list.last.id);
+        await Api(
+          auth.token,
+        ).markGroupMessagesRead(widget.group.id, list.last.id);
       }
     } catch (e) {
       if (!mounted) return;
@@ -144,7 +180,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   static const int _maxMultipleFiles = 10;
 
   Future<void> _sendFile() async {
-    final result = await FilePicker.platform.pickFiles(allowMultiple: true, withData: true);
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      withData: true,
+    );
     if (result == null || result.files.isEmpty) return;
     final files = result.files
         .where((f) => f.bytes != null && f.bytes!.isNotEmpty)
@@ -168,7 +207,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           _sending = false;
         });
       } else {
-        final list = files.map((f) => (bytes: f.bytes!.toList(), filename: f.name)).toList();
+        final list = files
+            .map((f) => (bytes: f.bytes!.toList(), filename: f.name))
+            .toList();
         final messages = await api.sendGroupMessageWithMultipleFiles(
           widget.group.id,
           '',
@@ -185,7 +226,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       if (!mounted) return;
       setState(() => _sending = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is ApiException ? e.message : context.tr('error'))),
+        SnackBar(
+          content: Text(e is ApiException ? e.message : context.tr('error')),
+        ),
       );
     }
   }
@@ -200,23 +243,25 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       _text.clear();
     });
     try {
-      final msg = await Api(context.read<AuthService>().token).sendGroupMessage(
-        widget.group.id,
-        content,
-        replyToId: replyToId,
-      );
+      final msg = await Api(
+        context.read<AuthService>().token,
+      ).sendGroupMessage(widget.group.id, content, replyToId: replyToId);
       if (!mounted) return;
       setState(() {
         _messages.add(msg);
         _sending = false;
       });
       _scrollToBottom();
-      await Api(context.read<AuthService>().token).markGroupMessagesRead(widget.group.id, msg.id);
+      await Api(
+        context.read<AuthService>().token,
+      ).markGroupMessagesRead(widget.group.id, msg.id);
     } catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is ApiException ? e.message : context.tr('error'))),
+        SnackBar(
+          content: Text(e is ApiException ? e.message : context.tr('error')),
+        ),
       );
     }
   }
@@ -237,19 +282,20 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         leading: const AppBackButton(),
         title: GestureDetector(
           onTap: () {
-            Navigator.of(context).push(
-              AppPageRoute(builder: (_) => GroupProfileScreen(group: widget.group)),
-            ).then((_) {
-              if (mounted) _load();
-            });
+            Navigator.of(context)
+                .push(
+                  AppPageRoute(
+                    builder: (_) => GroupProfileScreen(group: widget.group),
+                  ),
+                )
+                .then((_) {
+                  if (mounted) _load();
+                });
           },
           child: Row(
             children: [
               Expanded(
-                child: Text(
-                  widget.group.name,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                child: Text(widget.group.name, overflow: TextOverflow.ellipsis),
               ),
               const Icon(Icons.chevron_right, size: 20),
             ],
@@ -264,7 +310,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               child: Row(
                 children: [
-                  Icon(Icons.reply, size: 20, color: Theme.of(context).colorScheme.primary),
+                  Icon(
+                    Icons.reply,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -301,28 +351,36 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             child: _loading && _messages.isEmpty
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null && _messages.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-                            const SizedBox(height: 16),
-                            FilledButton(
-                              onPressed: _load,
-                              child: Text(context.tr('retry')),
-                            ),
-                          ],
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _error!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                         ),
-                      )
-                    : ListView.builder(
-                        controller: _scroll,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, i) {
-                          final m = _messages[i];
-                          return _buildMessageBubble(m);
-                        },
-                      ),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: _load,
+                          child: Text(context.tr('retry')),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scroll,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, i) {
+                      final m = _messages[i];
+                      return _buildMessageBubble(m);
+                    },
+                  ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -341,7 +399,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                     ),
                     enableInteractiveSelection: true,
                     textCapitalization: TextCapitalization.sentences,
@@ -376,7 +437,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       child: Align(
         alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.85,
+          ),
           child: Column(
             crossAxisAlignment: align,
             children: [
@@ -393,7 +456,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   ),
                 ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: isMine
                       ? Theme.of(context).colorScheme.primaryContainer
@@ -425,7 +491,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w600,
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
                                   ),
                                 ),
                               Text(
@@ -440,7 +508,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                       ),
                     GestureDetector(
                       onLongPress: () => _showGroupMessageActions(m),
-                      onSecondaryTapDown: (details) => _showGroupMessageActions(m, details.globalPosition),
+                      onSecondaryTapDown: (details) =>
+                          _showGroupMessageActions(m, details.globalPosition),
                       child: _buildGroupMessageContent(m),
                     ),
                   ],
@@ -456,45 +525,51 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   void _showGroupMessageActions(Message m, [Offset? position]) {
     void openSheet() {
       showModalBottomSheet(
-                          context: context,
-                          builder: (ctx) => SafeArea(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                    children: _reactionEmojis.map((emoji) {
-                                      return GestureDetector(
-                                        onTap: () {
-                                          Navigator.pop(ctx);
-                                          _setGroupReaction(m, emoji);
-                                        },
-                                        child: Text(emoji, style: const TextStyle(fontSize: 28)),
-                                      );
-                                    }).toList(),
-                                  ),
-                                ),
-                                const Divider(height: 1),
-                                ListTile(
-                                  leading: const Icon(Icons.reply),
-                                  title: Text(context.tr('reply')),
-                                  onTap: () {
-                                    Navigator.pop(ctx);
-                                    _onReply(m);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
+        context: context,
+        builder: (ctx) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: _reactionEmojis.map((emoji) {
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _setGroupReaction(m, emoji);
+                      },
+                      child: Text(emoji, style: const TextStyle(fontSize: 28)),
+                    );
+                  }).toList(),
+                ),
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.reply),
+                title: Text(context.tr('reply')),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _onReply(m);
+                },
+              ),
+            ],
+          ),
+        ),
+      );
     }
+
     if (position != null) {
       final screen = MediaQuery.sizeOf(context);
       showMenu<void>(
         context: context,
-        position: RelativeRect.fromLTRB(position.dx, position.dy, screen.width - position.dx, screen.height - position.dy),
+        position: RelativeRect.fromLTRB(
+          position.dx,
+          position.dy,
+          screen.width - position.dx,
+          screen.height - position.dy,
+        ),
         items: [
           PopupMenuItem(
             onTap: () {
@@ -531,10 +606,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       crossAxisAlignment: align,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(
-          m.content,
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        Text(m.content, style: Theme.of(context).textTheme.bodyLarge),
         if (m.reactions.isNotEmpty) ...[
           const SizedBox(height: 6),
           Wrap(
@@ -549,9 +621,14 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface.withOpacity(0.6),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withOpacity(0.6),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -574,7 +651,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           m.createdAt.length > 19 ? m.createdAt.substring(11, 16) : m.createdAt,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             fontSize: 10,
-            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withOpacity(0.7),
           ),
         ),
       ],

@@ -9,7 +9,8 @@ class AppUpdateLifecycleListener extends StatefulWidget {
   const AppUpdateLifecycleListener({super.key, required this.child});
 
   @override
-  State<AppUpdateLifecycleListener> createState() => _AppUpdateLifecycleListenerState();
+  State<AppUpdateLifecycleListener> createState() =>
+      _AppUpdateLifecycleListenerState();
 }
 
 class _AppUpdateLifecycleListenerState extends State<AppUpdateLifecycleListener>
@@ -20,7 +21,7 @@ class _AppUpdateLifecycleListenerState extends State<AppUpdateLifecycleListener>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    
+
     // Проверяем обновления при запуске приложения
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForUpdates();
@@ -36,7 +37,7 @@ class _AppUpdateLifecycleListenerState extends State<AppUpdateLifecycleListener>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    
+
     // Проверяем обновления при возврате из фонового режима
     if (state == AppLifecycleState.resumed && _wasInBackground) {
       _checkForUpdates();
@@ -50,9 +51,12 @@ class _AppUpdateLifecycleListenerState extends State<AppUpdateLifecycleListener>
 
   void _checkForUpdates() {
     if (!mounted) return;
-    
+
     try {
-      final updateService = Provider.of<AppUpdateService>(context, listen: false);
+      final updateService = Provider.of<AppUpdateService>(
+        context,
+        listen: false,
+      );
       updateService.checkForUpdates();
     } catch (_) {
       // Игнорируем ошибки если сервис недоступен

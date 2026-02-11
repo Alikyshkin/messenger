@@ -10,9 +10,7 @@ void main() {
 
   group('LoginScreen', () {
     testWidgets('renders title and login form', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        wrapWithApp(child: const LoginScreen()),
-      );
+      await tester.pumpWidget(wrapWithApp(child: const LoginScreen()));
       await tester.pumpAndSettle();
 
       expect(find.text('Мессенджер'), findsOneWidget);
@@ -21,10 +19,10 @@ void main() {
       expect(find.byType(FilledButton), findsOneWidget);
     });
 
-    testWidgets('has links to forgot password and register', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        wrapWithApp(child: const LoginScreen()),
-      );
+    testWidgets('has links to forgot password and register', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(wrapWithApp(child: const LoginScreen()));
       await tester.pumpAndSettle();
 
       expect(find.text('Забыли пароль?'), findsOneWidget);

@@ -23,7 +23,9 @@ class AppBackButton extends StatelessWidget {
             child: Icon(
               Icons.arrow_back_rounded,
               size: 24,
-              color: theme.appBarTheme.foregroundColor ?? theme.colorScheme.onPrimary,
+              color:
+                  theme.appBarTheme.foregroundColor ??
+                  theme.colorScheme.onPrimary,
             ),
           ),
         ),

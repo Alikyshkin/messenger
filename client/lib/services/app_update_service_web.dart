@@ -17,7 +17,7 @@ class AppUpdateServiceWeb {
           }
         }
       }
-      
+
       // Перезагружаем страницу
       html.window.location.reload();
     } catch (_) {

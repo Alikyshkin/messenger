@@ -6,7 +6,7 @@ import 'error_utils.dart';
 /// Утилиты для retry API запросов при временных ошибках
 class ApiRetry {
   /// Выполняет API запрос с повторными попытками при временных ошибках
-  /// 
+  ///
   /// [fn] - функция, выполняющая API запрос
   /// [maxAttempts] - максимальное количество попыток (по умолчанию 3)
   /// [initialDelay] - начальная задержка между попытками в секундах (по умолчанию 1)
@@ -19,24 +19,24 @@ class ApiRetry {
   }) async {
     int attempt = 0;
     int delaySeconds = initialDelay;
-    
+
     while (attempt < maxAttempts) {
       try {
         return await fn();
       } catch (e) {
         attempt++;
-        
+
         // Если это последняя попытка или ошибка не retryable, выбрасываем ошибку
         if (attempt >= maxAttempts || !_isRetryableError(e)) {
           rethrow;
         }
-        
+
         // Ждем перед следующей попыткой (экспоненциальный backoff)
         await Future.delayed(Duration(seconds: delaySeconds));
         delaySeconds = (delaySeconds * 2).clamp(initialDelay, maxDelay);
       }
     }
-    
+
     throw Exception('Failed after $maxAttempts attempts');
   }
 
@@ -46,7 +46,7 @@ class ApiRetry {
     if (ErrorUtils.isNetworkError(error)) {
       return true;
     }
-    
+
     // Временные ошибки сервера (503, 502, 504) можно повторить
     if (error is ApiException) {
       final statusCode = error.statusCode;
@@ -55,12 +55,12 @@ class ApiRetry {
           statusCode == 504 || // Gateway Timeout
           statusCode == 429; // Too Many Requests (rate limiting)
     }
-    
+
     // SocketException и другие сетевые ошибки
     if (error is SocketException) {
       return true;
     }
-    
+
     return false;
   }
 }

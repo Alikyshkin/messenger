@@ -28,8 +28,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   void initState() {
     super.initState();
     _user = widget.user;
-    if (_user!.friendsCount == null) _load();
-    else _loading = false;
+    if (_user!.friendsCount == null)
+      _load();
+    else
+      _loading = false;
   }
 
   Future<void> _load() async {
@@ -56,7 +58,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (count == null) return '—';
     if (count == 0) return context.tr('zero_friends');
     if (count == 1) return context.tr('one_friend');
-    if (count >= 2 && count <= 4) return context.tr('friends_2_4').replaceFirst('%s', '$count');
+    if (count >= 2 && count <= 4)
+      return context.tr('friends_2_4').replaceFirst('%s', '$count');
     return context.tr('friends_5_plus').replaceFirst('%s', '$count');
   }
 
@@ -64,9 +67,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final parts = iso.split('-');
     if (parts.length != 3) return iso;
     final months = [
-      context.tr('jan'), context.tr('feb'), context.tr('mar'), context.tr('apr'),
-      context.tr('may'), context.tr('jun'), context.tr('jul'), context.tr('aug'),
-      context.tr('sep'), context.tr('oct'), context.tr('nov'), context.tr('dec'),
+      context.tr('jan'),
+      context.tr('feb'),
+      context.tr('mar'),
+      context.tr('apr'),
+      context.tr('may'),
+      context.tr('jun'),
+      context.tr('jul'),
+      context.tr('aug'),
+      context.tr('sep'),
+      context.tr('oct'),
+      context.tr('nov'),
+      context.tr('dec'),
     ];
     final day = int.tryParse(parts[2]) ?? 0;
     final month = int.tryParse(parts[1]);
@@ -88,7 +100,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              Text(
+                _error!,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
               const SizedBox(height: 16),
               TextButton(onPressed: _load, child: Text(context.tr('retry'))),
             ],
@@ -135,10 +150,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   child: UserAvatar(
                     user: u,
                     radius: 48,
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    textStyle: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    textStyle: Theme.of(context).textTheme.headlineLarge
+                        ?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -174,7 +192,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.cake_outlined, size: 18, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      Icon(
+                        Icons.cake_outlined,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         _formatBirthday(context, u.birthday!),

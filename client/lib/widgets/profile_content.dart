@@ -11,7 +11,8 @@ String _friendsCountLabel(BuildContext context, int? count) {
   if (count == null) return '—';
   if (count == 0) return context.tr('no_friends');
   if (count == 1) return context.tr('one_friend');
-  if (count >= 2 && count <= 4) return context.tr('friends_2_4').replaceFirst('%s', '$count');
+  if (count >= 2 && count <= 4)
+    return context.tr('friends_2_4').replaceFirst('%s', '$count');
   return context.tr('friends_5_plus').replaceFirst('%s', '$count');
 }
 
@@ -19,9 +20,18 @@ String _formatBirthday(BuildContext context, String iso) {
   final parts = iso.split('-');
   if (parts.length != 3) return iso;
   final months = [
-    context.tr('jan'), context.tr('feb'), context.tr('mar'), context.tr('apr'),
-    context.tr('may'), context.tr('jun'), context.tr('jul'), context.tr('aug'),
-    context.tr('sep'), context.tr('oct'), context.tr('nov'), context.tr('dec'),
+    context.tr('jan'),
+    context.tr('feb'),
+    context.tr('mar'),
+    context.tr('apr'),
+    context.tr('may'),
+    context.tr('jun'),
+    context.tr('jul'),
+    context.tr('aug'),
+    context.tr('sep'),
+    context.tr('oct'),
+    context.tr('nov'),
+    context.tr('dec'),
   ];
   final day = int.tryParse(parts[2]) ?? 0;
   final month = int.tryParse(parts[1]);
@@ -33,7 +43,7 @@ String _formatBirthday(BuildContext context, String iso) {
 /// Виджет содержимого экрана профиля без Scaffold для встраивания в HomeScreen
 class ProfileContent extends StatefulWidget {
   final NavigatorState? navigator;
-  
+
   const ProfileContent({super.key, this.navigator});
 
   @override
@@ -83,7 +93,9 @@ class _ProfileContentState extends State<ProfileContent> {
                     onPressed: () {
                       final nav = widget.navigator ?? Navigator.of(context);
                       nav.push(
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
                       );
                     },
                   ),
@@ -102,31 +114,43 @@ class _ProfileContentState extends State<ProfileContent> {
                           UserAvatar(
                             user: u,
                             radius: AppSizes.avatarXL,
-                            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                            textStyle: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
-                            ),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
+                            textStyle: Theme.of(context).textTheme.headlineLarge
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onPrimaryContainer,
+                                ),
                           ),
                           AppSpacing.spacingVerticalLG,
                           Text(
                             u.displayName,
-                            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(fontWeight: FontWeight.w600),
                           ),
                           AppSpacing.spacingVerticalXS,
                           Text(
                             '@${u.username}',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
                           ),
                           if (u.bio != null && u.bio!.isNotEmpty) ...[
                             AppSpacing.spacingVerticalMD,
                             Text(
                               u.bio!,
                               textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
                             ),
                           ],
                           if (u.birthday != null && u.birthday!.isNotEmpty) ...[
@@ -137,14 +161,19 @@ class _ProfileContentState extends State<ProfileContent> {
                                 Icon(
                                   Icons.cake_outlined,
                                   size: AppSizes.iconSM,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                                 AppSpacing.spacingHorizontalMD,
                                 Text(
                                   _formatBirthday(context, u.birthday!),
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodyMedium
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
                                 ),
                               ],
                             ),
@@ -160,7 +189,9 @@ class _ProfileContentState extends State<ProfileContent> {
                         ListTile(
                           leading: const Icon(Icons.people_outline),
                           title: Text(context.tr('friends')),
-                          subtitle: Text(_friendsCountLabel(context, u.friendsCount)),
+                          subtitle: Text(
+                            _friendsCountLabel(context, u.friendsCount),
+                          ),
                           onTap: () {
                             // Переключение на контакты будет обработано через навигацию
                           },
@@ -171,9 +202,12 @@ class _ProfileContentState extends State<ProfileContent> {
                           title: Text(context.tr('settings')),
                           subtitle: Text(context.tr('settings_subtitle')),
                           onTap: () {
-                            final nav = widget.navigator ?? Navigator.of(context);
+                            final nav =
+                                widget.navigator ?? Navigator.of(context);
                             nav.push(
-                              MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                              MaterialPageRoute(
+                                builder: (_) => const SettingsScreen(),
+                              ),
                             );
                           },
                         ),

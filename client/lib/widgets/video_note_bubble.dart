@@ -40,20 +40,23 @@ class _VideoNoteBubbleState extends State<VideoNoteBubble> {
               _initialized = true;
             });
           } else {
-            setState(() => _error = 'Веб: зашифрованное видео не воспроизводится');
+            setState(
+              () => _error = 'Веб: зашифрованное видео не воспроизводится',
+            );
           }
         } catch (e) {
           if (mounted) setState(() => _error = 'Ошибка загрузки');
         }
       });
     } else if (widget.videoUrl != null) {
-      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl!))
-        ..initialize().then((_) {
-          if (mounted) {
-            setState(() => _initialized = true);
-            _controller!.setLooping(false);
-          }
-        });
+      _controller =
+          VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl!))
+            ..initialize().then((_) {
+              if (mounted) {
+                setState(() => _initialized = true);
+                _controller!.setLooping(false);
+              }
+            });
     }
   }
 
@@ -77,7 +80,11 @@ class _VideoNoteBubbleState extends State<VideoNoteBubble> {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(12),
-            child: Text(_error!, style: const TextStyle(color: Colors.white70, fontSize: 11), textAlign: TextAlign.center),
+            child: Text(
+              _error!,
+              style: const TextStyle(color: Colors.white70, fontSize: 11),
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
       );
@@ -99,11 +106,7 @@ class _VideoNoteBubbleState extends State<VideoNoteBubble> {
           color: Colors.black,
           shape: BoxShape.circle,
           boxShadow: [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 8,
-              spreadRadius: 1,
-            ),
+            BoxShadow(color: Colors.black26, blurRadius: 8, spreadRadius: 1),
           ],
         ),
         child: ClipOval(
@@ -121,7 +124,9 @@ class _VideoNoteBubbleState extends State<VideoNoteBubble> {
                   ),
                 )
               else
-                const Center(child: CircularProgressIndicator(color: Colors.white54)),
+                const Center(
+                  child: CircularProgressIndicator(color: Colors.white54),
+                ),
               if (_initialized && !_controller!.value.isPlaying)
                 Center(
                   child: Container(
@@ -130,7 +135,11 @@ class _VideoNoteBubbleState extends State<VideoNoteBubble> {
                       color: Colors.black54,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.play_arrow, color: Colors.white, size: 48),
+                    child: const Icon(
+                      Icons.play_arrow,
+                      color: Colors.white,
+                      size: 48,
+                    ),
                   ),
                 ),
             ],

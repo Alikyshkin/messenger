@@ -6,11 +6,7 @@ class EmptyStateWidget extends StatelessWidget {
   final String message;
   final IconData? icon;
 
-  const EmptyStateWidget({
-    super.key,
-    required this.message,
-    this.icon,
-  });
+  const EmptyStateWidget({super.key, required this.message, this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +20,9 @@ class EmptyStateWidget extends StatelessWidget {
               Icon(
                 icon,
                 size: 64,
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withOpacity(0.5),
               ),
               AppSpacing.spacingVerticalLG,
             ],
@@ -32,8 +30,8 @@ class EmptyStateWidget extends StatelessWidget {
               message,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),

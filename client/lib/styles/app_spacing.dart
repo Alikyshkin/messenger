@@ -14,21 +14,37 @@ class AppSpacing {
 
   // Отступы для контента экранов
   static const EdgeInsets screenPadding = EdgeInsets.fromLTRB(12, 12, 12, 24);
-  static const EdgeInsets screenPaddingVertical = EdgeInsets.fromLTRB(12, 16, 12, 24);
-  static const EdgeInsets cardPadding = EdgeInsets.symmetric(horizontal: 16, vertical: 8);
-  static const EdgeInsets cardPaddingLarge = EdgeInsets.symmetric(vertical: 24, horizontal: 16);
+  static const EdgeInsets screenPaddingVertical = EdgeInsets.fromLTRB(
+    12,
+    16,
+    12,
+    24,
+  );
+  static const EdgeInsets cardPadding = EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 8,
+  );
+  static const EdgeInsets cardPaddingLarge = EdgeInsets.symmetric(
+    vertical: 24,
+    horizontal: 16,
+  );
   static const EdgeInsets sectionPadding = EdgeInsets.fromLTRB(16, 16, 16, 8);
   static const EdgeInsets inputPadding = EdgeInsets.all(16);
   static const EdgeInsets errorPadding = EdgeInsets.all(24);
   static const EdgeInsets emptyStatePadding = EdgeInsets.all(32);
 
   // Отступы для навигации
-  static const EdgeInsets navigationPadding = EdgeInsets.symmetric(horizontal: 8);
+  static const EdgeInsets navigationPadding = EdgeInsets.symmetric(
+    horizontal: 8,
+  );
   static const double navigationIconSize = 28.0;
   static const double navigationAvatarRadius = 20.0;
 
   // Отступы для списков
-  static const EdgeInsets listItemPadding = EdgeInsets.symmetric(horizontal: 16, vertical: 8);
+  static const EdgeInsets listItemPadding = EdgeInsets.symmetric(
+    horizontal: 16,
+    vertical: 8,
+  );
   static const EdgeInsets listPadding = EdgeInsets.fromLTRB(12, 12, 12, 24);
 
   // Отступы между элементами

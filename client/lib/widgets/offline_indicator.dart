@@ -9,10 +9,7 @@ import '../services/ws_service.dart';
 class OfflineIndicator extends StatefulWidget {
   final Widget child;
 
-  const OfflineIndicator({
-    super.key,
-    required this.child,
-  });
+  const OfflineIndicator({super.key, required this.child});
 
   @override
   State<OfflineIndicator> createState() => _OfflineIndicatorState();
@@ -110,7 +107,7 @@ class _OfflineIndicatorState extends State<OfflineIndicator> {
   Widget build(BuildContext context) {
     final showOffline = !_isOnline || !_wsConnected;
     final isReconnecting = !_wsConnected && _isOnline;
-    
+
     return Stack(
       children: [
         widget.child,

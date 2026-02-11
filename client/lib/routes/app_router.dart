@@ -25,39 +25,37 @@ import '../services/api.dart';
 /// Конфигурация роутов приложения с поддержкой URL для веб
 GoRouter createAppRouter(AuthService authService) {
   final navigationObserver = NavigationUpdateObserver();
-  
+
   return GoRouter(
     initialLocation: '/',
     observers: [navigationObserver],
     redirect: (context, state) {
       final auth = authService;
       final isLoggedIn = auth.isLoggedIn;
-      final isLoggingIn = state.matchedLocation == '/login' || 
-                          state.matchedLocation == '/register' ||
-                          state.matchedLocation == '/forgot-password';
-      
+      final isLoggingIn =
+          state.matchedLocation == '/login' ||
+          state.matchedLocation == '/register' ||
+          state.matchedLocation == '/forgot-password';
+
       // Если пользователь не авторизован и пытается зайти на защищенные страницы
       if (!isLoggedIn && !isLoggingIn) {
         return '/login';
       }
-      
+
       // Если пользователь авторизован и пытается зайти на страницы входа
       if (isLoggedIn && isLoggingIn) {
         return '/';
       }
-      
+
       // Разрешаем навигацию на /profile для авторизованных пользователей
       if (isLoggedIn && state.matchedLocation == '/profile') {
         return null;
       }
-      
+
       return null; // Разрешаем навигацию
     },
     routes: [
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
@@ -110,7 +108,11 @@ GoRouter createAppRouter(AuthService authService) {
                   }
                   if (snapshot.hasError || !snapshot.hasData) {
                     return Scaffold(
-                      body: Center(child: Text('Ошибка загрузки: ${snapshot.error ?? "Пользователь не найден"}')),
+                      body: Center(
+                        child: Text(
+                          'Ошибка загрузки: ${snapshot.error ?? "Пользователь не найден"}',
+                        ),
+                      ),
                     );
                   }
                   return ChatScreen(peer: snapshot.data!);
@@ -141,7 +143,11 @@ GoRouter createAppRouter(AuthService authService) {
                   }
                   if (snapshot.hasError || !snapshot.hasData) {
                     return Scaffold(
-                      body: Center(child: Text('Ошибка загрузки: ${snapshot.error ?? "Группа не найдена"}')),
+                      body: Center(
+                        child: Text(
+                          'Ошибка загрузки: ${snapshot.error ?? "Группа не найдена"}',
+                        ),
+                      ),
                     );
                   }
                   return GroupChatScreen(group: snapshot.data!);
@@ -183,7 +189,11 @@ GoRouter createAppRouter(AuthService authService) {
                   }
                   if (snapshot.hasError || !snapshot.hasData) {
                     return Scaffold(
-                      body: Center(child: Text('Ошибка загрузки: ${snapshot.error ?? "Пользователь не найден"}')),
+                      body: Center(
+                        child: Text(
+                          'Ошибка загрузки: ${snapshot.error ?? "Пользователь не найден"}',
+                        ),
+                      ),
                     );
                   }
                   return UserProfileScreen(user: snapshot.data!);
@@ -213,7 +223,11 @@ GoRouter createAppRouter(AuthService authService) {
                   }
                   if (snapshot.hasError || !snapshot.hasData) {
                     return Scaffold(
-                      body: Center(child: Text('Ошибка загрузки: ${snapshot.error ?? "Группа не найдена"}')),
+                      body: Center(
+                        child: Text(
+                          'Ошибка загрузки: ${snapshot.error ?? "Группа не найдена"}',
+                        ),
+                      ),
                     );
                   }
                   return GroupProfileScreen(group: snapshot.data!);
@@ -227,9 +241,7 @@ GoRouter createAppRouter(AuthService authService) {
               final peerIdStr = state.pathParameters['peerId']!;
               final peerId = int.tryParse(peerIdStr);
               if (peerId == null) {
-                return const Scaffold(
-                  body: Center(child: Text('Неверный ID')),
-                );
+                return const Scaffold(body: Center(child: Text('Неверный ID')));
               }
               final isGroup = state.uri.queryParameters['group'] == 'true';
               // Загружаем пользователя или группу из API
@@ -246,7 +258,11 @@ GoRouter createAppRouter(AuthService authService) {
                     }
                     if (snapshot.hasError || !snapshot.hasData) {
                       return Scaffold(
-                        body: Center(child: Text('Ошибка загрузки: ${snapshot.error ?? "Группа не найдена"}')),
+                        body: Center(
+                          child: Text(
+                            'Ошибка загрузки: ${snapshot.error ?? "Группа не найдена"}',
+                          ),
+                        ),
                       );
                     }
                     return MediaGalleryScreen(group: snapshot.data!);
@@ -263,7 +279,11 @@ GoRouter createAppRouter(AuthService authService) {
                     }
                     if (snapshot.hasError || !snapshot.hasData) {
                       return Scaffold(
-                        body: Center(child: Text('Ошибка загрузки: ${snapshot.error ?? "Пользователь не найден"}')),
+                        body: Center(
+                          child: Text(
+                            'Ошибка загрузки: ${snapshot.error ?? "Пользователь не найден"}',
+                          ),
+                        ),
                       );
                     }
                     return MediaGalleryScreen(peer: snapshot.data!);
@@ -297,14 +317,8 @@ class _AppLoadingScreen extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isDark
-                ? [
-                    surface,
-                    theme.colorScheme.surfaceContainerHighest,
-                  ]
-                : [
-                    const Color(0xFFF5F5F5),
-                    const Color(0xFFE0E0E0),
-                  ],
+                ? [surface, theme.colorScheme.surfaceContainerHighest]
+                : [const Color(0xFFF5F5F5), const Color(0xFFE0E0E0)],
           ),
         ),
         child: SafeArea(
@@ -319,10 +333,7 @@ class _AppLoadingScreen extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [
-                      primary,
-                      primary.withValues(alpha: 0.85),
-                    ],
+                    colors: [primary, primary.withValues(alpha: 0.85)],
                   ),
                   boxShadow: [
                     BoxShadow(

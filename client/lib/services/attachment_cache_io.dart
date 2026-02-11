@@ -6,7 +6,9 @@ const _cacheDirName = 'messenger_attachment_cache';
 
 String _safeFilename(String name) {
   if (name.isEmpty) return 'файл';
-  return name.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_').replaceAll(RegExp(r'_+'), '_');
+  return name
+      .replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_')
+      .replaceAll(RegExp(r'_+'), '_');
 }
 
 Future<Directory> _cacheRoot() async {
@@ -14,20 +16,33 @@ Future<Directory> _cacheRoot() async {
   return Directory(p.join(dir.path, _cacheDirName));
 }
 
-Future<List<int>?> getCachedAttachmentBytes(int peerId, int messageId, String filename) async {
+Future<List<int>?> getCachedAttachmentBytes(
+  int peerId,
+  int messageId,
+  String filename,
+) async {
   final root = await _cacheRoot();
-  final file = File(p.join(root.path, '$peerId', '${messageId}_${_safeFilename(filename)}'));
+  final file = File(
+    p.join(root.path, '$peerId', '${messageId}_${_safeFilename(filename)}'),
+  );
   if (await file.exists()) {
     return file.readAsBytes();
   }
   return null;
 }
 
-Future<void> putCachedAttachment(int peerId, int messageId, String filename, List<int> bytes) async {
+Future<void> putCachedAttachment(
+  int peerId,
+  int messageId,
+  String filename,
+  List<int> bytes,
+) async {
   final root = await _cacheRoot();
   final peerDir = Directory(p.join(root.path, '$peerId'));
   if (!await peerDir.exists()) await peerDir.create(recursive: true);
-  final file = File(p.join(peerDir.path, '${messageId}_${_safeFilename(filename)}'));
+  final file = File(
+    p.join(peerDir.path, '${messageId}_${_safeFilename(filename)}'),
+  );
   await file.writeAsBytes(bytes);
 }
 

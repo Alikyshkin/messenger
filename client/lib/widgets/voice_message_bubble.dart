@@ -52,7 +52,9 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           if (widget.audioBytesFuture != null) {
             final bytes = await widget.audioBytesFuture!;
             if (kIsWeb) {
-              await _player.setUrl('data:audio/mp4;base64,${base64Encode(bytes)}');
+              await _player.setUrl(
+                'data:audio/mp4;base64,${base64Encode(bytes)}',
+              );
             } else {
               final path = await writeTempBytes(bytes, 'voice.m4a');
               await _player.setFilePath(path);
@@ -92,7 +94,9 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
       children: [
         IconButton(
           icon: Icon(
-            _player.playing ? Icons.pause_circle_filled : Icons.play_circle_filled,
+            _player.playing
+                ? Icons.pause_circle_filled
+                : Icons.play_circle_filled,
             color: color,
             size: 40,
           ),

@@ -40,15 +40,15 @@ class _WsCallListenerState extends State<WsCallListener> {
     _sub?.cancel();
     _sub = ws.callSignals.listen((signal) async {
       if (!mounted || signal.signal != 'offer') return;
-      
+
       // Если это групповой звонок, обрабатываем отдельно
       if (signal.groupId != null) {
         try {
           final api = Api(auth.token);
           final group = await api.getGroup(signal.groupId!);
-          
+
           AppSoundService.instance.playRingtone();
-          
+
           if (!isPageVisible) {
             await requestNotificationPermission();
             await showPageNotification(
@@ -57,7 +57,7 @@ class _WsCallListenerState extends State<WsCallListener> {
             );
             await focusWindow();
           }
-          
+
           if (!mounted) return;
           Navigator.of(context).push(
             AppPageRoute(
@@ -74,7 +74,7 @@ class _WsCallListenerState extends State<WsCallListener> {
         }
         return;
       }
-      
+
       // Обычный приватный звонок
       // Загружаем информацию о пользователе
       User peer;

@@ -16,7 +16,7 @@ class ErrorHandler {
     if (!context.mounted) return true;
 
     String? errorMessage;
-    
+
     if (error is ApiException) {
       errorMessage = error.message;
     } else if (getErrorMessage != null) {
@@ -28,9 +28,9 @@ class ErrorHandler {
     setState(errorMessage, false);
 
     if (showSnackBar && errorMessage != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMessage)));
     }
 
     return true;
@@ -48,13 +48,14 @@ class ErrorHandler {
     if (error is ApiException) {
       message = error.message;
     } else if (getErrorMessage != null) {
-      message = getErrorMessage(error) ?? ErrorUtils.getUserFriendlyMessage(error);
+      message =
+          getErrorMessage(error) ?? ErrorUtils.getUserFriendlyMessage(error);
     } else {
       message = ErrorUtils.getUserFriendlyMessage(error);
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }

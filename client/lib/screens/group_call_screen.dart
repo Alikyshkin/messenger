@@ -62,7 +62,6 @@ class GroupCallScreen extends StatefulWidget {
 }
 
 class _GroupCallScreenState extends State<GroupCallScreen> {
-
   WsService? _ws;
   StreamSubscription<CallSignal>? _signalSub;
   MediaStream? _localStream;
@@ -157,7 +156,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
         await _getUserMedia();
         _applyInitialMute();
       }
-      
+
       // Инициализируем локальный renderer сразу, чтобы показать свое видео
       if (!_localRendererInitialized) {
         await _localRenderer.initialize();
@@ -166,7 +165,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
           _localRenderer.srcObject = _localStream;
         }
       }
-      
+
       // Инициализируем renderers для всех участников
       for (final participant in _participants.values) {
         if (!participant.rendererInitialized) {
@@ -174,15 +173,15 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
           participant.rendererInitialized = true;
         }
       }
-      
+
       // Создаем PeerConnection для каждого участника
       for (final participant in _participants.values) {
         await _createPeerConnectionForParticipant(participant);
       }
-      
+
       // Отправляем сигнал группового звонка всем участникам
       _ws!.sendGroupCallSignal(widget.group.id, 'offer', null, true);
-      
+
       setState(() => _state = 'connected');
     } catch (e) {
       if (!mounted) return;
@@ -517,14 +516,14 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   void _acceptCall() async {
     AppSoundService.instance.stopRingtone();
     setState(() => _state = 'connected');
-    
+
     try {
       // Получаем медиа только если еще не получили
       if (_localStream == null) {
         await _getUserMedia();
         _applyInitialMute();
       }
-      
+
       // Инициализируем renderers для всех участников
       for (final participant in _participants.values) {
         if (!participant.rendererInitialized) {
@@ -532,7 +531,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
           participant.rendererInitialized = true;
         }
       }
-      
+
       // Создаем PeerConnection для каждого участника
       for (final participant in _participants.values) {
         await _createPeerConnectionForParticipant(participant);
@@ -569,7 +568,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     context.read<CallMinimizedService>().endCall();
     _cleanup();
     if (mounted) Navigator.of(context).pop();
-    
+
     // Проверяем обновления при выходе из звонка
     try {
       context.read<AppUpdateService>().checkForUpdates();
@@ -615,7 +614,6 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
       track.enabled = _micEnabled;
     }
   }
-
 
   @override
   void dispose() {
@@ -667,7 +665,8 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
               if (_localRendererInitialized && _localStream != null)
                 // Показываем сетку с локальным видео, даже если еще нет подключенных участников
                 _buildVideoGrid(connectedParticipants, connectingParticipants)
-              else if (connectedParticipants.isNotEmpty || connectingParticipants.isNotEmpty)
+              else if (connectedParticipants.isNotEmpty ||
+                  connectingParticipants.isNotEmpty)
                 _buildVideoGrid(connectedParticipants, connectingParticipants)
               else
                 _buildCallingView()
@@ -716,7 +715,11 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                     if (_state == 'connected') ...[
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(Icons.minimize, color: Colors.white70, size: 20),
+                        icon: const Icon(
+                          Icons.minimize,
+                          color: Colors.white70,
+                          size: 20,
+                        ),
                         onPressed: _minimizeCall,
                         tooltip: 'Свернуть',
                         padding: EdgeInsets.zero,
@@ -739,7 +742,10 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     );
   }
 
-  Widget _buildVideoGrid(List<_GroupCallParticipant> connectedParticipants, List<_GroupCallParticipant> connectingParticipants) {
+  Widget _buildVideoGrid(
+    List<_GroupCallParticipant> connectedParticipants,
+    List<_GroupCallParticipant> connectingParticipants,
+  ) {
     // Добавляем локальное видео в начало списка
     // Показываем подключенных и подключающихся участников
     final allParticipants = [
@@ -909,10 +915,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                         ),
                         child: const Text(
                           'Подключение...',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                          ),
+                          style: TextStyle(color: Colors.white, fontSize: 9),
                         ),
                       ),
                     ),
@@ -1027,14 +1030,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CallActionButton.reject(
-            onPressed: _rejectCall,
-          ),
+          CallActionButton.reject(onPressed: _rejectCall),
           const SizedBox(width: 32),
-          CallActionButton.accept(
-            onPressed: _acceptCall,
-            icon: Icons.videocam,
-          ),
+          CallActionButton.accept(onPressed: _acceptCall, icon: Icons.videocam),
         ],
       ),
     );
@@ -1058,9 +1056,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
             isEnabled: _cameraEnabled,
           ),
           const SizedBox(width: 12),
-          CallActionButton.reject(
-            onPressed: _endCall,
-          ),
+          CallActionButton.reject(onPressed: _endCall),
         ],
       ),
     );

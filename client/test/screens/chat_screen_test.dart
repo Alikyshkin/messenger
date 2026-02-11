@@ -33,7 +33,9 @@ void main() {
       testToken = 'test_token_123';
     });
 
-    testWidgets('ChatScreen loads and displays messages', (WidgetTester tester) async {
+    testWidgets('ChatScreen loads and displays messages', (
+      WidgetTester tester,
+    ) async {
       // Мокируем API ответ для загрузки сообщений
       final mockClient = MockClient((request) async {
         if (request.url.path.contains('/messages/2')) {
@@ -61,13 +63,9 @@ void main() {
                   'forward_from_sender_id': null,
                   'forward_from_display_name': null,
                   'reactions': [],
-                }
+                },
               ],
-              'pagination': {
-                'limit': 100,
-                'hasMore': false,
-                'total': 1,
-              },
+              'pagination': {'limit': 100, 'hasMore': false, 'total': 1},
             }),
             200,
           );
@@ -83,9 +81,7 @@ void main() {
               ChangeNotifierProvider(
                 create: (_) => AuthService()..setToken(testToken),
               ),
-              ChangeNotifierProvider(
-                create: (_) => WsService(),
-              ),
+              ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: ChatScreen(peer: testPeer),
           ),
@@ -99,11 +95,14 @@ void main() {
       expect(find.byType(ChatScreen), findsOneWidget);
     });
 
-    testWidgets('ChatScreen sends message on button press', (WidgetTester tester) async {
+    testWidgets('ChatScreen sends message on button press', (
+      WidgetTester tester,
+    ) async {
       bool messageSent = false;
 
       final mockClient = MockClient((request) async {
-        if (request.method == 'POST' && request.url.path.contains('/messages')) {
+        if (request.method == 'POST' &&
+            request.url.path.contains('/messages')) {
           messageSent = true;
           return http.Response(
             jsonEncode({
@@ -141,9 +140,7 @@ void main() {
               ChangeNotifierProvider(
                 create: (_) => AuthService()..setToken(testToken),
               ),
-              ChangeNotifierProvider(
-                create: (_) => WsService(),
-              ),
+              ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: ChatScreen(peer: testPeer),
           ),
@@ -172,13 +169,12 @@ void main() {
       // (в реальном тесте нужно проверить через мок API)
     });
 
-    testWidgets('ChatScreen handles loading error', (WidgetTester tester) async {
+    testWidgets('ChatScreen handles loading error', (
+      WidgetTester tester,
+    ) async {
       final mockClient = MockClient((request) async {
         if (request.url.path.contains('/messages/2')) {
-          return http.Response(
-            jsonEncode({'error': 'Ошибка загрузки'}),
-            500,
-          );
+          return http.Response(jsonEncode({'error': 'Ошибка загрузки'}), 500);
         }
         return http.Response('{}', 200);
       });
@@ -190,9 +186,7 @@ void main() {
               ChangeNotifierProvider(
                 create: (_) => AuthService()..setToken(testToken),
               ),
-              ChangeNotifierProvider(
-                create: (_) => WsService(),
-              ),
+              ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: ChatScreen(peer: testPeer),
           ),
@@ -205,17 +199,15 @@ void main() {
       expect(find.byType(ChatScreen), findsOneWidget);
     });
 
-    testWidgets('ChatScreen handles empty message list', (WidgetTester tester) async {
+    testWidgets('ChatScreen handles empty message list', (
+      WidgetTester tester,
+    ) async {
       final mockClient = MockClient((request) async {
         if (request.url.path.contains('/messages/2')) {
           return http.Response(
             jsonEncode({
               'data': [],
-              'pagination': {
-                'limit': 100,
-                'hasMore': false,
-                'total': 0,
-              },
+              'pagination': {'limit': 100, 'hasMore': false, 'total': 0},
             }),
             200,
           );
@@ -230,9 +222,7 @@ void main() {
               ChangeNotifierProvider(
                 create: (_) => AuthService()..setToken(testToken),
               ),
-              ChangeNotifierProvider(
-                create: (_) => WsService(),
-              ),
+              ChangeNotifierProvider(create: (_) => WsService()),
             ],
             child: ChatScreen(peer: testPeer),
           ),

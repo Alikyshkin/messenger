@@ -43,19 +43,18 @@ class AppUpdateBanner extends StatelessWidget {
                     Text(
                       'Приложение обновилось',
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.onPrimaryContainer,
-                          ),
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
                     ),
                     if (updateService.latestVersion != null)
                       Text(
                         'Доступна версия ${updateService.latestVersion}',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onPrimaryContainer
-                                  .withOpacity(0.7),
-                            ),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                        ),
                       ),
                   ],
                 ),
@@ -64,14 +63,19 @@ class AppUpdateBanner extends StatelessWidget {
               TextButton(
                 onPressed: () => updateService.dismissUpdate(),
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: Text(
                   'Закрыть',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onPrimaryContainer.withOpacity(0.7),
                     fontSize: 13,
                   ),
                 ),
@@ -80,14 +84,14 @@ class AppUpdateBanner extends StatelessWidget {
               FilledButton(
                 onPressed: () => updateService.updateApp(),
                 style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                child: const Text(
-                  'Обновить',
-                  style: TextStyle(fontSize: 13),
-                ),
+                child: const Text('Обновить', style: TextStyle(fontSize: 13)),
               ),
             ],
           ),

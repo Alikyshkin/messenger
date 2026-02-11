@@ -23,15 +23,17 @@ class _AddContactScreenState extends State<AddContactScreen> {
   Future<void> _add(User u) async {
     setState(() => _error = null);
     try {
-      final added = await Api(context.read<AuthService>().token).addContact(u.username);
+      final added = await Api(
+        context.read<AuthService>().token,
+      ).addContact(u.username);
       if (!mounted) return;
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.tr('request_sent'))),
-      );
-      Navigator.of(context).push(
-        AppPageRoute(builder: (_) => ChatScreen(peer: added)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('request_sent'))));
+      Navigator.of(
+        context,
+      ).push(AppPageRoute(builder: (_) => ChatScreen(peer: added)));
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _error = e.message);

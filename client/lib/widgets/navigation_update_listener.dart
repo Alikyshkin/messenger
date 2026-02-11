@@ -28,25 +28,28 @@ class NavigationUpdateObserver extends NavigatorObserver {
 
   void _checkForUpdatesIfHome(Route<dynamic>? route) {
     if (route == null) return;
-    
+
     // Проверяем, является ли это главным экраном (путь "/")
     final routeSettings = route.settings;
     final routeName = routeSettings.name;
-    
+
     // Проверяем обновления только при переходе на главный экран
     if (routeName != '/' && routeName != null && !routeName.startsWith('/')) {
       return; // Не главный экран, пропускаем проверку
     }
-    
+
     // Используем Future.microtask чтобы не блокировать навигацию
     Future.microtask(() {
       try {
         // Получаем контекст из route после микротаска
         final navigatorContext = route.navigator?.context;
         if (navigatorContext == null) return;
-        
+
         // Проверяем обновления при навигации на главный экран
-        final updateService = Provider.of<AppUpdateService>(navigatorContext, listen: false);
+        final updateService = Provider.of<AppUpdateService>(
+          navigatorContext,
+          listen: false,
+        );
         updateService.checkForUpdates();
       } catch (_) {
         // Игнорируем ошибки если сервис недоступен или контекст недоступен

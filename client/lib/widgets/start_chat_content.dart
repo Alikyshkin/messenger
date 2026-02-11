@@ -10,14 +10,12 @@ import 'user_search_widget.dart';
 /// Виджет содержимого экрана нового чата без Scaffold для встраивания в HomeScreen
 class StartChatContent extends StatelessWidget {
   final NavigatorState? navigator;
-  
+
   const StartChatContent({super.key, this.navigator});
 
   void _openChat(BuildContext context, User u) {
     final nav = navigator ?? Navigator.of(context);
-    nav.push(
-      AppPageRoute(builder: (_) => ChatScreen(peer: u)),
-    );
+    nav.push(AppPageRoute(builder: (_) => ChatScreen(peer: u)));
   }
 
   @override
@@ -34,9 +32,9 @@ class StartChatContent extends StatelessWidget {
                 padding: const EdgeInsets.only(left: 16),
                 child: Text(
                   context.tr('new_chat'),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
             ],

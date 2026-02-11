@@ -111,7 +111,12 @@ class AuthService extends ChangeNotifier {
     await _ensureE2EEKeys();
   }
 
-  Future<void> register(String username, String password, [String? displayName, String? email]) async {
+  Future<void> register(
+    String username,
+    String password, [
+    String? displayName,
+    String? email,
+  ]) async {
     final api = Api('');
     await api.register(username, password, displayName, email);
     final res = await api.login(username, password);

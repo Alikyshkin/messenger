@@ -13,7 +13,7 @@ class MinimizedCallWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final service = context.watch<CallMinimizedService>();
-    
+
     if (!service.isMinimized) {
       return const SizedBox.shrink();
     }
@@ -48,15 +48,22 @@ class MinimizedCallWidget extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 24,
-                        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                        backgroundImage: group.avatarUrl != null && group.avatarUrl!.isNotEmpty
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primaryContainer,
+                        backgroundImage:
+                            group.avatarUrl != null &&
+                                group.avatarUrl!.isNotEmpty
                             ? NetworkImage(group.avatarUrl!)
                             : null,
-                        child: group.avatarUrl == null || group.avatarUrl!.isEmpty
+                        child:
+                            group.avatarUrl == null || group.avatarUrl!.isEmpty
                             ? Icon(
                                 Icons.group,
                                 size: 24,
-                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer,
                               )
                             : null,
                       ),
@@ -69,7 +76,12 @@ class MinimizedCallWidget extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.green,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Theme.of(context).colorScheme.surfaceContainerHighest, width: 2),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -78,10 +90,7 @@ class MinimizedCallWidget extends StatelessWidget {
                 else if (peer != null)
                   Stack(
                     children: [
-                      UserAvatar(
-                        user: peer,
-                        radius: 24,
-                      ),
+                      UserAvatar(user: peer, radius: 24),
                       Positioned(
                         bottom: 0,
                         right: 0,
@@ -91,7 +100,12 @@ class MinimizedCallWidget extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.green,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Theme.of(context).colorScheme.surfaceContainerHighest, width: 2),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
@@ -120,14 +134,19 @@ class MinimizedCallWidget extends StatelessWidget {
                           Icon(
                             isVideoCall ? Icons.videocam : Icons.phone,
                             size: 14,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             isVideoCall ? 'Видеозвонок' : 'Аудиозвонок',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
                           ),
                         ],
                       ),
@@ -156,15 +175,13 @@ class MinimizedCallWidget extends StatelessWidget {
 
   void _expandCall(BuildContext context, CallMinimizedService service) {
     service.expandCall();
-    
+
     // Навигация к экрану звонка
     if (service.isGroupCall && service.group != null) {
       Navigator.of(context).push(
         AppPageRoute(
-          builder: (_) => GroupCallScreen(
-            group: service.group!,
-            isIncoming: false,
-          ),
+          builder: (_) =>
+              GroupCallScreen(group: service.group!, isIncoming: false),
         ),
       );
     } else if (service.peer != null) {

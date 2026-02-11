@@ -35,14 +35,10 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-enum _NavigationItem {
-  chats,
-  contacts,
-  newChat,
-  profile,
-}
+enum _NavigationItem { chats, contacts, newChat, profile }
 
-class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with AutomaticKeepAliveClientMixin {
   List<ChatPreview> _chats = [];
   bool _loading = true;
   String? _error;
@@ -66,14 +62,14 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final ws = context.read<WsService>();
         ws.connect(context.read<AuthService>().token);
-        
+
         // Проверяем обновления при возврате на главный экран
         try {
           context.read<AppUpdateService>().checkForUpdates();
         } catch (_) {
           // Игнорируем ошибки проверки обновлений
         }
-        
+
         _load();
         _loadFriendRequests();
         _newMessageSub = ws.onNewMessage.listen((_) {
@@ -90,7 +86,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               : (msg.senderDisplayName ?? 'Сообщение');
           final preview = msg.content.isEmpty
               ? (msg.hasAttachment ? 'Вложение' : '—')
-              : (msg.content.length > 50 ? '${msg.content.substring(0, 50)}…' : msg.content);
+              : (msg.content.length > 50
+                    ? '${msg.content.substring(0, 50)}…'
+                    : msg.content);
           showPageNotification(
             title: 'Новое сообщение',
             body: '$from: $preview',
@@ -132,8 +130,11 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       }
       if (!mounted) return;
       // Подсчитываем общее количество непрочитанных сообщений
-      final totalUnread = list.fold<int>(0, (sum, chat) => sum + chat.unreadCount);
-      
+      final totalUnread = list.fold<int>(
+        0,
+        (sum, chat) => sum + chat.unreadCount,
+      );
+
       setState(() {
         _chats = list;
         _loading = false;
@@ -213,13 +214,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
           navigator: _navigatorKey.currentState,
         );
       case _NavigationItem.newChat:
-        return StartChatContent(
-          navigator: _navigatorKey.currentState,
-        );
+        return StartChatContent(navigator: _navigatorKey.currentState);
       case _NavigationItem.profile:
-        return ProfileContent(
-          navigator: _navigatorKey.currentState,
-        );
+        return ProfileContent(navigator: _navigatorKey.currentState);
     }
   }
 
@@ -236,9 +233,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                 padding: const EdgeInsets.only(left: 16),
                 child: Text(
                   context.tr('chats'),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -252,113 +249,136 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                 ? ListView.builder(
                     padding: AppSpacing.listPadding,
                     itemCount: 10,
-                    itemBuilder: (_, __) => const Card(child: SkeletonChatTile()),
+                    itemBuilder: (_, __) =>
+                        const Card(child: SkeletonChatTile()),
                   )
                 : _error != null && _chats.isEmpty
-                    ? ErrorStateWidget(
-                        message: _error!,
-                        onRetry: _load,
-                        retryLabel: context.tr('retry'),
-                      )
-                    : _chats.isEmpty
-                        ? EmptyStateWidget(message: context.tr('no_chats'))
-                        : ListView.builder(
-                            padding: AppSpacing.listPadding,
-                            itemCount: _chats.length,
-                            itemBuilder: (context, i) {
-                              final c = _chats[i];
-                              final unread = c.unreadCount;
-                              final isGroup = c.isGroup;
-                              final title = isGroup ? (c.group!.name) : (c.peer!.displayName);
-                              final avatarUrl = isGroup ? c.group!.avatarUrl : c.peer!.avatarUrl;
-                              String subtitleText = '';
-                              if (c.lastMessage != null) {
-                                if (c.lastMessage!.isMine) {
-                                  subtitleText = '${context.tr('you_prefix')}${c.lastMessage!.isPoll ? context.tr('poll_prefix') : ''}${_previewContent(context, c.lastMessage!.content)}';
-                                } else {
-                                  final prefix = isGroup && c.lastMessage!.senderDisplayName != null
-                                      ? '${c.lastMessage!.senderDisplayName}: '
-                                      : '';
-                                  subtitleText = '$prefix${c.lastMessage!.isPoll ? context.tr('poll_prefix') : ''}${_previewContent(context, c.lastMessage!.content)}';
-                                }
-                              }
-                              return Card(
-                                margin: EdgeInsets.only(bottom: AppSpacing.sm),
-                                child: ListTile(
-                                  contentPadding: AppSpacing.cardPadding,
-                                  leading: CircleAvatar(
-                                    radius: AppSizes.avatarLG,
-                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                    backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                                        ? NetworkImage(avatarUrl)
-                                        : null,
-                                    child: avatarUrl == null || avatarUrl.isEmpty
-                                        ? Icon(
-                                            isGroup ? Icons.group : Icons.person,
-                                            size: AppSizes.iconXXL,
-                                            color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
-                                          )
-                                        : null,
-                                  ),
-                                  title: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          title,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 16,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                      if (unread > 0)
-                                        Container(
-                                          padding: EdgeInsets.symmetric(
-                                            horizontal: AppSpacing.sm,
-                                            vertical: AppSpacing.xs,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context).colorScheme.primary,
-                                            borderRadius: BorderRadius.circular(AppSizes.radiusLG),
-                                          ),
-                                          child: Text(
-                                            unread > 99 ? '99+' : '$unread',
-                                            style: TextStyle(
-                                              color: Theme.of(context).colorScheme.onPrimary,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                  subtitle: c.lastMessage != null
-                                      ? Padding(
-                                          padding: EdgeInsets.only(top: AppSpacing.xs),
-                                          child: Text(
-                                            subtitleText,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        )
-                                      : null,
-                                  onTap: () async {
-                                    if (isGroup) {
-                                      await context.push('/group/${c.group!.id}');
-                                    } else {
-                                      await context.push('/chat/${c.peer!.id}');
-                                    }
-                                    _load();
-                                  },
-                                ),
-                              );
-                            },
+                ? ErrorStateWidget(
+                    message: _error!,
+                    onRetry: _load,
+                    retryLabel: context.tr('retry'),
+                  )
+                : _chats.isEmpty
+                ? EmptyStateWidget(message: context.tr('no_chats'))
+                : ListView.builder(
+                    padding: AppSpacing.listPadding,
+                    itemCount: _chats.length,
+                    itemBuilder: (context, i) {
+                      final c = _chats[i];
+                      final unread = c.unreadCount;
+                      final isGroup = c.isGroup;
+                      final title = isGroup
+                          ? (c.group!.name)
+                          : (c.peer!.displayName);
+                      final avatarUrl = isGroup
+                          ? c.group!.avatarUrl
+                          : c.peer!.avatarUrl;
+                      String subtitleText = '';
+                      if (c.lastMessage != null) {
+                        if (c.lastMessage!.isMine) {
+                          subtitleText =
+                              '${context.tr('you_prefix')}${c.lastMessage!.isPoll ? context.tr('poll_prefix') : ''}${_previewContent(context, c.lastMessage!.content)}';
+                        } else {
+                          final prefix =
+                              isGroup &&
+                                  c.lastMessage!.senderDisplayName != null
+                              ? '${c.lastMessage!.senderDisplayName}: '
+                              : '';
+                          subtitleText =
+                              '$prefix${c.lastMessage!.isPoll ? context.tr('poll_prefix') : ''}${_previewContent(context, c.lastMessage!.content)}';
+                        }
+                      }
+                      return Card(
+                        margin: EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: ListTile(
+                          contentPadding: AppSpacing.cardPadding,
+                          leading: CircleAvatar(
+                            radius: AppSizes.avatarLG,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
+                            backgroundImage:
+                                avatarUrl != null && avatarUrl.isNotEmpty
+                                ? NetworkImage(avatarUrl)
+                                : null,
+                            child: avatarUrl == null || avatarUrl.isEmpty
+                                ? Icon(
+                                    isGroup ? Icons.group : Icons.person,
+                                    size: AppSizes.iconXXL,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onPrimaryContainer
+                                        .withOpacity(0.7),
+                                  )
+                                : null,
                           ),
+                          title: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (unread > 0)
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.sm,
+                                    vertical: AppSpacing.xs,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    borderRadius: BorderRadius.circular(
+                                      AppSizes.radiusLG,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    unread > 99 ? '99+' : '$unread',
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          subtitle: c.lastMessage != null
+                              ? Padding(
+                                  padding: EdgeInsets.only(top: AppSpacing.xs),
+                                  child: Text(
+                                    subtitleText,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                )
+                              : null,
+                          onTap: () async {
+                            if (isGroup) {
+                              await context.push('/group/${c.group!.id}');
+                            } else {
+                              await context.push('/chat/${c.peer!.id}');
+                            }
+                            _load();
+                          },
+                        ),
+                      );
+                    },
+                  ),
           ),
         ),
       ],
@@ -370,251 +390,274 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     return OfflineIndicator(
       child: Scaffold(
-            appBar: AppBar(
-              title: Text(_getAppBarTitle(context)),
-            ),
-            body: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Левая навигация: профиль, чаты, друзья, новый чат, внизу выход
-                Container(
-                  width: AppSizes.navigationWidth,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerLowest,
-                    border: Border(
-                      right: BorderSide(
-                        color: Theme.of(context).dividerColor,
-                        width: 1,
-                      ),
-                    ),
+        appBar: AppBar(title: Text(_getAppBarTitle(context))),
+        body: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Левая навигация: профиль, чаты, друзья, новый чат, внизу выход
+            Container(
+              width: AppSizes.navigationWidth,
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                border: Border(
+                  right: BorderSide(
+                    color: Theme.of(context).dividerColor,
+                    width: 1,
                   ),
-                  child: Column(
-                    children: [
-                      AppSpacing.spacingVerticalSM,
-                      Builder(
-                        builder: (context) {
-                          return Consumer<AuthService>(
-                            builder: (context, auth, _) {
-                              final user = auth.user;
-                              final isActive = _currentView == _NavigationItem.profile;
-                              return IconButton(
-                                icon: (user != null && (user.avatarUrl?.isNotEmpty ?? false))
-                                    ? UserAvatar(
-                                        user: user,
-                                        radius: AppSizes.avatarSM,
-                                      )
-                                    : Icon(
-                                        Icons.account_circle_outlined,
-                                        size: AppSizes.iconXL,
-                                        color: isActive
-                                            ? Theme.of(context).colorScheme.primary
-                                            : null,
-                                      ),
-                                tooltip: context.tr('my_profile'),
-                                style: IconButton.styleFrom(
-                                  backgroundColor: isActive
-                                      ? Theme.of(context).colorScheme.primaryContainer
-                                      : null,
-                                ),
-                                onPressed: () {
-                                  if (mounted && _currentView != _NavigationItem.profile) {
-                                    setState(() {
-                                      _currentView = _NavigationItem.profile;
-                                    });
-                                  }
-                                },
-                              );
+                ),
+              ),
+              child: Column(
+                children: [
+                  AppSpacing.spacingVerticalSM,
+                  Builder(
+                    builder: (context) {
+                      return Consumer<AuthService>(
+                        builder: (context, auth, _) {
+                          final user = auth.user;
+                          final isActive =
+                              _currentView == _NavigationItem.profile;
+                          return IconButton(
+                            icon:
+                                (user != null &&
+                                    (user.avatarUrl?.isNotEmpty ?? false))
+                                ? UserAvatar(
+                                    user: user,
+                                    radius: AppSizes.avatarSM,
+                                  )
+                                : Icon(
+                                    Icons.account_circle_outlined,
+                                    size: AppSizes.iconXL,
+                                    color: isActive
+                                        ? Theme.of(context).colorScheme.primary
+                                        : null,
+                                  ),
+                            tooltip: context.tr('my_profile'),
+                            style: IconButton.styleFrom(
+                              backgroundColor: isActive
+                                  ? Theme.of(
+                                      context,
+                                    ).colorScheme.primaryContainer
+                                  : null,
+                            ),
+                            onPressed: () {
+                              if (mounted &&
+                                  _currentView != _NavigationItem.profile) {
+                                setState(() {
+                                  _currentView = _NavigationItem.profile;
+                                });
+                              }
                             },
                           );
                         },
-                      ),
-                      IconButton(
-                        icon: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Icon(
-                              Icons.chat_outlined,
-                              size: AppSizes.iconXL,
-                              color: _currentView == _NavigationItem.chats
-                                  ? Theme.of(context).colorScheme.primary
-                                  : null,
-                            ),
-                            if (_totalUnreadCount > 0)
-                              Positioned(
-                                right: -AppSpacing.xs,
-                                top: -AppSpacing.xs,
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.md,
-                                    vertical: AppSpacing.xs,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    borderRadius: BorderRadius.circular(AppSizes.radiusMD),
-                                  ),
-                                  child: Text(
-                                    _totalUnreadCount > 99 ? '99+' : '$_totalUnreadCount',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        tooltip: context.tr('chats'),
-                        style: IconButton.styleFrom(
-                          backgroundColor: _currentView == _NavigationItem.chats
-                              ? Theme.of(context).colorScheme.primaryContainer
-                              : null,
-                        ),
-                        onPressed: () {
-                          if (mounted && _currentView != _NavigationItem.chats) {
-                            setState(() {
-                              _currentView = _NavigationItem.chats;
-                            });
-                          }
-                        },
-                      ),
-                      IconButton(
-                        icon: Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Icon(
-                              Icons.people_outline,
-                              size: AppSizes.iconXL,
-                              color: _currentView == _NavigationItem.contacts
-                                  ? Theme.of(context).colorScheme.primary
-                                  : null,
-                            ),
-                            if (_friendRequests.isNotEmpty)
-                              Positioned(
-                                right: -AppSpacing.xs,
-                                top: -AppSpacing.xs,
-                                child: Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.md,
-                                    vertical: AppSpacing.xs,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    borderRadius: BorderRadius.circular(AppSizes.radiusMD),
-                                  ),
-                                  child: Text(
-                                    _friendRequests.length > 99 ? '99+' : '${_friendRequests.length}',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        tooltip: context.tr('contacts'),
-                        style: IconButton.styleFrom(
-                          backgroundColor: _currentView == _NavigationItem.contacts
-                              ? Theme.of(context).colorScheme.primaryContainer
-                              : null,
-                        ),
-                        onPressed: () {
-                          if (mounted && _currentView != _NavigationItem.contacts) {
-                            setState(() {
-                              _currentView = _NavigationItem.contacts;
-                            });
-                          }
-                        },
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.edit_outlined,
-                          size: AppSizes.iconXL,
-                          color: _currentView == _NavigationItem.newChat
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
-                        ),
-                        tooltip: context.tr('new_chat'),
-                        style: IconButton.styleFrom(
-                          backgroundColor: _currentView == _NavigationItem.newChat
-                              ? Theme.of(context).colorScheme.primaryContainer
-                              : null,
-                        ),
-                        onPressed: () {
-                          if (mounted && _currentView != _NavigationItem.newChat) {
-                            setState(() {
-                              _currentView = _NavigationItem.newChat;
-                            });
-                          }
-                        },
-                      ),
-                      const Spacer(),
-                      Padding(
-                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: Text(
-                          'v${AppVersion.displayVersion}',
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.settings, size: AppSizes.iconXL),
-                        tooltip: context.tr('settings'),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                          );
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.logout, size: AppSizes.iconXL),
-                        tooltip: context.tr('logout'),
-                        onPressed: () async {
-                          final ok = await showDialog<bool>(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: Text(context.tr('logout_confirm')),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(false),
-                                  child: Text(context.tr('cancel')),
-                                ),
-                                FilledButton(
-                                  onPressed: () => Navigator.of(ctx).pop(true),
-                                  child: Text(context.tr('logout')),
-                                ),
-                              ],
-                            ),
-                          );
-                          if (ok == true && mounted) {
-                            await context.read<AuthService>().logout();
-                            if (!mounted) return;
-                            context.go('/login');
-                          }
-                        },
-                      ),
-                      AppSpacing.spacingVerticalSM,
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Navigator(
-                    key: _navigatorKey,
-                    onGenerateRoute: (settings) {
-                      return MaterialPageRoute(
-                        builder: (context) => _buildContentView(context),
-                        settings: settings,
                       );
                     },
                   ),
-                ),
-              ],
+                  IconButton(
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(
+                          Icons.chat_outlined,
+                          size: AppSizes.iconXL,
+                          color: _currentView == _NavigationItem.chats
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        if (_totalUnreadCount > 0)
+                          Positioned(
+                            right: -AppSpacing.xs,
+                            top: -AppSpacing.xs,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: AppSpacing.xs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusMD,
+                                ),
+                              ),
+                              child: Text(
+                                _totalUnreadCount > 99
+                                    ? '99+'
+                                    : '$_totalUnreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    tooltip: context.tr('chats'),
+                    style: IconButton.styleFrom(
+                      backgroundColor: _currentView == _NavigationItem.chats
+                          ? Theme.of(context).colorScheme.primaryContainer
+                          : null,
+                    ),
+                    onPressed: () {
+                      if (mounted && _currentView != _NavigationItem.chats) {
+                        setState(() {
+                          _currentView = _NavigationItem.chats;
+                        });
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Icon(
+                          Icons.people_outline,
+                          size: AppSizes.iconXL,
+                          color: _currentView == _NavigationItem.contacts
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
+                        if (_friendRequests.isNotEmpty)
+                          Positioned(
+                            right: -AppSpacing.xs,
+                            top: -AppSpacing.xs,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSpacing.md,
+                                vertical: AppSpacing.xs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.radiusMD,
+                                ),
+                              ),
+                              child: Text(
+                                _friendRequests.length > 99
+                                    ? '99+'
+                                    : '${_friendRequests.length}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    tooltip: context.tr('contacts'),
+                    style: IconButton.styleFrom(
+                      backgroundColor: _currentView == _NavigationItem.contacts
+                          ? Theme.of(context).colorScheme.primaryContainer
+                          : null,
+                    ),
+                    onPressed: () {
+                      if (mounted && _currentView != _NavigationItem.contacts) {
+                        setState(() {
+                          _currentView = _NavigationItem.contacts;
+                        });
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.edit_outlined,
+                      size: AppSizes.iconXL,
+                      color: _currentView == _NavigationItem.newChat
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                    tooltip: context.tr('new_chat'),
+                    style: IconButton.styleFrom(
+                      backgroundColor: _currentView == _NavigationItem.newChat
+                          ? Theme.of(context).colorScheme.primaryContainer
+                          : null,
+                    ),
+                    onPressed: () {
+                      if (mounted && _currentView != _NavigationItem.newChat) {
+                        setState(() {
+                          _currentView = _NavigationItem.newChat;
+                        });
+                      }
+                    },
+                  ),
+                  const Spacer(),
+                  Padding(
+                    padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Text(
+                      'v${AppVersion.displayVersion}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.settings, size: AppSizes.iconXL),
+                    tooltip: context.tr('settings'),
+                    onPressed: () {
+                      final nav =
+                          _navigatorKey.currentState ?? Navigator.of(context);
+                      nav.push(
+                        MaterialPageRoute(
+                          builder: (_) => SettingsScreen(
+                            navigator: _navigatorKey.currentState,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.logout, size: AppSizes.iconXL),
+                    tooltip: context.tr('logout'),
+                    onPressed: () async {
+                      final navigator = _navigatorKey.currentState;
+                      if (navigator == null) return;
+                      final ok = await showDialog<bool>(
+                        context: navigator.context,
+                        useRootNavigator: false,
+                        builder: (ctx) => AlertDialog(
+                          title: Text(context.tr('logout_confirm')),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: Text(context.tr('cancel')),
+                            ),
+                            FilledButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: Text(context.tr('logout')),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (ok == true && mounted) {
+                        await context.read<AuthService>().logout();
+                        if (!mounted) return;
+                        context.go('/login');
+                      }
+                    },
+                  ),
+                  AppSpacing.spacingVerticalSM,
+                ],
+              ),
             ),
+            Expanded(
+              child: Navigator(
+                key: _navigatorKey,
+                onGenerateRoute: (settings) {
+                  return MaterialPageRoute(
+                    builder: (context) => _buildContentView(context),
+                    settings: settings,
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -12,16 +12,12 @@ import '../widgets/app_back_button.dart';
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
 
-enum _SettingsCategory {
-  profile,
-  appearance,
-  security,
-  storage,
-  danger,
-}
+enum _SettingsCategory { profile, appearance, security, storage, danger }
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final NavigatorState? navigator;
+
+  const SettingsScreen({super.key, this.navigator});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -40,6 +36,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _passwordVisible = false;
   String? _error;
   int _cacheSizeBytes = 0;
+
   /// День рождения в формате YYYY-MM-DD или null если не указан.
   String? _birthday;
   _SettingsCategory _currentCategory = _SettingsCategory.profile;
@@ -64,9 +61,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final parts = iso.split('-');
     if (parts.length != 3) return iso;
     final months = [
-      context.tr('jan'), context.tr('feb'), context.tr('mar'), context.tr('apr'),
-      context.tr('may'), context.tr('jun'), context.tr('jul'), context.tr('aug'),
-      context.tr('sep'), context.tr('oct'), context.tr('nov'), context.tr('dec'),
+      context.tr('jan'),
+      context.tr('feb'),
+      context.tr('mar'),
+      context.tr('apr'),
+      context.tr('may'),
+      context.tr('jun'),
+      context.tr('jul'),
+      context.tr('aug'),
+      context.tr('sep'),
+      context.tr('oct'),
+      context.tr('nov'),
+      context.tr('dec'),
     ];
     final day = int.tryParse(parts[2]) ?? 0;
     final month = int.tryParse(parts[1]);
@@ -94,7 +100,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       helpText: context.tr('birthday_help'),
     );
     if (picked == null || !mounted) return;
-    setState(() => _birthday = '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}');
+    setState(
+      () => _birthday =
+          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}',
+    );
   }
 
   Future<void> _loadCacheSize() async {
@@ -107,15 +116,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final newPw = _newPasswordController.text;
     final confirm = _confirmPasswordController.text;
     if (current.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('enter_current_password'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('enter_current_password'))),
+      );
       return;
     }
     if (newPw.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('new_password_min'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('new_password_min'))));
       return;
     }
     if (newPw != confirm) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('passwords_dont_match'))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(context.tr('passwords_dont_match'))),
+      );
       return;
     }
     setState(() => _loading = true);
@@ -127,15 +142,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _confirmPasswordController.clear();
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('password_changed'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('password_changed'))));
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('connection_error'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('connection_error'))));
     }
   }
 
@@ -161,17 +182,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final auth = context.read<AuthService>();
       final api = Api(auth.token);
       await api.patchMe(
-        displayName: _displayNameController.text.trim().isEmpty ? null : _displayNameController.text.trim(),
-        username: _usernameController.text.trim().isEmpty ? null : _usernameController.text.trim(),
-        bio: _bioController.text.trim().isEmpty ? null : _bioController.text.trim(),
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+        displayName: _displayNameController.text.trim().isEmpty
+            ? null
+            : _displayNameController.text.trim(),
+        username: _usernameController.text.trim().isEmpty
+            ? null
+            : _usernameController.text.trim(),
+        bio: _bioController.text.trim().isEmpty
+            ? null
+            : _bioController.text.trim(),
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
         phone: _phoneController.text.trim().replaceAll(RegExp(r'\D'), ''),
         birthday: _birthday ?? '',
       );
       await auth.refreshUser();
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('profile_saved'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('profile_saved'))));
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -199,12 +230,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await auth.refreshUser();
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('photo_updated'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('photo_updated'))));
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e is ApiException ? e.message : context.tr('upload_photo_error');
+        _error = e is ApiException
+            ? e.message
+            : context.tr('upload_photo_error');
       });
     }
   }
@@ -243,7 +278,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
     final u = auth.user;
-    if (u == null) return Scaffold(body: Center(child: Text(context.tr('not_authorized'))));
+    if (u == null)
+      return Scaffold(body: Center(child: Text(context.tr('not_authorized'))));
 
     return Scaffold(
       appBar: AppBar(
@@ -284,11 +320,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 AppSpacing.spacingVerticalSM,
-                _buildCategoryButton(context, _SettingsCategory.profile, Icons.person_outline),
-                _buildCategoryButton(context, _SettingsCategory.appearance, Icons.palette_outlined),
-                _buildCategoryButton(context, _SettingsCategory.security, Icons.lock_outline),
-                _buildCategoryButton(context, _SettingsCategory.storage, Icons.storage_outlined),
-                _buildCategoryButton(context, _SettingsCategory.danger, Icons.warning_amber_outlined),
+                _buildCategoryButton(
+                  context,
+                  _SettingsCategory.profile,
+                  Icons.person_outline,
+                ),
+                _buildCategoryButton(
+                  context,
+                  _SettingsCategory.appearance,
+                  Icons.palette_outlined,
+                ),
+                _buildCategoryButton(
+                  context,
+                  _SettingsCategory.security,
+                  Icons.lock_outline,
+                ),
+                _buildCategoryButton(
+                  context,
+                  _SettingsCategory.storage,
+                  Icons.storage_outlined,
+                ),
+                _buildCategoryButton(
+                  context,
+                  _SettingsCategory.danger,
+                  Icons.warning_amber_outlined,
+                ),
                 const Spacer(),
               ],
             ),
@@ -307,17 +363,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         padding: const EdgeInsets.only(left: 16),
                         child: Text(
                           _getCategoryTitle(context, _currentCategory),
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Expanded(
-                  child: _buildContentView(context),
-                ),
+                Expanded(child: _buildContentView(context)),
               ],
             ),
           ),
@@ -326,15 +379,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildCategoryButton(BuildContext context, _SettingsCategory category, IconData icon) {
+  Widget _buildCategoryButton(
+    BuildContext context,
+    _SettingsCategory category,
+    IconData icon,
+  ) {
     final isActive = _currentCategory == category;
     return IconButton(
       icon: Icon(
         icon,
         size: AppSizes.iconXL,
-        color: isActive
-            ? Theme.of(context).colorScheme.primary
-            : null,
+        color: isActive ? Theme.of(context).colorScheme.primary : null,
       ),
       tooltip: _getCategoryTitle(context, category),
       style: IconButton.styleFrom(
@@ -360,151 +415,167 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return ListView(
       padding: AppSpacing.screenPaddingVertical,
       children: [
-          Center(
-            child: GestureDetector(
-              onTap: _loading ? null : _pickAndUploadAvatar,
-              child: Stack(
-                alignment: Alignment.bottomRight,
-                children: [
-                  CircleAvatar(
-                    radius: 52,
-                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    backgroundImage: u.avatarUrl != null && u.avatarUrl!.isNotEmpty
-                        ? NetworkImage(u.avatarUrl!)
-                        : null,
-                    child: u.avatarUrl == null || u.avatarUrl!.isEmpty
-                        ? Text(
-                            u.displayName.isNotEmpty ? u.displayName[0].toUpperCase() : '@',
-                            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          )
-                        : null,
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.camera_alt, size: 20, color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: Text(
-              context.tr('tap_to_change_photo'),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                _error!,
-                style: TextStyle(color: Theme.of(context).colorScheme.error),
-              ),
-            ),
-          TextField(
-            controller: _displayNameController,
-            decoration: InputDecoration(
-              labelText: context.tr('display_name_label'),
-              hintText: context.tr('display_name_hint'),
-            ),
-            textCapitalization: TextCapitalization.words,
-            enableInteractiveSelection: true,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _usernameController,
-            decoration: InputDecoration(
-              labelText: context.tr('username_label'),
-              hintText: context.tr('username_hint'),
-              helperText: context.tr('username_helper'),
-            ),
-            autocorrect: false,
-            enableInteractiveSelection: true,
-            enableSuggestions: false,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _bioController,
-            decoration: InputDecoration(
-              labelText: context.tr('bio_label'),
-              hintText: context.tr('bio_hint'),
-              alignLabelWithHint: true,
-            ),
-            maxLines: 3,
-            maxLength: 256,
-            enableInteractiveSelection: true,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _emailController,
-            decoration: InputDecoration(
-              labelText: context.tr('email_label'),
-              hintText: context.tr('email_hint_recovery'),
-              border: const OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.emailAddress,
-            autocorrect: false,
-            enableInteractiveSelection: true,
-            enableSuggestions: false,
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _phoneController,
-            decoration: InputDecoration(
-              labelText: context.tr('phone_label'),
-              hintText: context.tr('phone_hint'),
-              helperText: context.tr('phone_helper'),
-            ),
-            keyboardType: TextInputType.phone,
-            autocorrect: false,
-            enableInteractiveSelection: true,
-            enableSuggestions: false,
-          ),
-          const SizedBox(height: 16),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            title: Text(context.tr('birthday')),
-            subtitle: Text(
-              _birthday != null && _birthday!.isNotEmpty ? _formatBirthday(context, _birthday!) : context.tr('birthday_not_set'),
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
+        Center(
+          child: GestureDetector(
+            onTap: _loading ? null : _pickAndUploadAvatar,
+            child: Stack(
+              alignment: Alignment.bottomRight,
               children: [
-                if (_birthday != null && _birthday!.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.clear),
-                    onPressed: _loading ? null : () => setState(() => _birthday = ''),
-                    tooltip: context.tr('reset'),
+                CircleAvatar(
+                  radius: 52,
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHighest,
+                  backgroundImage:
+                      u.avatarUrl != null && u.avatarUrl!.isNotEmpty
+                      ? NetworkImage(u.avatarUrl!)
+                      : null,
+                  child: u.avatarUrl == null || u.avatarUrl!.isEmpty
+                      ? Text(
+                          u.displayName.isNotEmpty
+                              ? u.displayName[0].toUpperCase()
+                              : '@',
+                          style: Theme.of(context).textTheme.headlineLarge
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                        )
+                      : null,
+                ),
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    shape: BoxShape.circle,
                   ),
-                IconButton(
-                  icon: const Icon(Icons.calendar_today_outlined),
-                  onPressed: _loading ? null : _pickBirthday,
-                  tooltip: context.tr('pick_date'),
+                  child: const Icon(
+                    Icons.camera_alt,
+                    size: 20,
+                    color: Colors.white,
+                  ),
                 ),
               ],
             ),
-            onTap: _loading ? null : _pickBirthday,
           ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: _loading ? null : _saveProfile,
-              icon: const Icon(Icons.save_outlined, size: 20),
-              label: Text(context.tr('save')),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: Text(
+            context.tr('tap_to_change_photo'),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
+        ),
+        const SizedBox(height: 24),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        TextField(
+          controller: _displayNameController,
+          decoration: InputDecoration(
+            labelText: context.tr('display_name_label'),
+            hintText: context.tr('display_name_hint'),
+          ),
+          textCapitalization: TextCapitalization.words,
+          enableInteractiveSelection: true,
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _usernameController,
+          decoration: InputDecoration(
+            labelText: context.tr('username_label'),
+            hintText: context.tr('username_hint'),
+            helperText: context.tr('username_helper'),
+          ),
+          autocorrect: false,
+          enableInteractiveSelection: true,
+          enableSuggestions: false,
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _bioController,
+          decoration: InputDecoration(
+            labelText: context.tr('bio_label'),
+            hintText: context.tr('bio_hint'),
+            alignLabelWithHint: true,
+          ),
+          maxLines: 3,
+          maxLength: 256,
+          enableInteractiveSelection: true,
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _emailController,
+          decoration: InputDecoration(
+            labelText: context.tr('email_label'),
+            hintText: context.tr('email_hint_recovery'),
+            border: const OutlineInputBorder(),
+          ),
+          keyboardType: TextInputType.emailAddress,
+          autocorrect: false,
+          enableInteractiveSelection: true,
+          enableSuggestions: false,
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _phoneController,
+          decoration: InputDecoration(
+            labelText: context.tr('phone_label'),
+            hintText: context.tr('phone_hint'),
+            helperText: context.tr('phone_helper'),
+          ),
+          keyboardType: TextInputType.phone,
+          autocorrect: false,
+          enableInteractiveSelection: true,
+          enableSuggestions: false,
+        ),
+        const SizedBox(height: 16),
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          title: Text(context.tr('birthday')),
+          subtitle: Text(
+            _birthday != null && _birthday!.isNotEmpty
+                ? _formatBirthday(context, _birthday!)
+                : context.tr('birthday_not_set'),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_birthday != null && _birthday!.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: _loading
+                      ? null
+                      : () => setState(() => _birthday = ''),
+                  tooltip: context.tr('reset'),
+                ),
+              IconButton(
+                icon: const Icon(Icons.calendar_today_outlined),
+                onPressed: _loading ? null : _pickBirthday,
+                tooltip: context.tr('pick_date'),
+              ),
+            ],
+          ),
+          onTap: _loading ? null : _pickBirthday,
+        ),
+        const SizedBox(height: 24),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: _loading ? null : _saveProfile,
+            icon: const Icon(Icons.save_outlined, size: 20),
+            label: Text(context.tr('save')),
+          ),
+        ),
       ],
     );
   }
@@ -541,14 +612,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ButtonSegment(
                       value: ThemeMode.system,
                       label: Text(context.tr('theme_system')),
-                      icon: const Icon(Icons.brightness_auto_outlined, size: 20),
+                      icon: const Icon(
+                        Icons.brightness_auto_outlined,
+                        size: 20,
+                      ),
                     ),
                   ],
                   selected: {context.watch<ThemeService>().themeMode},
                   onSelectionChanged: _loading
                       ? null
                       : (Set<ThemeMode> selected) {
-                          context.read<ThemeService>().setThemeMode(selected.first);
+                          context.read<ThemeService>().setThemeMode(
+                            selected.first,
+                          );
                         },
                 ),
               ],
@@ -557,14 +633,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(height: 16),
         ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
+          ),
           leading: const Icon(Icons.language),
           title: Text(context.tr('language')),
           subtitle: Text(
             (context.watch<LocaleService>().locale?.languageCode == 'en')
                 ? context.tr('language_en')
                 : context.tr('language_ru'),
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
           trailing: const Icon(Icons.chevron_right),
           onTap: _loading ? null : _showLanguagePicker,
@@ -583,8 +664,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             labelText: context.tr('current_password'),
             border: const OutlineInputBorder(),
             suffixIcon: IconButton(
-              icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
-              onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+              icon: Icon(
+                _passwordVisible ? Icons.visibility_off : Icons.visibility,
+              ),
+              onPressed: () =>
+                  setState(() => _passwordVisible = !_passwordVisible),
               tooltip: _passwordVisible ? 'Скрыть пароль' : 'Показать пароль',
             ),
           ),
@@ -600,8 +684,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             labelText: context.tr('new_password'),
             border: const OutlineInputBorder(),
             suffixIcon: IconButton(
-              icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
-              onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+              icon: Icon(
+                _passwordVisible ? Icons.visibility_off : Icons.visibility,
+              ),
+              onPressed: () =>
+                  setState(() => _passwordVisible = !_passwordVisible),
               tooltip: _passwordVisible ? 'Скрыть пароль' : 'Показать пароль',
             ),
           ),
@@ -617,8 +704,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             labelText: context.tr('confirm_password'),
             border: const OutlineInputBorder(),
             suffixIcon: IconButton(
-              icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
-              onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+              icon: Icon(
+                _passwordVisible ? Icons.visibility_off : Icons.visibility,
+              ),
+              onPressed: () =>
+                  setState(() => _passwordVisible = !_passwordVisible),
               tooltip: _passwordVisible ? 'Скрыть пароль' : 'Показать пароль',
             ),
           ),
@@ -680,7 +770,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: AppSpacing.screenPaddingVertical,
       children: [
         Card(
-          color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+          color: Theme.of(
+            context,
+          ).colorScheme.errorContainer.withValues(alpha: 0.3),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -716,14 +808,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showLanguagePicker() {
     final localeService = context.read<LocaleService>();
     final isEn = localeService.locale?.languageCode == 'en';
+    final navigator = widget.navigator;
+    final sheetContext = navigator?.context ?? context;
     showModalBottomSheet<void>(
-      context: context,
+      context: sheetContext,
+      useRootNavigator: navigator != null ? false : true,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Icon(Icons.check, color: !isEn ? Theme.of(ctx).colorScheme.primary : Colors.transparent),
+              leading: Icon(
+                Icons.check,
+                color: !isEn
+                    ? Theme.of(ctx).colorScheme.primary
+                    : Colors.transparent,
+              ),
               title: Text(context.tr('language_ru')),
               onTap: () {
                 localeService.setLocale(const Locale('ru'));
@@ -731,7 +831,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.check, color: isEn ? Theme.of(ctx).colorScheme.primary : Colors.transparent),
+              leading: Icon(
+                Icons.check,
+                color: isEn
+                    ? Theme.of(ctx).colorScheme.primary
+                    : Colors.transparent,
+              ),
               title: Text(context.tr('language_en')),
               onTap: () {
                 localeService.setLocale(const Locale('en'));
@@ -745,8 +850,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _deleteAccount() async {
+    final navigator = widget.navigator;
+    final dialogContext = navigator?.context ?? context;
     final confirm = await showDialog<bool>(
-      context: context,
+      context: dialogContext,
+      useRootNavigator: navigator != null ? false : true,
       builder: (ctx) => AlertDialog(
         title: Text(context.tr('delete_account_confirm_title')),
         content: Text(context.tr('delete_account_confirm_body')),
@@ -774,15 +882,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await auth.logout();
       if (!mounted) return;
       Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('account_deleted'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('account_deleted'))));
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('connection_error'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('connection_error'))));
     }
   }
 
@@ -795,8 +909,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _showClearCacheByChat() async {
     final chats = await LocalDb.getChats();
     if (!mounted) return;
+    final navigator = widget.navigator;
+    final sheetContext = navigator?.context ?? context;
     showModalBottomSheet<void>(
-      context: context,
+      context: sheetContext,
+      useRootNavigator: navigator != null ? false : true,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -819,14 +936,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   if (peer == null) return const SizedBox.shrink();
                   return ListTile(
                     leading: CircleAvatar(
-                      backgroundImage: peer.avatarUrl != null && peer.avatarUrl!.isNotEmpty
+                      backgroundImage:
+                          peer.avatarUrl != null && peer.avatarUrl!.isNotEmpty
                           ? NetworkImage(peer.avatarUrl!)
                           : null,
                       child: peer.avatarUrl == null || peer.avatarUrl!.isEmpty
-                          ? Text((peer.displayName.isNotEmpty ? peer.displayName[0] : '@').toUpperCase())
+                          ? Text(
+                              (peer.displayName.isNotEmpty
+                                      ? peer.displayName[0]
+                                      : '@')
+                                  .toUpperCase(),
+                            )
                           : null,
                     ),
-                    title: Text(peer.displayName.isNotEmpty ? peer.displayName : peer.username),
+                    title: Text(
+                      peer.displayName.isNotEmpty
+                          ? peer.displayName
+                          : peer.username,
+                    ),
                     subtitle: Text('@${peer.username}'),
                     onTap: () async {
                       Navigator.pop(ctx);
@@ -834,7 +961,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       await _loadCacheSize();
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(context.tr('cache_cleared_for').replaceFirst('%s', peer.displayName.isNotEmpty ? peer.displayName : peer.username))),
+                          SnackBar(
+                            content: Text(
+                              context
+                                  .tr('cache_cleared_for')
+                                  .replaceFirst(
+                                    '%s',
+                                    peer.displayName.isNotEmpty
+                                        ? peer.displayName
+                                        : peer.username,
+                                  ),
+                            ),
+                          ),
                         );
                       }
                     },
@@ -852,7 +990,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await clearAllAttachmentCache();
     await _loadCacheSize();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('all_cache_cleared'))));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(context.tr('all_cache_cleared'))));
     }
   }
 }
