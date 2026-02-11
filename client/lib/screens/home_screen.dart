@@ -18,6 +18,7 @@ import '../widgets/offline_indicator.dart';
 import '../widgets/app_update_banner.dart';
 import '../widgets/user_avatar.dart';
 import '../services/app_update_service.dart';
+import '../config/version.dart' show AppVersion;
 import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -292,21 +293,16 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                         },
                       ),
                       const Spacer(),
-                      Consumer<AppUpdateService>(
-                        builder: (context, updateService, _) {
-                          final version = updateService.currentVersion ?? '1.0.0';
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Text(
-                              'v$version',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          );
-                        },
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          'v${AppVersion.displayVersion}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.logout, size: 28),

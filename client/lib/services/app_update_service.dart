@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import '../config.dart' show apiBaseUrl;
+import '../config/version.dart' show AppVersion;
 import 'app_update_service_stub.dart'
     if (dart.library.html) 'app_update_service_web.dart';
 
@@ -28,14 +29,15 @@ class AppUpdateService extends ChangeNotifier {
   Future<void> _init() async {
     // Получаем текущую версию приложения
     if (kIsWeb) {
-      // На Web версия берется из build
-      _currentVersion = '1.0.0'; // Будет обновляться при сборке
+      // На Web версия берется из конфигурации
+      _currentVersion = AppVersion.displayVersion;
     } else {
       try {
         final packageInfo = await PackageInfo.fromPlatform();
         _currentVersion = packageInfo.version;
       } catch (_) {
-        _currentVersion = '1.0.0';
+        // Fallback на версию из конфигурации
+        _currentVersion = AppVersion.displayVersion;
       }
     }
     
