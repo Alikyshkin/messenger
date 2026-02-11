@@ -13,6 +13,8 @@ import '../services/api.dart';
 import '../utils/webrtc_constants.dart';
 import '../utils/media_utils.dart';
 import '../widgets/user_avatar.dart';
+import '../widgets/call_action_button.dart';
+import '../widgets/call_control_button.dart';
 
 /// Участник группового звонка с его PeerConnection и потоком
 class _GroupCallParticipant {
@@ -984,22 +986,13 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton.filled(
+          CallActionButton.reject(
             onPressed: _rejectCall,
-            icon: const Icon(Icons.call_end),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
           ),
           const SizedBox(width: 32),
-          IconButton.filled(
+          CallActionButton.accept(
             onPressed: _acceptCall,
-            icon: const Icon(Icons.videocam),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
+            icon: Icons.videocam,
           ),
         ],
       ),
@@ -1014,35 +1007,18 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton.filled(
+          CallControlButton.microphone(
             onPressed: _toggleMic,
-            icon: Icon(_micEnabled ? Icons.mic : Icons.mic_off),
-            style: IconButton.styleFrom(
-              backgroundColor: _micEnabled
-                  ? Colors.grey.shade700
-                  : Colors.red.shade700,
-              foregroundColor: Colors.white,
-            ),
+            isEnabled: _micEnabled,
           ),
           const SizedBox(width: 12),
-          IconButton.filled(
+          CallControlButton.camera(
             onPressed: _toggleCamera,
-            icon: Icon(_cameraEnabled ? Icons.videocam : Icons.videocam_off),
-            style: IconButton.styleFrom(
-              backgroundColor: _cameraEnabled
-                  ? Colors.grey.shade700
-                  : Colors.red.shade700,
-              foregroundColor: Colors.white,
-            ),
+            isEnabled: _cameraEnabled,
           ),
           const SizedBox(width: 12),
-          IconButton.filled(
+          CallActionButton.reject(
             onPressed: _endCall,
-            icon: const Icon(Icons.call_end),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
           ),
         ],
       ),

@@ -9,6 +9,9 @@ import '../services/app_sound_service.dart';
 import '../services/auth_service.dart';
 import '../utils/webrtc_constants.dart';
 import '../utils/media_utils.dart';
+import '../widgets/call_action_button.dart';
+import '../widgets/call_control_button.dart';
+import '../widgets/call_layout_button.dart';
 
 /// Режим отображения видео: докладчик (большой удалённый), обычный, рядом слева-справа.
 enum CallLayout {
@@ -945,22 +948,13 @@ class _CallScreenState extends State<CallScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          IconButton.filled(
+          CallActionButton.reject(
             onPressed: _rejectCall,
-            icon: const Icon(Icons.call_end),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
           ),
           const SizedBox(width: 32),
-          IconButton.filled(
+          CallActionButton.accept(
             onPressed: _acceptCall,
-            icon: Icon(widget.isVideoCall ? Icons.videocam : Icons.phone),
-            style: IconButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
+            icon: widget.isVideoCall ? Icons.videocam : Icons.phone,
           ),
         ],
       ),
@@ -987,14 +981,11 @@ class _CallScreenState extends State<CallScreen> {
 
   Widget _layoutButton(CallLayout layout, IconData icon, String tooltip) {
     final selected = _layout == layout;
-    return Material(
-      color: selected ? Colors.blue.shade700 : Colors.grey.shade800,
-      borderRadius: BorderRadius.circular(8),
-      child: IconButton(
-        onPressed: () => setState(() => _layout = layout),
-        icon: Icon(icon, color: Colors.white, size: 20),
-        tooltip: tooltip,
-      ),
+    return CallLayoutButton(
+      onPressed: () => setState(() => _layout = layout),
+      icon: icon,
+      tooltip: tooltip,
+      isSelected: selected,
     );
   }
 
@@ -1009,67 +1000,38 @@ class _CallScreenState extends State<CallScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              IconButton.filled(
+              CallControlButton.participants(
                 onPressed: () => setState(() => _showPanel = !_showPanel),
-                icon: Icon(_showPanel ? Icons.keyboard_arrow_down : Icons.people),
-                style: IconButton.styleFrom(
-                  backgroundColor: _showPanel ? Colors.blue.shade700 : Colors.grey.shade700,
-                  foregroundColor: Colors.white,
-                ),
-                tooltip: _showPanel ? 'Скрыть' : 'Участники и настройки',
+                isExpanded: _showPanel,
               ),
               const SizedBox(width: 12),
-              IconButton.filled(
+              CallControlButton.microphone(
                 onPressed: _toggleMic,
-                icon: Icon(_micEnabled ? Icons.mic : Icons.mic_off),
-                style: IconButton.styleFrom(
-                  backgroundColor: _micEnabled ? Colors.grey.shade700 : Colors.red.shade700,
-                  foregroundColor: Colors.white,
-                ),
+                isEnabled: _micEnabled,
               ),
               const SizedBox(width: 12),
               if (widget.isVideoCall)
-                IconButton.filled(
+                CallControlButton.camera(
                   onPressed: _toggleCamera,
-                  icon: Icon(_cameraEnabled ? Icons.videocam : Icons.videocam_off),
-                  style: IconButton.styleFrom(
-                    backgroundColor: _cameraEnabled ? Colors.grey.shade700 : Colors.red.shade700,
-                    foregroundColor: Colors.white,
-                  ),
+                  isEnabled: _cameraEnabled,
                 ),
               if (widget.isVideoCall) const SizedBox(width: 12),
               const SizedBox(width: 12),
               if (widget.isVideoCall) ...[
-                IconButton.filled(
+                CallControlButton.screenShare(
                   onPressed: _toggleScreenShare,
-                  icon: Icon(_screenShareEnabled ? Icons.stop_screen_share : Icons.screen_share),
-                  style: IconButton.styleFrom(
-                    backgroundColor: _screenShareEnabled ? Colors.orange.shade700 : Colors.grey.shade700,
-                    foregroundColor: Colors.white,
-                  ),
-                  tooltip: _screenShareEnabled ? 'Остановить демонстрацию' : 'Демонстрация экрана',
+                  isEnabled: _screenShareEnabled,
                 ),
                 const SizedBox(width: 12),
-                IconButton.filled(
+                CallControlButton.switchCamera(
                   onPressed: _screenShareEnabled ? null : _switchCamera,
-                  icon: const Icon(Icons.flip_camera_ios),
-                  style: IconButton.styleFrom(
-                    backgroundColor: Colors.grey.shade700,
-                    foregroundColor: Colors.white,
-                  ),
-                  tooltip: 'Переключить камеру',
                 ),
                 const SizedBox(width: 12),
               ],
               const SizedBox(width: 12),
-              IconButton.filled(
+              CallActionButton.reject(
                 onPressed: _hangUp,
-                icon: const Icon(Icons.call_end),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.all(24),
-                ),
+                padding: const EdgeInsets.all(24),
               ),
             ],
           ),
