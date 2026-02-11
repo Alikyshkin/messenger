@@ -58,6 +58,7 @@ class _CallScreenState extends State<CallScreen> {
   String? _error;
   final List<Map<String, dynamic>> _pendingCandidates = [];
   bool _offerReceived = false; // Флаг для защиты от дублирующих offer
+  bool _isConnecting = false; // Флаг процесса подключения
 
   /// Видео и микрофон включены по умолчанию для видеозвонка.
   /// Для голосового звонка камера выключена.
@@ -627,12 +628,14 @@ class _CallScreenState extends State<CallScreen> {
     _localRenderer.srcObject = null;
     _remoteRenderer.srcObject = null;
     _screenRenderer.srcObject = null;
-    await _localStream?.dispose();
     _localStream?.getTracks().forEach((t) => t.stop());
+    await _localStream?.dispose();
     await _pc?.close();
     _pc = null;
     _localStream = null;
     _remoteStream = null;
+    _offerReceived = false;
+    _isConnecting = false;
     // Сообщение о пропущенном звонке создается автоматически на сервере при отправке сигнала reject
     if (mounted) {
       setState(() => _state = 'ended');
