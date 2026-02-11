@@ -73,7 +73,73 @@ function applyMigration(db, migration) {
   
   // Выполняем миграцию в транзакции
   const transaction = db.transaction(() => {
-    db.exec(sql);
+    try {
+      db.exec(sql);
+    } catch (error) {
+      // Для миграции 007 обрабатываем ошибки отдельно, так как она может падать
+      // если таблицы не существуют или имеют старую структуру
+      if (migration.version === 7 && error.code === 'SQLITE_ERROR' && error.message.includes('no such table')) {
+        // Таблицы нет, просто создаем пустые таблицы с правильной структурой
+        log.warn('Таблицы group_polls/group_poll_votes не существуют, создаем с правильной структурой');
+        db.exec(`
+          CREATE TABLE IF NOT EXISTS group_polls (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_message_id INTEGER NOT NULL UNIQUE,
+            question TEXT NOT NULL,
+            options TEXT NOT NULL,
+            multiple INTEGER DEFAULT 0,
+            FOREIGN KEY (group_message_id) REFERENCES group_messages(id) ON DELETE CASCADE
+          );
+          CREATE TABLE IF NOT EXISTS group_poll_votes (
+            group_poll_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            option_index INTEGER NOT NULL,
+            PRIMARY KEY (group_poll_id, user_id, option_index),
+            FOREIGN KEY (group_poll_id) REFERENCES group_polls(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+          );
+          CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll ON group_poll_votes(group_poll_id);
+          CREATE INDEX IF NOT EXISTS idx_group_poll_votes_user ON group_poll_votes(user_id);
+          CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll_user ON group_poll_votes(group_poll_id, user_id);
+        `);
+      } else if (migration.version === 7 && error.code === 'SQLITE_ERROR' && error.message.includes('no such column: group_poll_id')) {
+        // Таблица существует со старой структурой, исправляем её
+        log.warn('Таблица group_poll_votes имеет старую структуру, исправляем');
+        try {
+          // Создаем временную таблицу с правильной структурой
+          db.exec(`
+            CREATE TABLE group_poll_votes_temp (
+              group_poll_id INTEGER NOT NULL,
+              user_id INTEGER NOT NULL,
+              option_index INTEGER NOT NULL,
+              PRIMARY KEY (group_poll_id, user_id, option_index),
+              FOREIGN KEY (group_poll_id) REFERENCES group_polls(id) ON DELETE CASCADE,
+              FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
+          `);
+          
+          // Копируем данные из старой таблицы, используя poll_id
+          db.exec(`
+            INSERT INTO group_poll_votes_temp (group_poll_id, user_id, option_index)
+            SELECT poll_id, user_id, option_index FROM group_poll_votes;
+          `);
+          
+          // Удаляем старую таблицу и переименовываем новую
+          db.exec(`
+            DROP TABLE group_poll_votes;
+            ALTER TABLE group_poll_votes_temp RENAME TO group_poll_votes;
+            CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll ON group_poll_votes(group_poll_id);
+            CREATE INDEX IF NOT EXISTS idx_group_poll_votes_user ON group_poll_votes(user_id);
+            CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll_user ON group_poll_votes(group_poll_id, user_id);
+          `);
+        } catch (fixError) {
+          log.error({ error: fixError }, 'Ошибка при исправлении структуры таблицы');
+          throw fixError;
+        }
+      } else {
+        throw error; // Пробрасываем другие ошибки дальше
+      }
+    }
     db.prepare('INSERT INTO schema_migrations (version, name) VALUES (?, ?)')
       .run(migration.version, migration.name);
   });

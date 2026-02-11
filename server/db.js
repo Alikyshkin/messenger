@@ -147,84 +147,89 @@ db.exec(`
 `);
 
 // Групповые чаты
-db.exec(`
-  CREATE TABLE IF NOT EXISTS groups (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    avatar_path TEXT,
-    created_by_user_id INTEGER NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (created_by_user_id) REFERENCES users(id)
-  );
-  CREATE TABLE IF NOT EXISTS group_members (
-    group_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    role TEXT NOT NULL DEFAULT 'member',
-    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (group_id, user_id),
-    FOREIGN KEY (group_id) REFERENCES groups(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  );
-  CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id);
-  CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id);
-  CREATE INDEX IF NOT EXISTS idx_group_members_group_user ON group_members(group_id, user_id);
-  CREATE TABLE IF NOT EXISTS group_messages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    group_id INTEGER NOT NULL,
-    sender_id INTEGER NOT NULL,
-    content TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    attachment_path TEXT,
-    attachment_filename TEXT,
-    message_type TEXT DEFAULT 'text',
-    attachment_kind TEXT DEFAULT 'file',
-    attachment_duration_sec INTEGER,
-    attachment_encrypted INTEGER DEFAULT 0,
-    reply_to_id INTEGER,
-    is_forwarded INTEGER DEFAULT 0,
-    forward_from_sender_id INTEGER,
-    forward_from_display_name TEXT,
-    FOREIGN KEY (group_id) REFERENCES groups(id),
-    FOREIGN KEY (sender_id) REFERENCES users(id),
-    FOREIGN KEY (reply_to_id) REFERENCES group_messages(id)
-  );
-  
-  -- Полнотекстовый поиск для групповых сообщений
-  CREATE VIRTUAL TABLE IF NOT EXISTS group_messages_fts USING fts5(
-    content,
-    content='group_messages',
-    content_rowid='id'
-  );
-  CREATE INDEX IF NOT EXISTS idx_group_messages_group ON group_messages(group_id);
-  CREATE INDEX IF NOT EXISTS idx_group_messages_created ON group_messages(created_at);
-  CREATE INDEX IF NOT EXISTS idx_group_messages_group_created ON group_messages(group_id, created_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_group_messages_sender ON group_messages(sender_id);
-  CREATE TABLE IF NOT EXISTS group_read (
-    group_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    last_read_message_id INTEGER NOT NULL,
-    PRIMARY KEY (group_id, user_id),
-    FOREIGN KEY (group_id) REFERENCES groups(id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (last_read_message_id) REFERENCES group_messages(id)
-  );
-  CREATE TABLE IF NOT EXISTS group_polls (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    group_message_id INTEGER NOT NULL UNIQUE,
-    question TEXT NOT NULL,
-    options TEXT NOT NULL,
-    multiple INTEGER DEFAULT 0,
-    FOREIGN KEY (group_message_id) REFERENCES group_messages(id)
-  );
-  CREATE TABLE IF NOT EXISTS group_poll_votes (
-    group_poll_id INTEGER NOT NULL,
-    user_id INTEGER NOT NULL,
-    option_index INTEGER NOT NULL,
-    PRIMARY KEY (group_poll_id, user_id, option_index),
-    FOREIGN KEY (group_poll_id) REFERENCES group_polls(id),
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  );
-`);
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      avatar_path TEXT,
+      created_by_user_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+    );
+    CREATE TABLE IF NOT EXISTS group_members (
+      group_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      role TEXT NOT NULL DEFAULT 'member',
+      joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (group_id, user_id),
+      FOREIGN KEY (group_id) REFERENCES groups(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id);
+    CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id);
+    CREATE INDEX IF NOT EXISTS idx_group_members_group_user ON group_members(group_id, user_id);
+    CREATE TABLE IF NOT EXISTS group_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_id INTEGER NOT NULL,
+      sender_id INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      attachment_path TEXT,
+      attachment_filename TEXT,
+      message_type TEXT DEFAULT 'text',
+      attachment_kind TEXT DEFAULT 'file',
+      attachment_duration_sec INTEGER,
+      attachment_encrypted INTEGER DEFAULT 0,
+      reply_to_id INTEGER,
+      is_forwarded INTEGER DEFAULT 0,
+      forward_from_sender_id INTEGER,
+      forward_from_display_name TEXT,
+      FOREIGN KEY (group_id) REFERENCES groups(id),
+      FOREIGN KEY (sender_id) REFERENCES users(id),
+      FOREIGN KEY (reply_to_id) REFERENCES group_messages(id)
+    );
+    
+    -- Полнотекстовый поиск для групповых сообщений
+    CREATE VIRTUAL TABLE IF NOT EXISTS group_messages_fts USING fts5(
+      content,
+      content='group_messages',
+      content_rowid='id'
+    );
+    CREATE INDEX IF NOT EXISTS idx_group_messages_group ON group_messages(group_id);
+    CREATE INDEX IF NOT EXISTS idx_group_messages_created ON group_messages(created_at);
+    CREATE INDEX IF NOT EXISTS idx_group_messages_group_created ON group_messages(group_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_group_messages_sender ON group_messages(sender_id);
+    CREATE TABLE IF NOT EXISTS group_read (
+      group_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      last_read_message_id INTEGER NOT NULL,
+      PRIMARY KEY (group_id, user_id),
+      FOREIGN KEY (group_id) REFERENCES groups(id),
+      FOREIGN KEY (user_id) REFERENCES users(id),
+      FOREIGN KEY (last_read_message_id) REFERENCES group_messages(id)
+    );
+    CREATE TABLE IF NOT EXISTS group_polls (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      group_message_id INTEGER NOT NULL UNIQUE,
+      question TEXT NOT NULL,
+      options TEXT NOT NULL,
+      multiple INTEGER DEFAULT 0,
+      FOREIGN KEY (group_message_id) REFERENCES group_messages(id)
+    );
+    CREATE TABLE IF NOT EXISTS group_poll_votes (
+      group_poll_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      option_index INTEGER NOT NULL,
+      PRIMARY KEY (group_poll_id, user_id, option_index),
+      FOREIGN KEY (group_poll_id) REFERENCES group_polls(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+} catch (err) {
+  // Игнорируем ошибки при создании таблиц групп (миграция исправит структуру)
+  log.warn({ error: err }, 'Ошибка при создании таблиц групп, миграция исправит структуру');
+}
 
 // Создаем индексы для group_poll_votes отдельно, чтобы не падать при старой структуре
 try {

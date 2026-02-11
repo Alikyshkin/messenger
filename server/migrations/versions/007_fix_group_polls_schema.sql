@@ -3,7 +3,7 @@
 
 -- Исправляем таблицу group_polls
 -- Создаем временную таблицу с правильной структурой
-CREATE TABLE group_polls_temp (
+CREATE TABLE IF NOT EXISTS group_polls_temp (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   group_message_id INTEGER NOT NULL UNIQUE,
   question TEXT NOT NULL,
@@ -14,7 +14,7 @@ CREATE TABLE group_polls_temp (
 
 -- Копируем данные из старой таблицы group_polls, если она существует
 -- Используем message_id (старое название), так как group_message_id может еще не существовать
--- Если таблицы нет, INSERT просто не выполнится (но это нормально - создадим пустую таблицу)
+-- Если таблицы нет или она пустая, INSERT просто не выполнится (но это нормально - создадим пустую таблицу)
 INSERT INTO group_polls_temp (id, group_message_id, question, options, multiple)
 SELECT 
   id,
@@ -26,7 +26,8 @@ SELECT
   question,
   options,
   COALESCE(multiple, 0)
-FROM group_polls;
+FROM group_polls
+WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='group_polls');
 
 -- Удаляем старую таблицу
 DROP TABLE IF EXISTS group_polls;
@@ -36,7 +37,7 @@ ALTER TABLE group_polls_temp RENAME TO group_polls;
 
 -- Исправляем таблицу group_poll_votes
 -- Создаем новую таблицу с правильной структурой
-CREATE TABLE group_poll_votes_temp (
+CREATE TABLE IF NOT EXISTS group_poll_votes_temp (
   group_poll_id INTEGER NOT NULL,
   user_id INTEGER NOT NULL,
   option_index INTEGER NOT NULL,
@@ -45,15 +46,17 @@ CREATE TABLE group_poll_votes_temp (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Копируем данные из старой таблицы group_poll_votes, если она существует
+-- Копируем данные из старой таблицы group_poll_votes, если она существует и имеет колонку poll_id
 -- Используем poll_id (старое название), так как group_poll_id еще не существует
--- Если таблицы нет, INSERT просто не выполнится (но это нормально - создадим пустую таблицу)
+-- Если таблицы нет или она пустая, INSERT просто не выполнится (но это нормально - создадим пустую таблицу)
 INSERT INTO group_poll_votes_temp (group_poll_id, user_id, option_index)
 SELECT 
   poll_id as group_poll_id,
   user_id,
   option_index
-FROM group_poll_votes;
+FROM group_poll_votes
+WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='group_poll_votes')
+  AND EXISTS (SELECT 1 FROM pragma_table_info('group_poll_votes') WHERE name = 'poll_id');
 
 -- Удаляем старую таблицу
 DROP TABLE IF EXISTS group_poll_votes;
