@@ -29,8 +29,11 @@ class WsService extends ChangeNotifier {
   String _token = '';
   bool _allowReconnect = true;
   Timer? _reconnectTimer;
+  int _reconnectAttempts = 0;
+  static const int _maxReconnectDelay = 30; // Максимальная задержка переподключения (секунды)
   final List<Message> _incoming = [];
   final List<_ReactionUpdate> _reactionUpdates = [];
+  final List<Map<String, dynamic>> _pendingCallSignals = []; // Очередь сигналов звонка при отсутствии соединения
   final StreamController<CallSignal> _callSignalController = StreamController<CallSignal>.broadcast();
   final StreamController<void> _newMessageController = StreamController<void>.broadcast();
   final StreamController<Message> _newMessagePayloadController = StreamController<Message>.broadcast();
@@ -66,20 +69,25 @@ class WsService extends ChangeNotifier {
         _onMessage,
         onError: (e) {
           _connected = false;
+          _reconnectAttempts++;
           notifyListeners();
           _scheduleReconnect();
         },
         onDone: () {
           _connected = false;
+          _reconnectAttempts++;
           notifyListeners();
           _scheduleReconnect();
         },
         cancelOnError: false,
       );
       _connected = true;
+      _reconnectAttempts = 0; // Сбрасываем счетчик при успешном подключении
+      _flushPendingCallSignals(); // Отправляем накопленные сигналы
       notifyListeners();
     } catch (_) {
       _connected = false;
+      _reconnectAttempts++;
       notifyListeners();
       _scheduleReconnect();
     }
@@ -88,10 +96,31 @@ class WsService extends ChangeNotifier {
   void _scheduleReconnect() {
     if (!_allowReconnect || _token.isEmpty) return;
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 3), () {
+    // Экспоненциальный backoff: 3s, 6s, 12s, 24s, максимум 30s
+    final delaySeconds = _reconnectAttempts == 0 
+        ? 3 
+        : (_reconnectAttempts <= 4 
+            ? (3 * (1 << (_reconnectAttempts - 1)))
+            : _maxReconnectDelay).clamp(3, _maxReconnectDelay);
+    _reconnectTimer = Timer(Duration(seconds: delaySeconds), () {
       _reconnectTimer = null;
       if (!_connected && _allowReconnect && _token.isNotEmpty) _doConnect();
     });
+  }
+
+  /// Отправляет накопленные сигналы звонка после переподключения
+  void _flushPendingCallSignals() {
+    if (!_connected || _channel == null || _pendingCallSignals.isEmpty) return;
+    final signals = List<Map<String, dynamic>>.from(_pendingCallSignals);
+    _pendingCallSignals.clear();
+    for (final signal in signals) {
+      try {
+        _channel!.sink.add(jsonEncode(signal));
+      } catch (_) {
+        // Если не удалось отправить, возвращаем в очередь
+        _pendingCallSignals.add(signal);
+      }
+    }
   }
 
   void _onMessage(dynamic data) {
@@ -150,33 +179,55 @@ class WsService extends ChangeNotifier {
   }
 
   void sendCallSignal(int toUserId, String signal, [Map<String, dynamic>? payload, bool? isVideoCall, int? groupId]) {
-    if (!_connected || _channel == null) return;
-    try {
-      final message = {
-        'type': 'call_signal',
-        'toUserId': toUserId,
-        'signal': signal,
-        if (payload != null) 'payload': payload,
-        if (isVideoCall != null) 'isVideoCall': isVideoCall,
-        if (groupId != null) 'groupId': groupId,
-      };
-      _channel!.sink.add(jsonEncode(message));
-    } catch (_) {}
+    final message = {
+      'type': 'call_signal',
+      'toUserId': toUserId,
+      'signal': signal,
+      if (payload != null) 'payload': payload,
+      if (isVideoCall != null) 'isVideoCall': isVideoCall,
+      if (groupId != null) 'groupId': groupId,
+    };
+    
+    if (_connected && _channel != null) {
+      try {
+        _channel!.sink.add(jsonEncode(message));
+        return;
+      } catch (_) {
+        // Если отправка не удалась, добавляем в очередь
+      }
+    }
+    
+    // Если соединение отсутствует или отправка не удалась, сохраняем в очередь
+    // (кроме hangup/reject - их не нужно сохранять)
+    if (signal != 'hangup' && signal != 'reject') {
+      _pendingCallSignals.add(message);
+    }
   }
   
   /// Отправить групповой сигнал звонка всем участникам группы
   void sendGroupCallSignal(int groupId, String signal, [Map<String, dynamic>? payload, bool? isVideoCall]) {
-    if (!_connected || _channel == null) return;
-    try {
-      final message = {
-        'type': 'group_call_signal',
-        'groupId': groupId,
-        'signal': signal,
-        if (payload != null) 'payload': payload,
-        if (isVideoCall != null) 'isVideoCall': isVideoCall,
-      };
-      _channel!.sink.add(jsonEncode(message));
-    } catch (_) {}
+    final message = {
+      'type': 'group_call_signal',
+      'groupId': groupId,
+      'signal': signal,
+      if (payload != null) 'payload': payload,
+      if (isVideoCall != null) 'isVideoCall': isVideoCall,
+    };
+    
+    if (_connected && _channel != null) {
+      try {
+        _channel!.sink.add(jsonEncode(message));
+        return;
+      } catch (_) {
+        // Если отправка не удалась, добавляем в очередь
+      }
+    }
+    
+    // Если соединение отсутствует или отправка не удалась, сохраняем в очередь
+    // (кроме hangup/reject - их не нужно сохранять)
+    if (signal != 'hangup' && signal != 'reject') {
+      _pendingCallSignals.add(message);
+    }
   }
 
   Message? takeIncomingFor(int peerId) {
@@ -217,6 +268,7 @@ class WsService extends ChangeNotifier {
     _allowReconnect = false;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _reconnectAttempts = 0;
     _sub?.cancel();
     _sub = null;
     _channel?.sink.close();
@@ -224,6 +276,7 @@ class WsService extends ChangeNotifier {
     _connected = false;
     _incoming.clear();
     _reactionUpdates.clear();
+    _pendingCallSignals.clear();
     notifyListeners();
   }
 }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
@@ -10,7 +9,6 @@ import '../services/app_sound_service.dart';
 import '../services/auth_service.dart';
 import '../utils/webrtc_constants.dart';
 import '../utils/media_utils.dart';
-import '../widgets/connecting_participant_view.dart';
 
 /// Режим отображения видео: докладчик (большой удалённый), обычный, рядом слева-справа.
 enum CallLayout {
@@ -359,10 +357,26 @@ class _CallScreenState extends State<CallScreen> {
       }
     };
     _pc!.onIceConnectionState = (state) {
-      if (state == RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
-          state == RTCIceConnectionState.RTCIceConnectionStateFailed ||
+      if (state == RTCIceConnectionState.RTCIceConnectionStateDisconnected) {
+        // При временном разрыве соединения не завершаем звонок сразу
+        // Даем время на восстановление (ICE может восстановить соединение)
+        if (mounted) {
+          setState(() {
+            // Обновляем состояние, но не завершаем звонок
+          });
+        }
+      } else if (state == RTCIceConnectionState.RTCIceConnectionStateFailed ||
           state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
+        // Только при полном провале или закрытии завершаем звонок
         if (mounted) _endCall();
+      } else if (state == RTCIceConnectionState.RTCIceConnectionStateConnected ||
+          state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
+        // Восстановление соединения
+        if (mounted) {
+          setState(() {
+            // Обновляем состояние при восстановлении
+          });
+        }
       }
     };
   }

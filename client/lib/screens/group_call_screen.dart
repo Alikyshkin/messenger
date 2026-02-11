@@ -453,9 +453,17 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
 
     pc.onIceConnectionState = (state) {
       print('Participant ${participant.user.id} ICE connection state: $state');
-      if (state == RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
-          state == RTCIceConnectionState.RTCIceConnectionStateFailed ||
+      if (state == RTCIceConnectionState.RTCIceConnectionStateDisconnected) {
+        // При временном разрыве соединения не помечаем как отключенного сразу
+        // Даем время на восстановление (ICE может восстановить соединение)
+        if (mounted) {
+          setState(() {
+            // Обновляем состояние, но не меняем на disconnected
+          });
+        }
+      } else if (state == RTCIceConnectionState.RTCIceConnectionStateFailed ||
           state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
+        // Только при полном провале или закрытии помечаем как отключенного
         if (mounted) {
           setState(() {
             participant.state = 'disconnected';
@@ -466,6 +474,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
       } else if (state ==
               RTCIceConnectionState.RTCIceConnectionStateConnected ||
           state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
+        // Восстановление соединения
         if (mounted) {
           setState(() {
             participant.state = 'connected';
