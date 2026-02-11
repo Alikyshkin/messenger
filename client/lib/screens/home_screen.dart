@@ -13,6 +13,7 @@ import '../services/app_sound_service.dart';
 import '../utils/app_page_route.dart';
 import '../utils/page_visibility.dart';
 import '../widgets/skeleton.dart';
+import '../widgets/offline_indicator.dart';
 import 'chat_screen.dart';
 import 'contacts_screen.dart';
 import 'create_group_screen.dart';

@@ -7,7 +7,7 @@ import 'package:provider/provider.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../models/user.dart';
-import '../models/chat.dart';
+import '../models/group.dart';
 import '../widgets/app_back_button.dart';
 import 'image_preview_screen.dart';
 
@@ -111,8 +111,7 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen> with SingleTick
         MaterialPageRoute(
           builder: (_) => ImagePreviewScreen(
             imageUrl: item.url,
-            initialIndex: index,
-            images: _media.where((m) => m.type == 'photo').map((m) => m.url).toList(),
+            filename: item.filename ?? 'image.jpg',
           ),
         ),
       );
