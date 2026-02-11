@@ -74,6 +74,14 @@ router.post('/register', registerLimiter, validate(registerSchema), asyncHandler
     const user = db.prepare('SELECT id, username, display_name, email, created_at FROM users WHERE id = ?')
       .get(result.lastInsertRowid);
     const token = signToken(user.id, user.username);
+    
+    // Audit log
+    auditLog(AUDIT_EVENTS.REGISTER, user.id, {
+      ip: req.ip || req.connection?.remoteAddress,
+      userAgent: req.get('user-agent'),
+      username: user.username,
+    });
+    
     res.status(201).json({
       user: {
         id: user.id,
@@ -136,6 +144,13 @@ router.post('/login', authLimiter, checkAccountLockout, validate(loginSchema), a
     return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
   }
   const token = signToken(user.id, user.username);
+  
+  // Audit log
+  auditLog(AUDIT_EVENTS.LOGIN, user.id, {
+    ip: req.ip || req.connection?.remoteAddress,
+    userAgent: req.get('user-agent'),
+  });
+  
   res.json({
     user: {
       id: user.id,
@@ -189,6 +204,13 @@ router.post('/change-password', authMiddleware, validate(changePasswordSchema), 
   }
   const password_hash = bcrypt.hashSync(newPassword, 10);
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(password_hash, req.user.userId);
+  
+  // Audit log
+  auditLog(AUDIT_EVENTS.PASSWORD_CHANGE, req.user.userId, {
+    ip: req.ip || req.connection?.remoteAddress,
+    userAgent: req.get('user-agent'),
+  });
+  
   res.json({ message: 'Пароль изменён' });
 }));
 

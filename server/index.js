@@ -100,6 +100,9 @@ app.use((req, res, next) => {
 });
 app.use('/uploads', express.static(uploadsDir));
 
+// Audit logging должен быть после auth middleware, но до routes
+// (применяется автоматически через middleware в routes)
+
 app.use('/auth', authRoutes);
 app.use('/contacts', contactsRoutes);
 app.use('/messages', messagesRoutes);

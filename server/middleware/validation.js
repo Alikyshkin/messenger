@@ -20,6 +20,24 @@ export const validate = (schema) => {
   };
 };
 
+// Валидация силы пароля
+const passwordStrength = (value, helpers) => {
+  if (!value) return value;
+  
+  const result = zxcvbn(value);
+  
+  // Минимальный score: 2 (weak) или выше
+  if (result.score < 2) {
+    const feedback = result.feedback.suggestions.length > 0
+      ? result.feedback.suggestions.join(' ')
+      : 'Пароль слишком слабый. Используйте комбинацию букв, цифр и специальных символов.';
+    
+    return helpers.error('password.weak', { message: feedback });
+  }
+  
+  return value;
+};
+
 // Схемы валидации для аутентификации
 export const registerSchema = Joi.object({
   username: Joi.string().trim().min(VALIDATION_LIMITS.USERNAME_MIN_LENGTH).max(VALIDATION_LIMITS.USERNAME_MAX_LENGTH).required()
@@ -29,10 +47,15 @@ export const registerSchema = Joi.object({
       'string.min': `Имя пользователя минимум ${VALIDATION_LIMITS.USERNAME_MIN_LENGTH} символа`,
       'string.max': `Имя пользователя максимум ${VALIDATION_LIMITS.USERNAME_MAX_LENGTH} символов`,
     }),
-  password: Joi.string().min(VALIDATION_LIMITS.PASSWORD_MIN_LENGTH).max(VALIDATION_LIMITS.PASSWORD_MAX_LENGTH).required()
+  password: Joi.string()
+    .min(8) // Минимум 8 символов
+    .max(VALIDATION_LIMITS.PASSWORD_MAX_LENGTH)
+    .required()
+    .custom(passwordStrength, 'password strength validation')
     .messages({
-      'string.min': `Пароль минимум ${VALIDATION_LIMITS.PASSWORD_MIN_LENGTH} символов`,
-      'string.max': `Пароль максимум ${VALIDATION_LIMITS.PASSWORD_MAX_LENGTH} символов`,
+      'password.weak': '{{#message}}',
+      'string.min': 'Пароль должен содержать минимум 8 символов',
+      'string.max': `Пароль не должен превышать ${VALIDATION_LIMITS.PASSWORD_MAX_LENGTH} символов`,
     }),
   displayName: Joi.string().trim().max(VALIDATION_LIMITS.DISPLAY_NAME_MAX_LENGTH).allow('').optional(),
   email: Joi.string().email().trim().lowercase().max(255).optional().allow('', null),
@@ -52,19 +75,29 @@ export const forgotPasswordSchema = Joi.object({
 
 export const resetPasswordSchema = Joi.object({
   token: Joi.string().required(),
-  newPassword: Joi.string().min(VALIDATION_LIMITS.PASSWORD_MIN_LENGTH).max(VALIDATION_LIMITS.PASSWORD_MAX_LENGTH).required()
+  newPassword: Joi.string()
+    .min(8)
+    .max(VALIDATION_LIMITS.PASSWORD_MAX_LENGTH)
+    .required()
+    .custom(passwordStrength, 'password strength validation')
     .messages({
-      'string.min': `Пароль минимум ${VALIDATION_LIMITS.PASSWORD_MIN_LENGTH} символов`,
-      'string.max': `Пароль максимум ${VALIDATION_LIMITS.PASSWORD_MAX_LENGTH} символов`,
+      'password.weak': '{{#message}}',
+      'string.min': 'Пароль должен содержать минимум 8 символов',
+      'string.max': `Пароль не должен превышать ${VALIDATION_LIMITS.PASSWORD_MAX_LENGTH} символов`,
     }),
 });
 
 export const changePasswordSchema = Joi.object({
   currentPassword: Joi.string().required(),
-  newPassword: Joi.string().min(VALIDATION_LIMITS.PASSWORD_MIN_LENGTH).max(VALIDATION_LIMITS.PASSWORD_MAX_LENGTH).required()
+  newPassword: Joi.string()
+    .min(8)
+    .max(VALIDATION_LIMITS.PASSWORD_MAX_LENGTH)
+    .required()
+    .custom(passwordStrength, 'password strength validation')
     .messages({
-      'string.min': `Пароль минимум ${VALIDATION_LIMITS.PASSWORD_MIN_LENGTH} символов`,
-      'string.max': `Пароль максимум ${VALIDATION_LIMITS.PASSWORD_MAX_LENGTH} символов`,
+      'password.weak': '{{#message}}',
+      'string.min': 'Пароль должен содержать минимум 8 символов',
+      'string.max': `Пароль не должен превышать ${VALIDATION_LIMITS.PASSWORD_MAX_LENGTH} символов`,
     }),
 });
 
