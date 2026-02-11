@@ -504,7 +504,9 @@ class _CallScreenState extends State<CallScreen> {
     }
     if (s.signal == 'reject') {
       // При reject завершаем звонок полностью (собеседник отклонил)
-      if (mounted) _endCall();
+      if (mounted) {
+        _endCall();
+      }
       return;
     }
     if (s.signal == 'offer' && s.payload != null) {

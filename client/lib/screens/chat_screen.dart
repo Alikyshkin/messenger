@@ -599,7 +599,9 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _sending = false);
+      if (mounted) {
+        setState(() => _sending = false);
+      }
     }
   }
 
@@ -613,7 +615,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _send() async {
-    if (!_canSend) return;
+    if (!_canSend) {
+      return;
+    }
     final content = _text.text.trim();
     final replyToId = _replyingTo?.id;
     final pending = _pendingAttachment;
@@ -724,7 +728,9 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       if (widget.peer.publicKey != null) {
         final encrypted = await _e2ee.encrypt(content, widget.peer.publicKey);
-        if (encrypted != null) toSend = encrypted;
+        if (encrypted != null) {
+          toSend = encrypted;
+        }
       }
       final msg = await api.sendMessage(
         widget.peer.id,
@@ -821,7 +827,9 @@ class _ChatScreenState extends State<ChatScreen> {
   static const int _maxMultipleFiles = 10;
 
   Future<void> _attachFile() async {
-    if (_sending) return;
+    if (_sending) {
+      return;
+    }
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       withData: true,
@@ -899,7 +907,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _createPoll() async {
-    if (_sending) return;
+    if (_sending) {
+      return;
+    }
     final result = await showDialog<_PollFormResult>(
       context: context,
       builder: (_) => const _CreatePollDialog(),
@@ -987,7 +997,9 @@ class _ChatScreenState extends State<ChatScreen> {
   DateTime? _recordStartTime;
 
   Future<void> _startVoiceRecord() async {
-    if (_sending || _isRecording) return;
+    if (_sending || _isRecording) {
+      return;
+    }
     try {
       final hasPermission = await _audioRecorder.hasPermission();
       if (!hasPermission) {
@@ -1034,7 +1046,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _stopVoiceRecord() async {
-    if (!_isRecording || _recordPath == null) return;
+    if (!_isRecording || _recordPath == null) {
+      return;
+    }
     final startTime = _recordStartTime;
     try {
       final path = await _audioRecorder.stop();
@@ -1046,7 +1060,9 @@ class _ChatScreenState extends State<ChatScreen> {
         _recordPath = null;
         _recordStartTime = null;
       });
-      if (path == null || path.isEmpty) return;
+      if (path == null || path.isEmpty) {
+        return;
+      }
       int durationSec = 0;
       if (!kIsWeb) {
         try {
@@ -1060,7 +1076,9 @@ class _ChatScreenState extends State<ChatScreen> {
       if (durationSec < 1 && startTime != null) {
         durationSec = DateTime.now().difference(startTime).inSeconds;
       }
-      if (durationSec < 1) return;
+      if (durationSec < 1) {
+        return;
+      }
       var voiceBytes = Uint8List.fromList(await readVoiceFileBytes(path));
       var encrypted = false;
       if (widget.peer.publicKey != null) {
@@ -1084,7 +1102,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _openRecordVideoNote() async {
-    if (_sending) return;
+    if (_sending) {
+      return;
+    }
     final result = await Navigator.of(context).push<Map<String, dynamic>>(
       AppPageRoute(
         builder: (_) => RecordVideoNoteScreen(
@@ -1093,7 +1113,9 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
-    if (result == null || !mounted) return;
+    if (result == null || !mounted) {
+      return;
+    }
     final msg = result['message'] as Message?;
     if (msg != null) {
       setState(() => _messages.add(msg));
@@ -1501,7 +1523,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                           r.userIds.contains(myId);
                                       return InkWell(
                                         onTap: () {
-                                          if (hasMine) _setReaction(m, r.emoji);
+                                          if (hasMine) {
+                                            _setReaction(m, r.emoji);
+                                          }
                                         },
                                         borderRadius: BorderRadius.circular(12),
                                         child: Container(
@@ -2134,7 +2158,9 @@ class _ChatScreenState extends State<ChatScreen> {
             height: 200,
             fit: BoxFit.cover,
             loadingBuilder: (_, child, progress) {
-              if (progress == null) return child;
+                    if (progress == null) {
+                      return child;
+                    }
               return SizedBox(
                 width: 200,
                 height: 200,
@@ -2215,7 +2241,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   /// Содержимое — служебная подпись «(файл)» при картинке: в пузыре не показываем.
   bool _isFilePlaceholderContent(Message m) {
-    if (!m.hasAttachment) return false;
+    if (!m.hasAttachment) {
+      return false;
+    }
     final content = m.content.trim();
     if (content != '(файл)' && content.isNotEmpty) return false;
     return _isImageFilename(m.attachmentFilename ?? '');
@@ -2252,7 +2280,9 @@ class _ChatScreenState extends State<ChatScreen> {
       'Сообщение не удалось расшифровать';
 
   String _safeMessageContent(String? content) {
-    if (content == null || content.isEmpty) return '';
+    if (content == null || content.isEmpty) {
+      return '';
+    }
     if (content.startsWith('e2ee:')) return _undecryptedPlaceholder;
     if (content.length > 24 && RegExp(r'^[A-Za-z0-9+/]+=*$').hasMatch(content))
       return _undecryptedPlaceholder;
@@ -2299,12 +2329,16 @@ class _CreatePollDialogState extends State<_CreatePollDialog> {
   }
 
   void _addOption() {
-    if (_optionControllers.length >= 10) return;
+    if (_optionControllers.length >= 10) {
+      return;
+    }
     setState(() => _optionControllers.add(TextEditingController()));
   }
 
   void _removeOption(int i) {
-    if (_optionControllers.length <= 2) return;
+    if (_optionControllers.length <= 2) {
+      return;
+    }
     setState(() {
       _optionControllers[i].dispose();
       _optionControllers.removeAt(i);
