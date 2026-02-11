@@ -264,7 +264,7 @@ app.get('/health', (req, res) => {
     log.error('Health check failed', error);
     res.status(503).json({
       status: 'unhealthy',
-      error: process.env.NODE_ENV === 'production' ? 'Service unavailable' : error.message,
+      error: process.env.NODE_ENV === 'production' ? 'Сервис недоступен' : error.message,
     });
   }
 });

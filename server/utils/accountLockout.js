@@ -101,7 +101,9 @@ export function checkAccountLockout(req, res, next) {
     return next();
   }
   
-  const user = db.prepare('SELECT id, locked_until FROM users WHERE username = ?').get(username);
+  // Нормализуем username так же, как в auth route
+  const normalizedUsername = username.trim().toLowerCase();
+  const user = db.prepare('SELECT id, locked_until FROM users WHERE username = ?').get(normalizedUsername);
   
   if (!user) {
     return next(); // Пользователь не найден, проверка будет в auth route
@@ -109,7 +111,7 @@ export function checkAccountLockout(req, res, next) {
   
   if (isAccountLocked(user.id)) {
     const remaining = getLockoutRemainingSeconds(user.id);
-    log.warn({ userId: user.id, username, remaining }, 'Login attempt on locked account');
+    log.warn({ userId: user.id, username: normalizedUsername, remaining }, 'Login attempt on locked account');
     
     return res.status(423).json({
       error: 'Аккаунт временно заблокирован из-за множественных неудачных попыток входа',

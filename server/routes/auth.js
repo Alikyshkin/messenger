@@ -66,11 +66,12 @@ const router = Router();
  */
 router.post('/register', registerLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
   const { username, password, displayName, email } = req.validated;
+  const normalizedUsername = username.trim().toLowerCase();
   const password_hash = bcrypt.hashSync(password, 10);
   try {
     const result = db.prepare(
       'INSERT INTO users (username, display_name, password_hash, email) VALUES (?, ?, ?, ?)'
-    ).run(username.toLowerCase(), (displayName || username) || null, password_hash, email || null);
+    ).run(normalizedUsername, (displayName || username) || null, password_hash, email || null);
     const user = db.prepare('SELECT id, username, display_name, email, created_at FROM users WHERE id = ?')
       .get(result.lastInsertRowid);
     const token = signToken(user.id, user.username);
@@ -137,12 +138,37 @@ router.post('/register', registerLimiter, validate(registerSchema), asyncHandler
  */
 router.post('/login', authLimiter, checkAccountLockout, validate(loginSchema), asyncHandler(async (req, res) => {
   const { username, password } = req.validated;
+  const normalizedUsername = username.trim().toLowerCase();
+  
+  // Ищем пользователя
   const user = db.prepare(
     'SELECT id, username, display_name, email, password_hash FROM users WHERE username = ?'
-  ).get(username.trim().toLowerCase());
-  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+  ).get(normalizedUsername);
+  
+  // Проверяем, что пользователь найден и у него есть password_hash
+  if (!user) {
+    log.warn({ username: normalizedUsername, ip: req.ip }, 'Login attempt with non-existent username');
     return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
   }
+  
+  if (!user.password_hash) {
+    log.error({ userId: user.id, username: normalizedUsername }, 'User found but password_hash is missing');
+    return res.status(500).json({ error: 'Ошибка сервера. Обратитесь к администратору.' });
+  }
+  
+  // Проверяем пароль
+  const isPasswordValid = bcrypt.compareSync(password, user.password_hash);
+  
+  if (!isPasswordValid) {
+    // Регистрируем неудачную попытку входа
+    recordFailedAttempt(user.id, normalizedUsername);
+    log.warn({ userId: user.id, username: normalizedUsername, ip: req.ip }, 'Failed login attempt - invalid password');
+    return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
+  }
+  
+  // Успешный вход - сбрасываем счетчик неудачных попыток
+  resetFailedAttempts(user.id);
+  
   const token = signToken(user.id, user.username);
   
   // Audit log
@@ -150,6 +176,8 @@ router.post('/login', authLimiter, checkAccountLockout, validate(loginSchema), a
     ip: req.ip || req.connection?.remoteAddress,
     userAgent: req.get('user-agent'),
   });
+  
+  log.info({ userId: user.id, username: normalizedUsername }, 'Successful login');
   
   res.json({
     user: {
