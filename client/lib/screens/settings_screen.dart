@@ -9,6 +9,16 @@ import '../services/attachment_cache.dart';
 import '../services/locale_service.dart';
 import '../services/theme_service.dart';
 import '../widgets/app_back_button.dart';
+import '../styles/app_spacing.dart';
+import '../styles/app_sizes.dart';
+
+enum _SettingsCategory {
+  profile,
+  appearance,
+  security,
+  storage,
+  danger,
+}
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -32,6 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _cacheSizeBytes = 0;
   /// День рождения в формате YYYY-MM-DD или null если не указан.
   String? _birthday;
+  _SettingsCategory _currentCategory = _SettingsCategory.profile;
 
   @override
   void initState() {
@@ -198,6 +209,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  String _getCategoryTitle(BuildContext context, _SettingsCategory category) {
+    switch (category) {
+      case _SettingsCategory.profile:
+        return context.tr('profile');
+      case _SettingsCategory.appearance:
+        return context.tr('appearance');
+      case _SettingsCategory.security:
+        return context.tr('change_password_section');
+      case _SettingsCategory.storage:
+        return context.tr('cache_section');
+      case _SettingsCategory.danger:
+        return context.tr('danger_zone');
+    }
+  }
+
+  Widget _buildContentView(BuildContext context) {
+    switch (_currentCategory) {
+      case _SettingsCategory.profile:
+        return _buildProfileContent(context);
+      case _SettingsCategory.appearance:
+        return _buildAppearanceContent(context);
+      case _SettingsCategory.security:
+        return _buildSecurityContent(context);
+      case _SettingsCategory.storage:
+        return _buildStorageContent(context);
+      case _SettingsCategory.danger:
+        return _buildDangerContent(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthService>();
@@ -218,16 +259,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
             )
-          else
+          else if (_currentCategory == _SettingsCategory.profile)
             TextButton(
               onPressed: _saveProfile,
               child: Text(context.tr('save')),
             ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Левое меню категорий
+          Container(
+            width: AppSizes.navigationWidth,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerLowest,
+              border: Border(
+                right: BorderSide(
+                  color: Theme.of(context).dividerColor,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Column(
+              children: [
+                AppSpacing.spacingVerticalSM,
+                _buildCategoryButton(context, _SettingsCategory.profile, Icons.person_outline),
+                _buildCategoryButton(context, _SettingsCategory.appearance, Icons.palette_outlined),
+                _buildCategoryButton(context, _SettingsCategory.security, Icons.lock_outline),
+                _buildCategoryButton(context, _SettingsCategory.storage, Icons.storage_outlined),
+                _buildCategoryButton(context, _SettingsCategory.danger, Icons.warning_amber_outlined),
+                const Spacer(),
+              ],
+            ),
+          ),
+          // Правая часть с контентом
+          Expanded(
+            child: Column(
+              children: [
+                // Заголовок
+                Container(
+                  padding: AppSpacing.navigationPadding,
+                  height: AppSizes.appBarHeight,
+                  child: Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 16),
+                        child: Text(
+                          _getCategoryTitle(context, _currentCategory),
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: _buildContentView(context),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryButton(BuildContext context, _SettingsCategory category, IconData icon) {
+    final isActive = _currentCategory == category;
+    return IconButton(
+      icon: Icon(
+        icon,
+        size: AppSizes.iconXL,
+        color: isActive
+            ? Theme.of(context).colorScheme.primary
+            : null,
+      ),
+      tooltip: _getCategoryTitle(context, category),
+      style: IconButton.styleFrom(
+        backgroundColor: isActive
+            ? Theme.of(context).colorScheme.primaryContainer
+            : null,
+      ),
+      onPressed: () {
+        if (mounted && _currentCategory != category) {
+          setState(() {
+            _currentCategory = category;
+          });
+        }
+      },
+    );
+  }
+
+  Widget _buildProfileContent(BuildContext context) {
+    final auth = context.watch<AuthService>();
+    final u = auth.user;
+    if (u == null) return const SizedBox.shrink();
+
+    return ListView(
+      padding: AppSpacing.screenPaddingVertical,
+      children: [
           Center(
             child: GestureDetector(
               onTap: _loading ? null : _pickAndUploadAvatar,
