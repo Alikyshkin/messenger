@@ -111,7 +111,12 @@ class _ChatScreenState extends State<ChatScreen> {
       await LocalDb.upsertMessage(decrypted, widget.peer.id);
       await LocalDb.updateChatLastMessage(widget.peer.id, decrypted);
       if (!mounted) return;
+      final wasAtBottom = _isAtBottom();
       setState(() => _messages.add(decrypted));
+      // Прокручиваем к новому сообщению только если пользователь был внизу
+      if (wasAtBottom) {
+        _scrollToBottom(force: true);
+      }
     }
     ReactionUpdate? ru;
     while ((ru = ws.takeReactionUpdateFor(widget.peer.id)) != null) {
@@ -249,7 +254,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages = merged;
         _loading = false;
       });
-      _scrollToBottom();
+      _scrollToBottom(force: true); // При загрузке всегда прокручиваем вниз
       await api.markMessagesRead(peerId);
     } catch (e) {
       if (!mounted) return;
@@ -261,10 +266,21 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _scrollToBottom() {
+  /// Проверяет, находится ли пользователь внизу списка сообщений
+  bool _isAtBottom() {
+    if (!_scroll.hasClients) return false;
+    final position = _scroll.position;
+    // Считаем что пользователь внизу, если он находится в пределах 100px от конца
+    return position.pixels >= position.maxScrollExtent - 100;
+  }
+
+  void _scrollToBottom({bool force = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scroll.hasClients) {
-        _scroll.jumpTo(_scroll.position.maxScrollExtent);
+        // Прокручиваем только если пользователь внизу или принудительно
+        if (force || _isAtBottom()) {
+          _scroll.jumpTo(_scroll.position.maxScrollExtent);
+        }
       }
     });
   }
