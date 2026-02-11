@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:provider/provider.dart';
@@ -1617,7 +1616,7 @@ class _CallScreenState extends State<CallScreen> {
           ),
           const SizedBox(height: 4),
           DropdownButtonFormField<String>(
-            value: _selectedVideoDeviceId ?? videoInputs.first.deviceId,
+            initialValue: _selectedVideoDeviceId ?? videoInputs.first.deviceId,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -1672,7 +1671,7 @@ class _CallScreenState extends State<CallScreen> {
           ),
           const SizedBox(height: 4),
           DropdownButtonFormField<String>(
-            value: _selectedAudioDeviceId ?? audioInputs.first.deviceId,
+            initialValue: _selectedAudioDeviceId ?? audioInputs.first.deviceId,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
