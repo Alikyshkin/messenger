@@ -3,11 +3,13 @@ import db from '../db.js';
 import { authMiddleware } from '../auth.js';
 import { validate, addContactSchema, validateParams, idParamSchema } from '../middleware/validation.js';
 import { validatePagination, createPaginationMeta } from '../middleware/pagination.js';
+import { get, set, del, CacheKeys } from '../utils/cache.js';
+import config from '../config/index.js';
 
 const router = Router();
 router.use(authMiddleware);
 
-router.get('/', validatePagination, (req, res) => {
+router.get('/', validatePagination, async (req, res) => {
   const { limit = 50, offset = 0 } = req.pagination;
   const userId = req.user.userId;
   
@@ -35,7 +37,7 @@ router.get('/', validatePagination, (req, res) => {
 });
 
 // Отправить заявку в друзья (друг появляется в списке только после одобрения)
-router.post('/', validate(addContactSchema), (req, res) => {
+router.post('/', validate(addContactSchema), async (req, res) => {
   const { username } = req.validated;
   const contact = db.prepare(
     'SELECT id, username, display_name FROM users WHERE username = ?'

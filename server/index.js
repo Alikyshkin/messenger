@@ -27,6 +27,7 @@ import exportRoutes from './routes/export.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './utils/swagger.js';
 import { metricsMiddleware, getMetrics, metrics } from './utils/metrics.js';
+import { initCache } from './utils/cache.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const uploadsDir = join(__dirname, 'uploads');
@@ -354,7 +355,10 @@ app.use((req, res, next) => {
 });
 
 if (config.nodeEnv !== 'test') {
-  server.listen(config.port, () => {
+  // Инициализация кэша
+initCache();
+
+server.listen(config.port, () => {
     log.info(`Server running at http://localhost:${config.port}`, { port: config.port, env: config.nodeEnv });
   });
 }

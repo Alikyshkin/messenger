@@ -10,6 +10,8 @@ import { authMiddleware } from '../auth.js';
 import { validate, updateUserSchema, validateParams, idParamSchema } from '../middleware/validation.js';
 import { validateFile } from '../middleware/fileValidation.js';
 import { FILE_LIMITS, ALLOWED_FILE_TYPES, SEARCH_CONFIG } from '../config/constants.js';
+import { get, set, del, CacheKeys } from '../utils/cache.js';
+import config from '../config/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const avatarsDir = path.join(__dirname, '../uploads/avatars');
@@ -81,7 +83,16 @@ function userToJson(user, baseUrl, options = {}) {
  *             schema:
  *               $ref: '#/components/schemas/User'
  */
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
+  const userId = req.user.userId;
+  
+  // Пытаемся получить из кэша
+  const cacheKey = CacheKeys.user(userId);
+  const cached = await get(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
+  
   const user = db.prepare(
     'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email, birthday, phone, is_online, last_seen FROM users WHERE id = ?'
   ).get(req.user.userId);
