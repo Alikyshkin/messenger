@@ -80,6 +80,8 @@ class _CallScreenState extends State<CallScreen> {
   @override
   void initState() {
     super.initState();
+    AppSoundService.instance.setInCall(true);
+    if (!widget.isIncoming) AppSoundService.instance.stopRingtone();
     _renderersFuture = _initRenderers();
     _ws = context.read<WsService>();
     if (widget.isIncoming && widget.initialSignal != null) {
@@ -468,6 +470,7 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
+    AppSoundService.instance.setInCall(false);
     AppSoundService.instance.stopRingtone();
     _signalSub?.cancel();
     _localRenderer.srcObject = null;
