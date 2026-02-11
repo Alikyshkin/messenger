@@ -24,6 +24,7 @@ import '../widgets/app_back_button.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/voice_message_bubble.dart';
 import '../widgets/video_note_bubble.dart';
+import '../widgets/user_avatar.dart';
 import 'call_screen.dart';
 import 'record_video_note_screen.dart';
 import 'user_profile_screen.dart';
@@ -1159,44 +1160,18 @@ class _ChatScreenState extends State<ChatScreen> {
         foregroundColor: appBarFg,
         title: Row(
           children: [
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: isDark
-                      ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
-                      : Colors.white24,
-                  backgroundImage:
-                      widget.peer.avatarUrl != null &&
-                          widget.peer.avatarUrl!.isNotEmpty
-                      ? NetworkImage(widget.peer.avatarUrl!)
-                      : null,
-                  child:
-                      widget.peer.avatarUrl == null ||
-                          widget.peer.avatarUrl!.isEmpty
-                      ? Icon(
-                          Icons.person,
-                          color: appBarFg.withValues(alpha: 0.8),
-                          size: 24,
-                        )
-                      : null,
-                ),
-                if (widget.peer.isOnline == true)
-                  Positioned(
-                    right: -2,
-                    bottom: -2,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: appBarBg, width: 2),
-                      ),
-                    ),
-                  ),
-              ],
+            UserAvatar(
+              user: widget.peer,
+              radius: 20,
+              backgroundColor: isDark
+                  ? theme.colorScheme.onSurface.withValues(alpha: 0.2)
+                  : Colors.white24,
+              textStyle: TextStyle(
+                color: appBarFg,
+                fontSize: 20 * 0.6,
+                fontWeight: FontWeight.w600,
+              ),
+              showOnlineIndicator: true,
             ),
             const SizedBox(width: 12),
             Expanded(
