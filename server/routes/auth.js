@@ -6,6 +6,7 @@ import { signToken, authMiddleware } from '../auth.js';
 import { sendPasswordResetEmail } from '../mailer.js';
 import { authLimiter, registerLimiter, passwordResetLimiter } from '../middleware/rateLimit.js';
 import { validate, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema } from '../middleware/validation.js';
+import { log } from '../utils/logger.js';
 
 const router = Router();
 
@@ -32,6 +33,7 @@ router.post('/register', registerLimiter, validate(registerSchema), (req, res) =
     if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') {
       return res.status(409).json({ error: 'Это имя пользователя уже занято' });
     }
+    log.error('Registration error', e, { username });
     throw e;
   }
 });

@@ -10,6 +10,7 @@ import { fileURLToPath } from 'url';
 import { verifyToken } from './auth.js';
 import { clients, broadcastToUser } from './realtime.js';
 import { apiLimiter } from './middleware/rateLimit.js';
+import { log } from './utils/logger.js';
 
 import authRoutes from './routes/auth.js';
 import contactsRoutes from './routes/contacts.js';
@@ -187,7 +188,7 @@ wss.on('connection', (ws, req) => {
         const toId = Number(data.toUserId);
         const set = clients.get(toId);
         const n = set ? set.size : 0;
-        console.log(`[ws] call_signal from ${userId} to ${toId} (${n} connection(s))`);
+        log.ws('call_signal', { fromUserId: userId, toUserId: toId, connections: n });
         broadcastToUser(toId, {
           type: 'call_signal',
           fromUserId: userId,
@@ -206,13 +207,26 @@ wss.on('connection', (ws, req) => {
     }
   });
 
-  ws.on('error', () => ws.close());
+  ws.on('error', (error) => {
+    log.error('WebSocket error', error, { userId });
+    ws.close();
+  });
+});
+
+// Middleware для логирования HTTP запросов
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const responseTime = Date.now() - start;
+    log.http(req, res, responseTime);
+  });
+  next();
 });
 
 const PORT = process.env.PORT || 3000;
 if (process.env.NODE_ENV !== 'test') {
   server.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+    log.info(`Server running at http://localhost:${PORT}`, { port: PORT, env: process.env.NODE_ENV });
   });
 }
 
