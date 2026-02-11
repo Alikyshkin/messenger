@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
 import { decryptIfLegacy } from '../cipher.js';
+import { validatePagination, createPaginationMeta } from '../middleware/pagination.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -12,9 +13,11 @@ function getBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
-router.get('/', (req, res) => {
+router.get('/', validatePagination, (req, res) => {
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
+  const { limit = 50, offset = 0 } = req.pagination;
+  
   // 1-1 чаты
   const lastIds = db.prepare(`
     SELECT MAX(id) as mid, 
@@ -22,7 +25,15 @@ router.get('/', (req, res) => {
     FROM messages
     WHERE sender_id = ? OR receiver_id = ?
     GROUP BY peer_id
-  `).all(me, me, me);
+    ORDER BY mid DESC
+    LIMIT ? OFFSET ?
+  `).all(me, me, me, limit, offset);
+  
+  const totalChats = db.prepare(`
+    SELECT COUNT(DISTINCT CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END) as cnt
+    FROM messages
+    WHERE sender_id = ? OR receiver_id = ?
+  `).get(me, me, me)?.cnt || 0;
   const unreadCounts = db.prepare(`
     SELECT sender_id AS peer_id, COUNT(*) AS cnt
     FROM messages
@@ -86,7 +97,11 @@ router.get('/', (req, res) => {
   }
 
   result.sort((a, b) => new Date(b.last_message.created_at) - new Date(a.last_message.created_at));
-  res.json(result);
+  
+  res.json({
+    data: result,
+    pagination: createPaginationMeta(totalChats, limit, offset),
+  });
 });
 
 export default router;

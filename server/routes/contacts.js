@@ -2,23 +2,34 @@ import { Router } from 'express';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
 import { validate, addContactSchema, validateParams, idParamSchema } from '../middleware/validation.js';
+import { validatePagination, createPaginationMeta } from '../middleware/pagination.js';
 
 const router = Router();
 router.use(authMiddleware);
 
-router.get('/', (req, res) => {
+router.get('/', validatePagination, (req, res) => {
+  const { limit = 50, offset = 0 } = req.pagination;
+  const userId = req.user.userId;
+  
+  const total = db.prepare('SELECT COUNT(*) as cnt FROM contacts WHERE user_id = ?').get(userId)?.cnt || 0;
+  
   const rows = db.prepare(`
     SELECT u.id, u.username, u.display_name
     FROM contacts c
     JOIN users u ON u.id = c.contact_id
     WHERE c.user_id = ?
     ORDER BY u.display_name, u.username
-  `).all(req.user.userId);
-  res.json(rows.map(r => ({
-    id: r.id,
-    username: r.username,
-    display_name: r.display_name || r.username,
-  })));
+    LIMIT ? OFFSET ?
+  `).all(userId, limit, offset);
+  
+  res.json({
+    data: rows.map(r => ({
+      id: r.id,
+      username: r.username,
+      display_name: r.display_name || r.username,
+    })),
+    pagination: createPaginationMeta(total, limit, offset),
+  });
 });
 
 // Отправить заявку в друзья (друг появляется в списке только после одобрения)

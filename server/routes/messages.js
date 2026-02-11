@@ -162,7 +162,37 @@ router.get('/:peerId', validateParams(peerIdParamSchema), (req, res) => {
     msg.reactions = getMessageReactions(r.id);
     return msg;
   });
-  res.json(list);
+  
+  // Подсчитываем общее количество сообщений для пагинации
+  const totalQuery = `
+    SELECT COUNT(*) as cnt
+    FROM messages
+    WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+  `;
+  const totalParams = [me, peerId, peerId, me];
+  if (before && !Number.isNaN(before)) {
+    // Если есть before, считаем только сообщения до этого ID
+    const total = db.prepare(totalQuery + ' AND id < ?').get(...totalParams, before)?.cnt || 0;
+    res.json({
+      data: list,
+      pagination: {
+        limit,
+        before,
+        hasMore: list.length === limit,
+        total,
+      },
+    });
+  } else {
+    const total = db.prepare(totalQuery).get(...totalParams)?.cnt || 0;
+    res.json({
+      data: list,
+      pagination: {
+        limit,
+        hasMore: list.length === limit,
+        total,
+      },
+    });
+  }
 });
 
 router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {

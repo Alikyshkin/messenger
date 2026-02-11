@@ -108,16 +108,26 @@ function isAdmin(me, groupId) {
 }
 
 // Список групп текущего пользователя (для чатов объединим в chats.js)
-router.get('/', (req, res) => {
+router.get('/', validatePagination, (req, res) => {
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
+  const { limit = 50, offset = 0 } = req.pagination;
+  
+  const total = db.prepare(`
+    SELECT COUNT(*) as cnt
+    FROM groups g
+    JOIN group_members gm ON g.id = gm.group_id AND gm.user_id = ?
+  `).get(me)?.cnt || 0;
+  
   const rows = db.prepare(`
     SELECT g.id, g.name, g.avatar_path, g.created_by_user_id, g.created_at,
            gm.role AS my_role
     FROM groups g
     JOIN group_members gm ON g.id = gm.group_id AND gm.user_id = ?
     ORDER BY g.id
-  `).all(me);
+    LIMIT ? OFFSET ?
+  `).all(me, limit, offset);
+  
   const list = rows.map((r) => {
     const count = db.prepare('SELECT COUNT(*) AS c FROM group_members WHERE group_id = ?').get(r.id);
     return groupToJson(
@@ -126,7 +136,11 @@ router.get('/', (req, res) => {
       { my_role: r.my_role, member_count: count?.c ?? 0 },
     );
   });
-  res.json(list);
+  
+  res.json({
+    data: list,
+    pagination: createPaginationMeta(total, limit, offset),
+  });
 });
 
 // Создать группу: body { name, member_ids: number[] }, опционально multipart avatar
@@ -390,7 +404,32 @@ router.get('/:id/messages', validateParams(idParamSchema), (req, res) => {
     msg.reactions = getGroupMessageReactions(r.id);
     return msg;
   });
-  res.json(list);
+  
+  // Подсчитываем общее количество сообщений для пагинации
+  const totalQuery = 'SELECT COUNT(*) as cnt FROM group_messages WHERE group_id = ?';
+  const totalParams = [groupId];
+  if (before && !Number.isNaN(before)) {
+    const total = db.prepare(totalQuery + ' AND id < ?').get(...totalParams, before)?.cnt || 0;
+    res.json({
+      data: list,
+      pagination: {
+        limit,
+        before,
+        hasMore: list.length === limit,
+        total,
+      },
+    });
+  } else {
+    const total = db.prepare(totalQuery).get(...totalParams)?.cnt || 0;
+    res.json({
+      data: list,
+      pagination: {
+        limit,
+        hasMore: list.length === limit,
+        total,
+      },
+    });
+  }
 });
 
 // Реакция на сообщение в группе
