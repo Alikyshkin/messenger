@@ -305,7 +305,13 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     });
   }
   next();
-}), validate(sendMessageSchema), asyncHandler(async (req, res) => {
+}), (req, res, next) => {
+  log.info({ path: req.path, method: req.method }, 'POST /messages - before validation');
+  next();
+}, validate(sendMessageSchema), (req, res, next) => {
+  log.info({ path: req.path, method: req.method }, 'POST /messages - after validation, before handler');
+  next();
+}, asyncHandler(async (req, res) => {
   log.info({ path: req.path, method: req.method }, 'POST /messages route handler - after validation');
   const data = req.validated;
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);

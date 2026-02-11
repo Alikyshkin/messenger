@@ -49,7 +49,8 @@ if (!existsSync(publicDir)) mkdirSync(publicDir, { recursive: true });
 const app = express();
 // Включаем trust proxy для работы за reverse proxy (Docker, nginx и т.д.)
 // Это нужно для правильной работы rate limiting и определения IP адресов
-app.set('trust proxy', true);
+// Используем более безопасную настройку: доверяем только первому прокси
+app.set('trust proxy', 1);
 const server = createServer(app);
 
 // Security headers (должен быть первым middleware)
