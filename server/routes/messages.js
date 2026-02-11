@@ -15,6 +15,7 @@ import { validate, sendMessageSchema, validateParams, peerIdParamSchema, message
 import { validateFile } from '../middleware/fileValidation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { ALLOWED_REACTION_EMOJIS, FILE_LIMITS, ALLOWED_FILE_TYPES } from '../config/constants.js';
+import { syncMessagesFTS } from '../utils/ftsSync.js';
 const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getMessageReactions(messageId) {
   const rows = db.prepare('SELECT user_id, emoji FROM message_reactions WHERE message_id = ?').all(messageId);
@@ -302,7 +303,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     });
   }
   next();
-}, validate(sendMessageSchema), asyncHandler(async (req, res) => {
+}), validate(sendMessageSchema), asyncHandler(async (req, res) => {
   const data = req.validated;
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
   const rid = data.receiver_id;
