@@ -297,13 +297,19 @@ router.get('/:peerId', validateParams(peerIdParamSchema), asyncHandler(async (re
  *               $ref: '#/components/schemas/Message'
  */
 router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
-  log.info({ path: req.path, method: req.method }, 'POST /messages route handler - start');
+  log.info({ path: req.path, method: req.method, contentType: req.get('Content-Type') }, 'POST /messages route handler - start');
   if (req.get('Content-Type')?.startsWith('multipart/form-data')) {
+    log.info({ path: req.path, method: req.method }, 'POST /messages - processing multipart/form-data');
     return upload.array('file', FILE_LIMITS.MAX_FILES_PER_MESSAGE)(req, res, (err) => {
-      if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки файла' });
+      if (err) {
+        log.error({ path: req.path, method: req.method, error: err.message }, 'POST /messages - multer error');
+        return res.status(400).json({ error: err.message || 'Ошибка загрузки файла' });
+      }
+      log.info({ path: req.path, method: req.method }, 'POST /messages - multer success, calling next()');
       next();
     });
   }
+  log.info({ path: req.path, method: req.method }, 'POST /messages - not multipart, calling next()');
   next();
 }), (req, res, next) => {
   log.info({ path: req.path, method: req.method }, 'POST /messages - before validation');
