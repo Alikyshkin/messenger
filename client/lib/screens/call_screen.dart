@@ -135,12 +135,14 @@ class _CallScreenState extends State<CallScreen> {
         'type': offer.type,
       }, widget.isVideoCall);
       
-      // Offer отправлен, состояние уже 'calling'
+      // Устанавливаем флаг подключения после отправки offer
+      setState(() => _isConnecting = true);
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _state = 'ended';
         _error = _mediaErrorMessage(e);
+        _isConnecting = false;
       });
     }
   }
