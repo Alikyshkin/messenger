@@ -58,7 +58,6 @@ class _CallScreenState extends State<CallScreen> {
   String? _error;
   final List<Map<String, dynamic>> _pendingCandidates = [];
   bool _offerReceived = false; // Флаг для защиты от дублирующих offer
-  bool _isConnecting = false; // Флаг процесса подключения
 
   /// Видео и микрофон включены по умолчанию для видеозвонка.
   /// Для голосового звонка камера выключена.
@@ -136,14 +135,12 @@ class _CallScreenState extends State<CallScreen> {
         'type': offer.type,
       }, widget.isVideoCall);
       
-      // Устанавливаем флаг подключения после отправки offer
-      setState(() => _isConnecting = true);
+      // Offer отправлен, состояние уже 'calling'
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _state = 'ended';
         _error = _mediaErrorMessage(e);
-        _isConnecting = false;
       });
     }
   }
@@ -425,7 +422,6 @@ class _CallScreenState extends State<CallScreen> {
       _offerReceived = true;
       
       try {
-        setState(() => _isConnecting = true);
         await _renderersFuture;
         
         // Получаем медиа только если еще не получили
@@ -472,7 +468,6 @@ class _CallScreenState extends State<CallScreen> {
           AppSoundService.instance.stopRingtone();
           setState(() {
             _state = 'connected';
-            _isConnecting = false;
           });
         }
       } catch (e) {
@@ -481,7 +476,6 @@ class _CallScreenState extends State<CallScreen> {
           setState(() {
             _state = 'ended';
             _error = _mediaErrorMessage(e);
-            _isConnecting = false;
           });
         }
       }
@@ -512,7 +506,6 @@ class _CallScreenState extends State<CallScreen> {
           AppSoundService.instance.stopRingtone();
           setState(() {
             _state = 'connected';
-            _isConnecting = true; // Начинаем процесс подключения после получения answer
           });
         }
       } catch (e) {
@@ -521,7 +514,6 @@ class _CallScreenState extends State<CallScreen> {
           setState(() {
             _state = 'ended';
             _error = 'Ошибка при установке соединения';
-            _isConnecting = false;
           });
         }
       }
@@ -547,7 +539,6 @@ class _CallScreenState extends State<CallScreen> {
     if (offerPayload == null) return;
     setState(() {
       _state = 'init';
-      _isConnecting = true;
     });
     try {
       await _renderersFuture;
@@ -594,7 +585,6 @@ class _CallScreenState extends State<CallScreen> {
         AppSoundService.instance.stopRingtone();
         setState(() {
           _state = 'connected';
-          _isConnecting = true; // Начинаем процесс подключения
         });
       }
     } catch (e) {
@@ -603,7 +593,6 @@ class _CallScreenState extends State<CallScreen> {
         setState(() {
           _state = 'ended';
           _error = _mediaErrorMessage(e);
-          _isConnecting = false;
         });
       }
     }
@@ -635,7 +624,6 @@ class _CallScreenState extends State<CallScreen> {
     _localStream = null;
     _remoteStream = null;
     _offerReceived = false;
-    _isConnecting = false;
     // Сообщение о пропущенном звонке создается автоматически на сервере при отправке сигнала reject
     if (mounted) {
       setState(() => _state = 'ended');
@@ -824,7 +812,7 @@ class _CallScreenState extends State<CallScreen> {
     final showRemote = _state == 'connected' && _remoteStream != null;
     // Локальное видео показываем только если есть удаленное (чтобы не дублировать в двух окнах)
     final showLocal = _state == 'connected' && _localStream != null && showRemote;
-    final isConnecting = _state == 'connected' && _isConnecting && !showRemote;
+    final isConnecting = _state == 'calling' || (_state == 'connected' && !showRemote);
     
     return Stack(
       fit: StackFit.expand,
