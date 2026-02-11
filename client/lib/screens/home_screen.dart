@@ -226,6 +226,24 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   Widget _buildChatsView(BuildContext context) {
     return Column(
       children: [
+        // Заголовок
+        Container(
+          padding: AppSpacing.navigationPadding,
+          height: AppSizes.appBarHeight,
+          child: Row(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 16),
+                child: Text(
+                  context.tr('chats'),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
         const AppUpdateBanner(),
         Expanded(
           child: RefreshIndicator(
