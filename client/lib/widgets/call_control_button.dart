@@ -102,6 +102,7 @@ class CallControlButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final defaultSize = size ?? 56.0;
+    final iconSize = size != null ? size! * 0.5 : 28.0;
     
     // Цвета по умолчанию из темы
     final defaultEnabledColor = enabledColor ?? 
@@ -115,7 +116,7 @@ class CallControlButton extends StatelessWidget {
     
     return IconButton.filled(
       onPressed: onPressed,
-      icon: Icon(iconToShow, size: size != null ? size! * 0.6 : null),
+      icon: Icon(iconToShow),
       tooltip: tooltip,
       style: IconButton.styleFrom(
         backgroundColor: backgroundColor,
@@ -123,6 +124,7 @@ class CallControlButton extends StatelessWidget {
         padding: EdgeInsets.all(defaultSize * 0.25),
         minimumSize: Size(defaultSize, defaultSize),
         maximumSize: Size(defaultSize, defaultSize),
+        iconSize: iconSize,
       ),
     );
   }

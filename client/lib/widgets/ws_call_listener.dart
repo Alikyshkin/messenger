@@ -103,8 +103,10 @@ class _WsCallListenerState extends State<WsCallListener> {
       }
 
       if (!mounted) return;
-      // Определяем тип звонка из сигнала (по умолчанию видеозвонок для совместимости)
-      final isVideoCall = signal.isVideoCall ?? true;
+      // Определяем тип звонка из сигнала
+      // Если isVideoCall явно указан как false, то голосовой звонок
+      // Если null или true, то видеозвонок (для совместимости со старыми клиентами)
+      final isVideoCall = signal.isVideoCall != false;
       Navigator.of(context).push(
         AppPageRoute(
           builder: (_) => CallScreen(

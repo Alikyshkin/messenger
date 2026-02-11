@@ -61,17 +61,20 @@ class CallActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final defaultSize = size ?? 56.0;
+    final iconSize = size != null ? size! * 0.5 : 28.0;
+    final defaultPadding = padding ?? EdgeInsets.all(defaultSize * 0.25);
     
     return IconButton.filled(
       onPressed: onPressed,
-      icon: Icon(icon, size: size != null ? size! * 0.6 : null),
+      icon: Icon(icon),
       tooltip: tooltip,
       style: IconButton.styleFrom(
         backgroundColor: backgroundColor ?? theme.colorScheme.primary,
         foregroundColor: foregroundColor ?? theme.colorScheme.onPrimary,
-        padding: padding ?? EdgeInsets.all(defaultSize * 0.25),
+        padding: defaultPadding,
         minimumSize: Size(defaultSize, defaultSize),
         maximumSize: Size(defaultSize, defaultSize),
+        iconSize: iconSize,
       ),
     );
   }

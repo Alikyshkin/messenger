@@ -565,12 +565,21 @@ wss.on('connection', (ws, req) => {
           return;
         }
         
+        // Определяем тип звонка: если явно указан false, то голосовой, иначе видеозвонок
+        // Но если не указан вообще (undefined), используем true для совместимости со старыми клиентами
+        // Явно преобразуем в boolean, чтобы избежать проблем с типами
+        let isVideoCall = true; // По умолчанию видеозвонок
+        if (data.isVideoCall !== undefined && data.isVideoCall !== null) {
+          // Преобразуем в boolean: false остается false, true остается true
+          isVideoCall = Boolean(data.isVideoCall);
+        }
+        
         const signalPayload = {
           type: 'call_signal',
           fromUserId: userId,
           signal: data.signal,
           payload: data.payload ?? null,
-          isVideoCall: data.isVideoCall ?? true, // По умолчанию видеозвонок для совместимости
+          isVideoCall: isVideoCall,
         };
         
         // Если это групповой звонок, добавляем groupId
