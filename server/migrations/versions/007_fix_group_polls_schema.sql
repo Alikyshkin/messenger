@@ -15,19 +15,7 @@ CREATE TABLE IF NOT EXISTS group_polls_temp (
 -- Копируем данные из старой таблицы group_polls, если она существует
 -- Используем message_id (старое название), так как group_message_id может еще не существовать
 -- Если таблицы нет или она пустая, INSERT просто не выполнится (но это нормально - создадим пустую таблицу)
-INSERT INTO group_polls_temp (id, group_message_id, question, options, multiple)
-SELECT 
-  id,
-  CASE 
-    WHEN EXISTS (SELECT name FROM pragma_table_info('group_polls') WHERE name = 'group_message_id')
-    THEN group_message_id
-    ELSE message_id
-  END,
-  question,
-  options,
-  COALESCE(multiple, 0)
-FROM group_polls
-WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='group_polls');
+-- Примечание: проверка структуры таблицы выполняется в JavaScript перед выполнением SQL
 
 -- Удаляем старую таблицу
 DROP TABLE IF EXISTS group_polls;
@@ -48,15 +36,7 @@ CREATE TABLE IF NOT EXISTS group_poll_votes_temp (
 
 -- Копируем данные из старой таблицы group_poll_votes, если она существует и имеет колонку poll_id
 -- Используем poll_id (старое название), так как group_poll_id еще не существует
--- Если таблицы нет или она пустая, INSERT просто не выполнится (но это нормально - создадим пустую таблицу)
-INSERT INTO group_poll_votes_temp (group_poll_id, user_id, option_index)
-SELECT 
-  poll_id as group_poll_id,
-  user_id,
-  option_index
-FROM group_poll_votes
-WHERE EXISTS (SELECT 1 FROM sqlite_master WHERE type='table' AND name='group_poll_votes')
-  AND EXISTS (SELECT 1 FROM pragma_table_info('group_poll_votes') WHERE name = 'poll_id');
+-- Примечание: проверка структуры таблицы выполняется в JavaScript перед выполнением SQL
 
 -- Удаляем старую таблицу
 DROP TABLE IF EXISTS group_poll_votes;

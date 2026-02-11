@@ -232,15 +232,27 @@ try {
 }
 
 // Создаем индексы для group_poll_votes отдельно, чтобы не падать при старой структуре
+// Проверяем, существует ли колонка group_poll_id перед созданием индексов
 try {
-  db.exec(`
-    CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll ON group_poll_votes(group_poll_id);
-    CREATE INDEX IF NOT EXISTS idx_group_poll_votes_user ON group_poll_votes(user_id);
-    CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll_user ON group_poll_votes(group_poll_id, user_id);
-  `);
+  // Проверяем структуру таблицы через pragma_table_info
+  const tableInfo = db.prepare(`PRAGMA table_info(group_poll_votes)`).all();
+  const hasGroupPollId = tableInfo.some(col => col.name === 'group_poll_id');
+  
+  if (hasGroupPollId) {
+    // Таблица имеет правильную структуру, создаем индексы
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll ON group_poll_votes(group_poll_id);
+      CREATE INDEX IF NOT EXISTS idx_group_poll_votes_user ON group_poll_votes(user_id);
+      CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll_user ON group_poll_votes(group_poll_id, user_id);
+    `);
+  } else {
+    // Таблица имеет старую структуру, индексы будут созданы миграцией
+    log.warn('Таблица group_poll_votes имеет старую структуру, индексы будут созданы миграцией');
+  }
 } catch (err) {
   // Игнорируем ошибки при создании индексов (таблица может иметь старую структуру)
   // Миграция исправит это позже
+  log.warn({ error: err }, 'Ошибка при создании индексов для group_poll_votes, миграция исправит структуру');
 }
 
 // Реакции на сообщения (личные и групповые)
