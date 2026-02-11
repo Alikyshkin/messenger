@@ -27,7 +27,29 @@ if (!existsSync(publicDir)) mkdirSync(publicDir, { recursive: true });
 const app = express();
 const server = createServer(app);
 
-app.use(cors());
+// CORS настройка
+const allowedOrigins = process.env.CORS_ORIGINS 
+  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+  : ['http://localhost:3000', 'http://localhost:8080', 'http://127.0.0.1:3000', 'http://127.0.0.1:8080'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Разрешаем запросы без origin (например, мобильные приложения, Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+  maxAge: 86400, // 24 часа
+}));
+
 app.use(express.json());
 app.use('/api', apiLimiter); // Общий лимит для всех API запросов
 // Явно указываем UTF-8 для всех JSON-ответов API (корректное отображение кириллицы).
