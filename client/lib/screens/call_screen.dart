@@ -22,12 +22,14 @@ class CallScreen extends StatefulWidget {
   final User peer;
   final bool isIncoming;
   final CallSignal? initialSignal;
+  final bool isVideoCall; // true для видеозвонка, false для голосового
 
   const CallScreen({
     super.key,
     required this.peer,
     this.isIncoming = false,
     this.initialSignal,
+    this.isVideoCall = true, // По умолчанию видеозвонок
   });
 
   @override
@@ -57,6 +59,7 @@ class _CallScreenState extends State<CallScreen> {
   final List<Map<String, dynamic>> _pendingCandidates = [];
 
   /// Видео и микрофон включены по умолчанию для видеозвонка.
+  /// Для голосового звонка камера выключена.
   bool _cameraEnabled = true;
   bool _micEnabled = true;
 
@@ -118,13 +121,13 @@ class _CallScreenState extends State<CallScreen> {
       }
       var offer = await _pc!.createOffer({
         'offerToReceiveAudio': true,
-        'offerToReceiveVideo': true,
+        'offerToReceiveVideo': widget.isVideoCall,
       });
       await _pc!.setLocalDescription(offer);
       _ws!.sendCallSignal(widget.peer.id, 'offer', {
         'sdp': offer.sdp,
         'type': offer.type,
-      });
+      }, widget.isVideoCall);
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -137,9 +140,12 @@ class _CallScreenState extends State<CallScreen> {
   /// Применяем состояние видео и микрофона к трекам.
   void _applyInitialMute() {
     if (_localStream == null) return;
-    // Включаем видео и микрофон по умолчанию для видеозвонка
+    // Для голосового звонка камера выключена
+    if (!widget.isVideoCall) {
+      _cameraEnabled = false;
+    }
     for (var t in _localStream!.getVideoTracks()) {
-      t.enabled = _cameraEnabled;
+      t.enabled = _cameraEnabled && widget.isVideoCall;
     }
     for (var t in _localStream!.getAudioTracks()) {
       t.enabled = _micEnabled;
@@ -161,7 +167,7 @@ class _CallScreenState extends State<CallScreen> {
     return e.toString();
   }
 
-  Future<void> _getUserMedia({String? videoDeviceId, String? audioDeviceId}) async {
+  Map<String, dynamic> _buildVideoConstraints(String? videoDeviceId) {
     // Улучшаем качество видео для лучшего опыта
     final Map<String, dynamic> videoConstraint = kIsWeb
         ? {
@@ -185,11 +191,15 @@ class _CallScreenState extends State<CallScreen> {
         videoConstraintMap['deviceId'] = {'exact': videoDeviceId};
       }
     }
+    return videoConstraintMap;
+  }
+
+  Future<void> _getUserMedia({String? videoDeviceId, String? audioDeviceId}) async {
     final Map<String, dynamic> mediaConstraints = {
       'audio': audioDeviceId != null && audioDeviceId.isNotEmpty
           ? {'deviceId': {'exact': audioDeviceId}}
           : true,
-      'video': videoConstraintMap,
+      'video': widget.isVideoCall ? _buildVideoConstraints(videoDeviceId) : false,
     };
     try {
       _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
@@ -345,7 +355,7 @@ class _CallScreenState extends State<CallScreen> {
         'candidate': candidate.candidate,
         'sdpMid': candidate.sdpMid,
         'sdpMLineIndex': candidate.sdpMLineIndex,
-      });
+      }, widget.isVideoCall);
     };
     _pc!.onTrack = (event) {
       print('onTrack event: ${event.track.kind}, streams: ${event.streams.length}');
@@ -426,13 +436,13 @@ class _CallScreenState extends State<CallScreen> {
         _pendingCandidates.clear();
         var answer = await _pc!.createAnswer({
           'offerToReceiveAudio': true,
-          'offerToReceiveVideo': true,
+          'offerToReceiveVideo': widget.isVideoCall,
         });
         await _pc!.setLocalDescription(answer);
         _ws!.sendCallSignal(widget.peer.id, 'answer', {
           'sdp': answer.sdp,
           'type': answer.type,
-        });
+        }, widget.isVideoCall);
         if (mounted) {
           AppSoundService.instance.stopRingtone();
           setState(() => _state = 'connected');
@@ -546,12 +556,12 @@ class _CallScreenState extends State<CallScreen> {
 
   void _rejectCall() {
     // Сообщение о пропущенном звонке создается автоматически на сервере при отправке сигнала reject
-    _ws!.sendCallSignal(widget.peer.id, 'reject');
+    _ws!.sendCallSignal(widget.peer.id, 'reject', null, widget.isVideoCall);
     _endCall();
   }
 
   void _hangUp() {
-    _ws!.sendCallSignal(widget.peer.id, 'hangup');
+    _ws!.sendCallSignal(widget.peer.id, 'hangup', null, widget.isVideoCall);
     _endCall();
   }
 
@@ -640,12 +650,12 @@ class _CallScreenState extends State<CallScreen> {
           fit: StackFit.expand,
           children: [
             _buildVideoLayout(),
-            _buildOverlayTitle(),
-            // Показываем превью локального видео только когда есть удаленное видео и НЕ в режиме "рядом" (чтобы не дублировать)
-            if (_state == 'connected' && _renderersInitialized && _remoteStream != null && _layout != CallLayout.sideBySide) _buildLocalPreview(isControlsVisible),
+            if (widget.isVideoCall) _buildOverlayTitle(),
+            // Показываем превью локального видео только для видеозвонков, когда есть удаленное видео и НЕ в режиме "рядом"
+            if (widget.isVideoCall && _state == 'connected' && _renderersInitialized && _remoteStream != null && _layout != CallLayout.sideBySide) _buildLocalPreview(isControlsVisible),
             if (_state == 'ringing') _buildIncomingControls(),
             if (isControlsVisible) ...[
-              _buildLayoutSwitcher(),
+              if (widget.isVideoCall) _buildLayoutSwitcher(),
               _buildBottomControls(myName),
             ],
             if (_showPanel && isControlsVisible) _buildPanel(myName),
@@ -659,6 +669,10 @@ class _CallScreenState extends State<CallScreen> {
     if (!_renderersInitialized) {
       return const Center(child: CircularProgressIndicator(color: Colors.white));
     }
+    // Для голосовых звонков показываем аватар вместо видео
+    if (!widget.isVideoCall) {
+      return _buildVoiceCallLayout();
+    }
     switch (_layout) {
       case CallLayout.sideBySide:
         return _buildSideBySideLayout();
@@ -666,6 +680,54 @@ class _CallScreenState extends State<CallScreen> {
       case CallLayout.normal:
         return _buildSpeakerLayout();
     }
+  }
+  
+  Widget _buildVoiceCallLayout() {
+    final showRemote = _state == 'connected' && _remoteStream != null;
+    return Container(
+      color: const Color(0xFF1A1A1A),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 80,
+              backgroundColor: Colors.blue.shade700,
+              backgroundImage: widget.peer.avatarUrl != null && widget.peer.avatarUrl!.isNotEmpty
+                  ? NetworkImage(widget.peer.avatarUrl!)
+                  : null,
+              child: widget.peer.avatarUrl == null || widget.peer.avatarUrl!.isEmpty
+                  ? Text(
+                      widget.peer.displayName.isNotEmpty ? widget.peer.displayName[0].toUpperCase() : '?',
+                      style: const TextStyle(color: Colors.white, fontSize: 48),
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              widget.peer.displayName,
+              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            if (showRemote)
+              const Text(
+                'Разговор',
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              )
+            else if (_state == 'calling')
+              const Text(
+                'Вызов...',
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              )
+            else if (_state == 'ringing')
+              const Text(
+                'Входящий звонок',
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildSpeakerLayout() {
@@ -744,9 +806,9 @@ class _CallScreenState extends State<CallScreen> {
             _state == 'calling'
                 ? 'Вызов...'
                 : _state == 'ringing'
-                    ? 'Входящий звонок'
+                    ? widget.isVideoCall ? 'Входящий видеозвонок' : 'Входящий звонок'
                     : _state == 'connected'
-                        ? 'Видеозвонок'
+                        ? widget.isVideoCall ? 'Видеозвонок' : 'Голосовой звонок'
                         : '...',
             style: const TextStyle(color: Colors.white70, fontSize: 14),
           ),
@@ -791,7 +853,7 @@ class _CallScreenState extends State<CallScreen> {
           const SizedBox(width: 32),
           IconButton.filled(
             onPressed: _acceptCall,
-            icon: const Icon(Icons.videocam),
+            icon: Icon(widget.isVideoCall ? Icons.videocam : Icons.phone),
             style: IconButton.styleFrom(
               backgroundColor: Colors.green,
               foregroundColor: Colors.white,
@@ -863,34 +925,39 @@ class _CallScreenState extends State<CallScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              IconButton.filled(
-                onPressed: _toggleCamera,
-                icon: Icon(_cameraEnabled ? Icons.videocam : Icons.videocam_off),
-                style: IconButton.styleFrom(
-                  backgroundColor: _cameraEnabled ? Colors.grey.shade700 : Colors.red.shade700,
-                  foregroundColor: Colors.white,
+              if (widget.isVideoCall)
+                IconButton.filled(
+                  onPressed: _toggleCamera,
+                  icon: Icon(_cameraEnabled ? Icons.videocam : Icons.videocam_off),
+                  style: IconButton.styleFrom(
+                    backgroundColor: _cameraEnabled ? Colors.grey.shade700 : Colors.red.shade700,
+                    foregroundColor: Colors.white,
+                  ),
                 ),
-              ),
+              if (widget.isVideoCall) const SizedBox(width: 12),
               const SizedBox(width: 12),
-              IconButton.filled(
-                onPressed: _toggleScreenShare,
-                icon: Icon(_screenShareEnabled ? Icons.stop_screen_share : Icons.screen_share),
-                style: IconButton.styleFrom(
-                  backgroundColor: _screenShareEnabled ? Colors.orange.shade700 : Colors.grey.shade700,
-                  foregroundColor: Colors.white,
+              if (widget.isVideoCall) ...[
+                IconButton.filled(
+                  onPressed: _toggleScreenShare,
+                  icon: Icon(_screenShareEnabled ? Icons.stop_screen_share : Icons.screen_share),
+                  style: IconButton.styleFrom(
+                    backgroundColor: _screenShareEnabled ? Colors.orange.shade700 : Colors.grey.shade700,
+                    foregroundColor: Colors.white,
+                  ),
+                  tooltip: _screenShareEnabled ? 'Остановить демонстрацию' : 'Демонстрация экрана',
                 ),
-                tooltip: _screenShareEnabled ? 'Остановить демонстрацию' : 'Демонстрация экрана',
-              ),
-              const SizedBox(width: 12),
-              IconButton.filled(
-                onPressed: _screenShareEnabled ? null : _switchCamera,
-                icon: const Icon(Icons.flip_camera_ios),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.grey.shade700,
-                  foregroundColor: Colors.white,
+                const SizedBox(width: 12),
+                IconButton.filled(
+                  onPressed: _screenShareEnabled ? null : _switchCamera,
+                  icon: const Icon(Icons.flip_camera_ios),
+                  style: IconButton.styleFrom(
+                    backgroundColor: Colors.grey.shade700,
+                    foregroundColor: Colors.white,
+                  ),
+                  tooltip: 'Переключить камеру',
                 ),
-                tooltip: 'Переключить камеру',
-              ),
+                const SizedBox(width: 12),
+              ],
               const SizedBox(width: 12),
               IconButton.filled(
                 onPressed: _hangUp,

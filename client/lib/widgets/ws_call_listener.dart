@@ -58,20 +58,24 @@ class _WsCallListenerState extends State<WsCallListener> {
 
       if (!isPageVisible) {
         await requestNotificationPermission();
+        final isVideoCall = signal.isVideoCall ?? true;
         await showPageNotification(
-          title: 'Входящий звонок',
+          title: isVideoCall ? 'Входящий видеозвонок' : 'Входящий звонок',
           body: peer.displayName,
         );
         await focusWindow();
       }
 
       if (!mounted) return;
+      // Определяем тип звонка из сигнала (по умолчанию видеозвонок для совместимости)
+      final isVideoCall = signal.isVideoCall ?? true;
       Navigator.of(context).push(
         AppPageRoute(
           builder: (_) => CallScreen(
             peer: peer,
             isIncoming: true,
             initialSignal: signal,
+            isVideoCall: isVideoCall,
           ),
         ),
       );

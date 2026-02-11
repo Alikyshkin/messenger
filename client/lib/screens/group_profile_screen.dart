@@ -134,12 +134,20 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
             leading: const Icon(Icons.videocam_outlined),
             title: Text(context.tr('group_call')),
             subtitle: Text(
-              context.tr('group_call_coming'),
+              'Начать групповой видеозвонок',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             onTap: () {
+              if (g.members == null || g.members!.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('В группе нет участников для звонка')),
+                );
+                return;
+              }
+              // Пока что групповые звонки не полностью реализованы
+              // Можно добавить отдельный экран для групповых звонков в будущем
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(context.tr('group_call_coming'))),
+                const SnackBar(content: Text('Групповые видеозвонки в разработке')),
               );
             },
           ),

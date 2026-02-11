@@ -449,6 +449,13 @@ wss.on('connection', (ws, req) => {
           return;
         }
         
+        // Если указан groupId, это групповой звонок - валидируем его
+        const groupId = data.groupId != null ? Number(data.groupId) : null;
+        if (groupId != null && (!Number.isInteger(groupId) || groupId <= 0)) {
+          log.warn('Invalid call_signal: invalid groupId', { userId, groupId });
+          return;
+        }
+        
         const set = clients.get(toId);
         const n = set ? set.size : 0;
         log.ws('call_signal', { fromUserId: userId, toUserId: toId, connections: n });
@@ -528,6 +535,51 @@ wss.on('connection', (ws, req) => {
           fromUserId: userId,
           signal: data.signal,
           payload: data.payload ?? null,
+          isVideoCall: data.isVideoCall ?? true, // По умолчанию видеозвонок для совместимости
+          groupId: groupId ?? null,
+        });
+      }
+      
+      if (data.type === 'group_call_signal') {
+        // Валидация группового звонка
+        if (!data.groupId || typeof data.groupId !== 'number') {
+          log.warn('Invalid group_call_signal: missing or invalid groupId', { userId });
+          return;
+        }
+        if (!data.signal || typeof data.signal !== 'string') {
+          log.warn('Invalid group_call_signal: missing or invalid signal', { userId });
+          return;
+        }
+        
+        const groupId = Number(data.groupId);
+        if (!Number.isInteger(groupId) || groupId <= 0) {
+          log.warn('Invalid group_call_signal: invalid groupId', { userId, groupId });
+          return;
+        }
+        
+        // Проверяем, что пользователь является участником группы
+        const isMember = db.prepare('SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?').get(groupId, userId);
+        if (!isMember) {
+          log.warn('Invalid group_call_signal: user is not a member of the group', { userId, groupId });
+          return;
+        }
+        
+        // Получаем всех участников группы кроме текущего пользователя
+        const members = db.prepare('SELECT user_id FROM group_members WHERE group_id = ? AND user_id != ?').all(groupId, userId);
+        const memberIds = members.map(m => m.user_id);
+        
+        log.ws('group_call_signal', { fromUserId: userId, groupId, signal: data.signal, members: memberIds.length });
+        
+        // Отправляем сигнал всем участникам группы
+        memberIds.forEach(memberId => {
+          broadcastToUser(memberId, {
+            type: 'call_signal',
+            fromUserId: userId,
+            signal: data.signal,
+            payload: data.payload ?? null,
+            isVideoCall: data.isVideoCall ?? true,
+            groupId: groupId,
+          });
         });
       }
     } catch (_) {}

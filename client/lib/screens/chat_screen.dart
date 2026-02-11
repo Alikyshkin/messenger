@@ -958,11 +958,20 @@ class _ChatScreenState extends State<ChatScreen> {
             },
           ),
           IconButton(
+            icon: const Icon(Icons.phone),
+            tooltip: 'Голосовой звонок',
+            onPressed: () {
+              Navigator.of(context).push(
+                AppPageRoute(builder: (_) => CallScreen(peer: widget.peer, isIncoming: false, isVideoCall: false)),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.videocam),
             tooltip: 'Видеозвонок',
             onPressed: () {
               Navigator.of(context).push(
-                AppPageRoute(builder: (_) => CallScreen(peer: widget.peer, isIncoming: false)),
+                AppPageRoute(builder: (_) => CallScreen(peer: widget.peer, isIncoming: false, isVideoCall: true)),
               );
             },
           ),

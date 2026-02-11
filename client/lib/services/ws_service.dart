@@ -149,15 +149,33 @@ class WsService extends ChangeNotifier {
     return list;
   }
 
-  void sendCallSignal(int toUserId, String signal, [Map<String, dynamic>? payload]) {
+  void sendCallSignal(int toUserId, String signal, [Map<String, dynamic>? payload, bool? isVideoCall, int? groupId]) {
     if (!_connected || _channel == null) return;
     try {
-      _channel!.sink.add(jsonEncode({
+      final message = {
         'type': 'call_signal',
         'toUserId': toUserId,
         'signal': signal,
         if (payload != null) 'payload': payload,
-      }));
+        if (isVideoCall != null) 'isVideoCall': isVideoCall,
+        if (groupId != null) 'groupId': groupId,
+      };
+      _channel!.sink.add(jsonEncode(message));
+    } catch (_) {}
+  }
+  
+  /// Отправить групповой сигнал звонка всем участникам группы
+  void sendGroupCallSignal(int groupId, String signal, [Map<String, dynamic>? payload, bool? isVideoCall]) {
+    if (!_connected || _channel == null) return;
+    try {
+      final message = {
+        'type': 'group_call_signal',
+        'groupId': groupId,
+        'signal': signal,
+        if (payload != null) 'payload': payload,
+        if (isVideoCall != null) 'isVideoCall': isVideoCall,
+      };
+      _channel!.sink.add(jsonEncode(message));
     } catch (_) {}
   }
 
