@@ -164,13 +164,6 @@ app.get('/health', (req, res) => {
     });
   }
   
-  res.json({
-    status: 'ok',
-    circuitBreakers,
-  });
-  
-  // Старая логика health check
-  try {
   try {
     // Проверка базы данных
     const dbCheck = db.prepare('SELECT 1').get();
@@ -178,6 +171,7 @@ app.get('/health', (req, res) => {
       return res.status(503).json({
         status: 'unhealthy',
         database: 'unavailable',
+        circuitBreakers,
       });
     }
 
