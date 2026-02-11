@@ -628,6 +628,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     final connectedParticipants = _participants.values
         .where((p) => p.state == 'connected')
         .toList();
+    final connectingParticipants = _participants.values
+        .where((p) => p.state == 'connecting')
+        .toList();
     final totalParticipants = _participants.length + 1; // +1 для себя
 
     return Scaffold(
@@ -636,9 +639,12 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Видео сетка участников
-            if (_state == 'connected' && (connectedParticipants.isNotEmpty || connectingParticipants.isNotEmpty))
-              _buildVideoGrid(connectedParticipants, connectingParticipants)
+            // Видео сетка участников - показываем даже если есть подключающиеся
+            if (_state == 'connected' || _state == 'calling')
+              if (connectedParticipants.isNotEmpty || connectingParticipants.isNotEmpty || _localRendererInitialized)
+                _buildVideoGrid(connectedParticipants, connectingParticipants)
+              else
+                _buildCallingView()
             else if (_state == 'ringing')
               _buildRingingView()
             else if (_state == 'calling')
