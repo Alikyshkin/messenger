@@ -347,9 +347,9 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
       poll_id: pollId,
       poll: {
         id: pollId,
-        question,
+        question: questionText,
         options: options.map((text, i) => ({ text, votes: 0, voted: false })),
-        multiple: !!multiple,
+        multiple: !!(data.multiple),
       },
       reactions: [],
     };
