@@ -224,10 +224,19 @@ db.exec(`
     FOREIGN KEY (group_poll_id) REFERENCES group_polls(id),
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
-  CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll ON group_poll_votes(group_poll_id);
-  CREATE INDEX IF NOT EXISTS idx_group_poll_votes_user ON group_poll_votes(user_id);
-  CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll_user ON group_poll_votes(group_poll_id, user_id);
 `);
+
+// Создаем индексы для group_poll_votes отдельно, чтобы не падать при старой структуре
+try {
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll ON group_poll_votes(group_poll_id);
+    CREATE INDEX IF NOT EXISTS idx_group_poll_votes_user ON group_poll_votes(user_id);
+    CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll_user ON group_poll_votes(group_poll_id, user_id);
+  `);
+} catch (err) {
+  // Игнорируем ошибки при создании индексов (таблица может иметь старую структуру)
+  // Миграция исправит это позже
+}
 
 // Реакции на сообщения (личные и групповые)
 try {

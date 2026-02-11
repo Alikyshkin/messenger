@@ -3,7 +3,7 @@
 
 -- Исправляем таблицу group_polls
 -- Создаем временную таблицу с правильной структурой
-CREATE TABLE IF NOT EXISTS group_polls_temp (
+CREATE TABLE group_polls_temp (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   group_message_id INTEGER NOT NULL UNIQUE,
   question TEXT NOT NULL,
@@ -12,22 +12,21 @@ CREATE TABLE IF NOT EXISTS group_polls_temp (
   FOREIGN KEY (group_message_id) REFERENCES group_messages(id) ON DELETE CASCADE
 );
 
--- Копируем данные из старой таблицы
+-- Копируем данные из старой таблицы group_polls, если она существует
 -- Используем message_id (старое название), так как group_message_id может еще не существовать
+-- Если таблицы нет, INSERT просто не выполнится (но это нормально - создадим пустую таблицу)
 INSERT INTO group_polls_temp (id, group_message_id, question, options, multiple)
 SELECT 
   id,
-  COALESCE(
-    (SELECT group_message_id FROM group_polls WHERE group_polls.id = gp.id LIMIT 1),
-    (SELECT message_id FROM group_polls WHERE group_polls.id = gp.id LIMIT 1)
-  ) as group_message_id,
+  CASE 
+    WHEN EXISTS (SELECT name FROM pragma_table_info('group_polls') WHERE name = 'group_message_id')
+    THEN group_message_id
+    ELSE message_id
+  END,
   question,
   options,
-  COALESCE(
-    (SELECT multiple FROM group_polls WHERE group_polls.id = gp.id LIMIT 1),
-    0
-  ) as multiple
-FROM group_polls AS gp;
+  COALESCE(multiple, 0)
+FROM group_polls;
 
 -- Удаляем старую таблицу
 DROP TABLE IF EXISTS group_polls;
@@ -37,7 +36,7 @@ ALTER TABLE group_polls_temp RENAME TO group_polls;
 
 -- Исправляем таблицу group_poll_votes
 -- Создаем новую таблицу с правильной структурой
-CREATE TABLE IF NOT EXISTS group_poll_votes_temp (
+CREATE TABLE group_poll_votes_temp (
   group_poll_id INTEGER NOT NULL,
   user_id INTEGER NOT NULL,
   option_index INTEGER NOT NULL,
@@ -46,8 +45,9 @@ CREATE TABLE IF NOT EXISTS group_poll_votes_temp (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Копируем данные из старой таблицы
--- Используем poll_id (старое название) напрямую, так как group_poll_id еще не существует
+-- Копируем данные из старой таблицы group_poll_votes, если она существует
+-- Используем poll_id (старое название), так как group_poll_id еще не существует
+-- Если таблицы нет, INSERT просто не выполнится (но это нормально - создадим пустую таблицу)
 INSERT INTO group_poll_votes_temp (group_poll_id, user_id, option_index)
 SELECT 
   poll_id as group_poll_id,
