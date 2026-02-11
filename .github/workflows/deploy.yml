@@ -109,15 +109,9 @@ jobs:
         chmod 600 ~/.ssh/deploy_key
         ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
     
-    - name: Deploy Flutter web app using rsync (optimized: compression + incremental)
+    - name: Deploy Flutter web app using rsync
       run: |
-        rsync -avz --compress-level=6 --delete \
-          --exclude='.git' \
-          --exclude='*.map' \
-          --exclude='.DS_Store' \
-          --info=progress2 \
-          client/build/web/ \
-          ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/messenger/public/
+        rsync -avz --compress-level=6 --delete --exclude='.git' --exclude='*.map' --exclude='.DS_Store' --info=progress2 client/build/web/ ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/messenger/public/
       env:
         RSYNC_RSH: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o Compression=yes
     

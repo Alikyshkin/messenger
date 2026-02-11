@@ -103,6 +103,7 @@ app.use(cookieParser());
 
 // CSRF Protection применяется только к API маршрутам, исключая статические файлы и SPA маршруты
 // Статические файлы и корневой путь не требуют CSRF защиты
+// Auth endpoints (login, register) также исключены, так как используют JWT токены
 app.use((req, res, next) => {
   const path = req.path;
   
@@ -117,13 +118,18 @@ app.use((req, res, next) => {
     path.startsWith('/ready') ||
     path.startsWith('/csrf-token') ||
     path === '/' ||
+    // Исключаем auth endpoints (login, register) - они используют JWT токены
+    path === '/auth/login' ||
+    path === '/auth/register' ||
+    path === '/auth/forgot-password' ||
+    path === '/auth/reset-password' ||
     // Пропускаем все пути, которые не начинаются с /api или /auth
     (!path.startsWith('/api') && !path.startsWith('/auth'))
   ) {
     return next();
   }
   
-  // Применяем CSRF защиту только к API и auth маршрутам
+  // Применяем CSRF защиту только к API маршрутам и некоторым auth маршрутам (например, смена пароля для авторизованных)
   return csrfProtect()(req, res, next);
 });
 
