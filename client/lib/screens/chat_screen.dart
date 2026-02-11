@@ -18,6 +18,7 @@ import '../services/attachment_cache.dart';
 import '../services/e2ee_service.dart';
 import '../services/ws_service.dart';
 import '../utils/app_page_route.dart';
+import '../utils/error_utils.dart';
 import '../utils/download_file.dart';
 import '../utils/voice_file_io.dart';
 import '../widgets/app_back_button.dart';
@@ -659,18 +660,7 @@ class _ChatScreenState extends State<ChatScreen> {
       
       // Проверяем, является ли это реальной сетевой ошибкой
       // (когда запрос вообще не дошел до сервера - нет интернета, таймаут и т.д.)
-      final errorStr = e.toString().toLowerCase();
-      final isNetworkError = errorStr.contains('socketexception') ||
-          errorStr.contains('timeoutexception') ||
-          errorStr.contains('httpexception') ||
-          errorStr.contains('clientexception') ||
-          errorStr.contains('failed host lookup') ||
-          errorStr.contains('network is unreachable') ||
-          errorStr.contains('connection refused') ||
-          errorStr.contains('connection timed out') ||
-          errorStr.contains('no address associated with hostname');
-      
-      if (isNetworkError) {
+      if (ErrorUtils.isNetworkError(e)) {
         // Только для реальных сетевых ошибок (нет интернета) добавляем в outbox
         await LocalDb.addToOutbox(widget.peer.id, toSend);
         ScaffoldMessenger.of(context).showSnackBar(

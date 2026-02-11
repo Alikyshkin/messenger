@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../utils/app_page_route.dart';
+import '../widgets/user_avatar.dart';
 import 'contacts_screen.dart';
 import 'settings_screen.dart';
 
@@ -78,20 +79,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
               child: Column(
                 children: [
-                  CircleAvatar(
+                  UserAvatar(
+                    user: u,
                     radius: 48,
                     backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                    backgroundImage: u.avatarUrl != null && u.avatarUrl!.isNotEmpty
-                        ? NetworkImage(u.avatarUrl!)
-                        : null,
-                    child: u.avatarUrl == null || u.avatarUrl!.isEmpty
-                        ? Text(
-                            u.displayName.isNotEmpty ? u.displayName[0].toUpperCase() : '@',
-                            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimaryContainer,
-                            ),
-                          )
-                        : null,
+                    textStyle: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(

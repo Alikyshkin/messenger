@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../utils/app_page_route.dart';
 import '../widgets/app_back_button.dart';
 import '../widgets/skeleton.dart';
+import '../widgets/user_avatar.dart';
 import 'add_contact_screen.dart';
 import 'chat_screen.dart';
 import 'possible_friends_screen.dart';
@@ -210,16 +211,14 @@ class _ContactsScreenState extends State<ContactsScreen> {
                                   ),
                                   ..._contacts.map((u) => ListTile(
                                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    leading: CircleAvatar(
+                                    leading: UserAvatar(
+                                      user: u,
                                       radius: 24,
                                       backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                      backgroundImage: u.avatarUrl != null && u.avatarUrl!.isNotEmpty ? NetworkImage(u.avatarUrl!) : null,
-                                      child: (u.avatarUrl == null || u.avatarUrl!.isEmpty)
-                                          ? Text(
-                                              u.displayName.isNotEmpty ? u.displayName[0].toUpperCase() : '?',
-                                              style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer, fontWeight: FontWeight.w600),
-                                            )
-                                          : null,
+                                      textStyle: TextStyle(
+                                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                     ),
                                     title: Text(u.displayName, style: const TextStyle(fontWeight: FontWeight.w500)),
                                     subtitle: Text('@${u.username}', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 14)),

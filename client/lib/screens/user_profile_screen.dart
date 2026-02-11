@@ -6,6 +6,7 @@ import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../utils/app_page_route.dart';
 import '../widgets/app_back_button.dart';
+import '../widgets/user_avatar.dart';
 import 'chat_screen.dart';
 
 /// Профиль другого пользователя: отображается только количество друзей (не список).
@@ -131,20 +132,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               children: [
                 const SizedBox(height: 24),
                 Center(
-                  child: CircleAvatar(
+                  child: UserAvatar(
+                    user: u,
                     radius: 48,
                     backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    backgroundImage: u.avatarUrl != null && u.avatarUrl!.isNotEmpty
-                        ? NetworkImage(u.avatarUrl!)
-                        : null,
-                    child: u.avatarUrl == null || u.avatarUrl!.isEmpty
-                        ? Text(
-                            u.displayName.isNotEmpty ? u.displayName[0].toUpperCase() : '@',
-                            style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          )
-                        : null,
+                    textStyle: Theme.of(context).textTheme.headlineLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 16),
