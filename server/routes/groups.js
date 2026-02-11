@@ -11,6 +11,8 @@ import { authMiddleware } from '../auth.js';
 import { notifyNewGroupMessage, notifyGroupReaction } from '../realtime.js';
 import { decryptIfLegacy } from '../cipher.js';
 import { messageLimiter, uploadLimiter } from '../middleware/rateLimit.js';
+import { sanitizeText } from '../middleware/sanitize.js';
+import { validate, createGroupSchema, updateGroupSchema, addGroupMemberSchema, sendGroupMessageSchema, validateParams, idParamSchema, addReactionSchema, voteGroupPollSchema, messageIdParamSchema, readGroupSchema, groupIdAndPollIdParamSchema } from '../middleware/validation.js';
 
 const ALLOWED_EMOJIS = new Set(['👍', '👎', '❤️', '🔥', '😂', '😮', '😢']);
 function getGroupMessageReactions(groupMessageId) {
@@ -135,13 +137,10 @@ router.post('/', (req, res, next) => {
     });
   }
   next();
-}, (req, res) => {
+}, validate(createGroupSchema), (req, res) => {
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
-  let name = (req.body?.name ?? '').trim();
-  let memberIds = req.body?.member_ids;
-  if (!name) return res.status(400).json({ error: 'Укажите название группы' });
-  if (name.length > 128) name = name.slice(0, 128);
+  const { name, member_ids: memberIds } = req.validated;
   if (typeof memberIds === 'string') {
     try { memberIds = JSON.parse(memberIds); } catch { memberIds = []; }
   }
@@ -178,9 +177,8 @@ router.post('/', (req, res, next) => {
 });
 
 // Информация о группе и участники
-router.get('/:id', (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'Некорректный id группы' });
+router.get('/:id', validateParams(idParamSchema), (req, res) => {
+  const id = req.validatedParams.id;
   const me = req.user.userId;
   if (!isMember(me, id)) return res.status(404).json({ error: 'Группа не найдена' });
   const baseUrl = getBaseUrl(req);
@@ -206,9 +204,8 @@ router.get('/:id', (req, res) => {
 });
 
 // Обновить название и/или фото (только админ)
-router.patch('/:id', (req, res, next) => {
-  const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'Некорректный id группы' });
+router.patch('/:id', validateParams(idParamSchema), (req, res, next) => {
+  const id = req.validatedParams.id;
   const me = req.user.userId;
   if (!isAdmin(me, id)) return res.status(403).json({ error: 'Только администратор может изменить группу' });
   if (req.get('Content-Type')?.startsWith('multipart/form-data')) {
@@ -218,11 +215,11 @@ router.patch('/:id', (req, res, next) => {
     });
   }
   next();
-}, (req, res) => {
-  const id = parseInt(req.params.id, 10);
+}, validate(updateGroupSchema), (req, res) => {
+  const id = req.validatedParams.id;
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
-  const name = typeof req.body?.name === 'string' ? req.body.name.trim().slice(0, 128) : null;
+  const name = req.validated.name ? sanitizeText(req.validated.name).slice(0, 128) : null;
   const avatarPath = req.file?.filename ?? null;
   if (!name && !avatarPath) return res.status(400).json({ error: 'Укажите name и/или загрузите avatar' });
   const group = db.prepare('SELECT id, name, avatar_path, created_by_user_id, created_at FROM groups WHERE id = ?').get(id);
@@ -245,9 +242,8 @@ router.patch('/:id', (req, res, next) => {
 });
 
 // Добавить участников (админ)
-router.post('/:id/members', (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'Некорректный id группы' });
+router.post('/:id/members', validateParams(idParamSchema), validate(addGroupMemberSchema), (req, res) => {
+  const id = req.validatedParams.id;
   const me = req.user.userId;
   if (!isAdmin(me, id)) return res.status(403).json({ error: 'Только администратор может добавлять участников' });
   let userIds = req.body?.user_ids;
@@ -267,10 +263,10 @@ router.post('/:id/members', (req, res) => {
 });
 
 // Удалить участника или выйти (админ может удалить любого, участник — только себя)
-router.delete('/:id/members/:userId', (req, res) => {
-  const groupId = parseInt(req.params.id, 10);
+router.delete('/:id/members/:userId', validateParams(idParamSchema), (req, res) => {
+  const groupId = req.validatedParams.id;
   const userId = parseInt(req.params.userId, 10);
-  if (Number.isNaN(groupId) || Number.isNaN(userId)) return res.status(400).json({ error: 'Некорректный id' });
+  if (Number.isNaN(userId)) return res.status(400).json({ error: 'Некорректный id пользователя' });
   const me = req.user.userId;
   if (!isMember(me, groupId)) return res.status(404).json({ error: 'Группа не найдена' });
   if (me !== userId && !isAdmin(me, groupId)) {
@@ -287,9 +283,8 @@ router.delete('/:id/members/:userId', (req, res) => {
 });
 
 // Прочитать сообщения группы
-router.get('/:id/messages', (req, res) => {
-  const groupId = parseInt(req.params.id, 10);
-  if (Number.isNaN(groupId)) return res.status(400).json({ error: 'Некорректный id группы' });
+router.get('/:id/messages', validateParams(idParamSchema), (req, res) => {
+  const groupId = req.validatedParams.id;
   const me = req.user.userId;
   if (!isMember(me, groupId)) return res.status(404).json({ error: 'Группа не найдена' });
   const limit = Math.min(parseInt(req.query.limit, 10) || 100, 200);
@@ -365,12 +360,10 @@ router.get('/:id/messages', (req, res) => {
 });
 
 // Реакция на сообщение в группе
-router.post('/:id/messages/:messageId/reaction', (req, res) => {
-  const groupId = parseInt(req.params.id, 10);
-  const messageId = parseInt(req.params.messageId, 10);
-  const emoji = typeof req.body?.emoji === 'string' ? req.body.emoji.trim() : '';
-  if (Number.isNaN(groupId) || Number.isNaN(messageId) || messageId < 1) return res.status(400).json({ error: 'Некорректный id' });
-  if (!ALLOWED_EMOJIS.has(emoji)) return res.status(400).json({ error: 'Недопустимая реакция' });
+router.post('/:id/messages/:messageId/reaction', validateParams(groupIdAndMessageIdParamSchema), validate(addReactionSchema), (req, res) => {
+  const groupId = req.validatedParams.id;
+  const messageId = req.validatedParams.messageId;
+  const { emoji } = req.validated;
   const me = req.user.userId;
   if (!isMember(me, groupId)) return res.status(404).json({ error: 'Группа не найдена' });
   const row = db.prepare('SELECT id, group_id FROM group_messages WHERE id = ? AND group_id = ?').get(messageId, groupId);
@@ -392,11 +385,9 @@ router.post('/:id/messages/:messageId/reaction', (req, res) => {
 });
 
 // Отметить прочтение
-router.patch('/:id/read', (req, res) => {
-  const groupId = parseInt(req.params.id, 10);
-  const lastMessageId = parseInt(req.body?.last_message_id, 10);
-  if (Number.isNaN(groupId)) return res.status(400).json({ error: 'Некорректный id группы' });
-  if (Number.isNaN(lastMessageId) || lastMessageId < 0) return res.status(400).json({ error: 'Укажите last_message_id' });
+router.patch('/:id/read', validateParams(idParamSchema), validate(readGroupSchema), (req, res) => {
+  const groupId = req.validatedParams.id;
+  const { last_message_id: lastMessageId } = req.validated;
   const me = req.user.userId;
   if (!isMember(me, groupId)) return res.status(404).json({ error: 'Группа не найдена' });
   const existing = db.prepare('SELECT last_read_message_id FROM group_read WHERE group_id = ? AND user_id = ?').get(groupId, me);
@@ -412,7 +403,7 @@ router.patch('/:id/read', (req, res) => {
 });
 
 // Отправить сообщение в группу (текст, файл/несколько файлов, опрос)
-router.post('/:id/messages', messageLimiter, uploadLimiter, (req, res, next) => {
+router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uploadLimiter, (req, res, next) => {
   if (req.get('Content-Type')?.startsWith('multipart/form-data')) {
     return fileUpload.array('file', 20)(req, res, (err) => {
       if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки файла' });
@@ -420,42 +411,32 @@ router.post('/:id/messages', messageLimiter, uploadLimiter, (req, res, next) => 
     });
   }
   next();
-}, (req, res) => {
-  const groupId = parseInt(req.params.id, 10);
-  if (Number.isNaN(groupId)) return res.status(400).json({ error: 'Некорректный id группы' });
+}, validate(sendGroupMessageSchema), (req, res) => {
+  const groupId = req.validatedParams.id;
   const me = req.user.userId;
   if (!isMember(me, groupId)) return res.status(404).json({ error: 'Группа не найдена' });
   const baseUrl = getBaseUrl(req);
-  const {
-    content,
-    type,
-    question,
-    options: optArr,
-    multiple,
-    reply_to_id,
-    is_forwarded,
-    forward_from_sender_id,
-    forward_from_display_name,
-  } = req.body || {};
-  const isPoll = type === 'poll' && question && Array.isArray(optArr) && optArr.length >= 2;
-  const text = (content ?? '').trim();
+  const data = req.validated;
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
+  const isPoll = data.type === 'poll' && data.question && Array.isArray(data.options) && data.options.length >= 2;
+  const text = data.content ? sanitizeText(data.content) : '';
   if (!isPoll && !text && files.length === 0) return res.status(400).json({ error: 'content или файл обязательны' });
-  const replyToId = reply_to_id != null ? parseInt(reply_to_id, 10) : null;
-  const isFwd = is_forwarded === true || is_forwarded === 'true';
-  const fwdFromId = forward_from_sender_id != null ? parseInt(forward_from_sender_id, 10) : null;
-  const fwdFromName = typeof forward_from_display_name === 'string' ? forward_from_display_name.trim().slice(0, 128) : null;
+  const replyToId = data.reply_to_id || null;
+  const isFwd = data.is_forwarded || false;
+  const fwdFromId = data.forward_from_sender_id || null;
+  const fwdFromName = data.forward_from_display_name ? sanitizeText(data.forward_from_display_name).slice(0, 128) : null;
 
   if (isPoll) {
-    const options = optArr.slice(0, 10).map((o) => String(o).trim()).filter(Boolean);
+    const options = data.options.slice(0, 10).map((o) => sanitizeText(String(o))).filter(Boolean);
     if (options.length < 2) return res.status(400).json({ error: 'Минимум 2 варианта ответа' });
+    const questionText = sanitizeText(data.question);
     const insMsg = db.prepare(
       `INSERT INTO group_messages (group_id, sender_id, content, message_type) VALUES (?, ?, ?, 'poll')`,
-    ).run(groupId, me, question);
+    ).run(groupId, me, questionText);
     const msgId = insMsg.lastInsertRowid;
     const pollResult = db.prepare(
       'INSERT INTO group_polls (group_message_id, question, options, multiple) VALUES (?, ?, ?, ?)',
-    ).run(msgId, question, JSON.stringify(options), multiple ? 1 : 0);
+    ).run(msgId, questionText, JSON.stringify(options), data.multiple ? 1 : 0);
     const pollId = pollResult.lastInsertRowid;
     const row = db.prepare(
       'SELECT id, group_id, sender_id, content, created_at, message_type FROM group_messages WHERE id = ?',
@@ -504,7 +485,7 @@ router.post('/:id/messages', messageLimiter, uploadLimiter, (req, res, next) => 
     const ins = db.prepare(
       `INSERT INTO group_messages (group_id, sender_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name)
        VALUES (?, ?, ?, NULL, NULL, 'text', 'file', NULL, 0, ?, ?, ?, ?)`,
-    ).run(groupId, me, text, Number.isNaN(replyToId) ? null : replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
+    ).run(groupId, me, text, replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
     const msgId = ins.lastInsertRowid;
     const row = db.prepare(
       'SELECT id, group_id, sender_id, content, created_at, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM group_messages WHERE id = ?',
@@ -623,22 +604,21 @@ router.post('/:id/messages', messageLimiter, uploadLimiter, (req, res, next) => 
 });
 
 // Голос в опросе группы
-router.post('/:id/polls/:pollId/vote', (req, res) => {
-  const groupId = parseInt(req.params.id, 10);
-  const pollId = parseInt(req.params.pollId, 10);
-  if (Number.isNaN(groupId) || Number.isNaN(pollId)) return res.status(400).json({ error: 'Некорректный id' });
+router.post('/:id/polls/:pollId/vote', validateParams(groupIdAndPollIdParamSchema), validate(voteGroupPollSchema), (req, res) => {
+  const groupId = req.validatedParams.id;
+  const pollId = req.validatedParams.pollId;
   const me = req.user.userId;
   if (!isMember(me, groupId)) return res.status(404).json({ error: 'Группа не найдена' });
-  const { option_index, option_indexes } = req.body || {};
+  const { option_index, option_indices } = req.validated;
   const poll = db.prepare('SELECT id, group_message_id, options, multiple FROM group_polls WHERE id = ?').get(pollId);
   if (!poll) return res.status(404).json({ error: 'Опрос не найден' });
   const msg = db.prepare('SELECT group_id FROM group_messages WHERE id = ?').get(poll.group_message_id);
   if (!msg || msg.group_id !== groupId) return res.status(404).json({ error: 'Опрос не найден' });
   const options = JSON.parse(poll.options || '[]');
-  const indices = option_indexes != null && Array.isArray(option_indexes)
-    ? option_indexes.map((x) => parseInt(x, 10)).filter((i) => !Number.isNaN(i) && i >= 0 && i < options.length)
-    : (option_index != null && !Number.isNaN(parseInt(option_index, 10)))
-      ? [parseInt(option_index, 10)]
+  const indices = option_indices != null && Array.isArray(option_indices)
+    ? option_indices.filter((i) => i >= 0 && i < options.length)
+    : option_index != null
+      ? [option_index]
       : [];
   const idx = indices[0];
   if (poll.multiple) {

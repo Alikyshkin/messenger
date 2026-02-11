@@ -10,6 +10,8 @@ import { authMiddleware } from '../auth.js';
 import { notifyNewMessage, notifyReaction } from '../realtime.js';
 import { decryptIfLegacy } from '../cipher.js';
 import { messageLimiter, uploadLimiter } from '../middleware/rateLimit.js';
+import { sanitizeText } from '../middleware/sanitize.js';
+import { validate, sendMessageSchema, validateParams, peerIdParamSchema, messageIdParamSchema, addReactionSchema } from '../middleware/validation.js';
 
 const ALLOWED_EMOJIS = new Set(['👍', '👎', '❤️', '🔥', '😂', '😮', '😢']);
 function getMessageReactions(messageId) {
@@ -55,9 +57,8 @@ function getBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
-router.patch('/:peerId/read', (req, res) => {
-  const peerId = parseInt(req.params.peerId, 10);
-  if (Number.isNaN(peerId)) return res.status(400).json({ error: 'Некорректный id чата' });
+router.patch('/:peerId/read', validateParams(peerIdParamSchema), (req, res) => {
+  const peerId = req.validatedParams.peerId;
   const me = req.user.userId;
   db.prepare(
     'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE receiver_id = ? AND sender_id = ? AND read_at IS NULL'
@@ -65,11 +66,9 @@ router.patch('/:peerId/read', (req, res) => {
   res.status(204).send();
 });
 
-router.post('/:messageId/reaction', (req, res) => {
-  const messageId = parseInt(req.params.messageId, 10);
-  const emoji = typeof req.body?.emoji === 'string' ? req.body.emoji.trim() : '';
-  if (Number.isNaN(messageId) || messageId < 1) return res.status(400).json({ error: 'Некорректный id сообщения' });
-  if (!ALLOWED_EMOJIS.has(emoji)) return res.status(400).json({ error: 'Недопустимая реакция' });
+router.post('/:messageId/reaction', validateParams(messageIdParamSchema), validate(addReactionSchema), (req, res) => {
+  const messageId = req.validatedParams.messageId;
+  const { emoji } = req.validated;
   const me = req.user.userId;
   const row = db.prepare('SELECT id, sender_id, receiver_id FROM messages WHERE id = ?').get(messageId);
   if (!row) return res.status(404).json({ error: 'Сообщение не найдено' });
@@ -89,11 +88,8 @@ router.post('/:messageId/reaction', (req, res) => {
   res.json({ reactions });
 });
 
-router.get('/:peerId', (req, res) => {
-  const peerId = parseInt(req.params.peerId, 10);
-  if (Number.isNaN(peerId)) {
-    return res.status(400).json({ error: 'Некорректный id чата' });
-  }
+router.get('/:peerId', validateParams(peerIdParamSchema), (req, res) => {
+  const peerId = req.validatedParams.peerId;
   const limit = Math.min(parseInt(req.query.limit, 10) || 100, 200);
   const before = req.query.before ? parseInt(req.query.before, 10) : null;
   const me = req.user.userId;
@@ -176,31 +172,31 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     });
   }
   next();
-}, (req, res) => {
-  const { receiver_id, content, type, question, options: optArr, multiple, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name } = req.body;
-  const rid = parseInt(receiver_id, 10);
-  const isPoll = type === 'poll' && question && Array.isArray(optArr) && optArr.length >= 2;
-  const text = (content ?? '').trim();
+}, validate(sendMessageSchema), (req, res) => {
+  const data = req.validated;
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
-  if (Number.isNaN(rid)) return res.status(400).json({ error: 'receiver_id обязателен' });
+  const rid = data.receiver_id;
+  const isPoll = data.type === 'poll' && data.question && Array.isArray(data.options) && data.options.length >= 2;
+  const text = data.content ? sanitizeText(data.content) : '';
   if (!isPoll && !text && files.length === 0) return res.status(400).json({ error: 'content или файл обязательны' });
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
-  const replyToId = reply_to_id != null ? parseInt(reply_to_id, 10) : null;
-  const isFwd = is_forwarded === true || is_forwarded === 'true';
-  const fwdFromId = forward_from_sender_id != null ? parseInt(forward_from_sender_id, 10) : null;
-  const fwdFromName = typeof forward_from_display_name === 'string' ? forward_from_display_name.trim().slice(0, 128) : null;
+  const replyToId = data.reply_to_id || null;
+  const isFwd = data.is_forwarded || false;
+  const fwdFromId = data.forward_from_sender_id || null;
+  const fwdFromName = data.forward_from_display_name ? sanitizeText(data.forward_from_display_name).slice(0, 128) : null;
 
   if (isPoll) {
-    const options = optArr.slice(0, 10).map(o => String(o).trim()).filter(Boolean);
+    const options = data.options.slice(0, 10).map(o => sanitizeText(String(o))).filter(Boolean);
     if (options.length < 2) return res.status(400).json({ error: 'Минимум 2 варианта ответа' });
+    const questionText = sanitizeText(data.question);
     const result = db.prepare(
       `INSERT INTO messages (sender_id, receiver_id, content, message_type, attachment_path, attachment_filename) VALUES (?, ?, ?, 'poll', NULL, NULL)`
-    ).run(me, rid, question);
+    ).run(me, rid, questionText);
     const msgId = result.lastInsertRowid;
     const pollResult = db.prepare(
       'INSERT INTO polls (message_id, question, options, multiple) VALUES (?, ?, ?, ?)'
-    ).run(msgId, question, JSON.stringify(options), multiple ? 1 : 0);
+    ).run(msgId, questionText, JSON.stringify(options), data.multiple ? 1 : 0);
     const pollId = pollResult.lastInsertRowid;
     db.prepare('UPDATE messages SET poll_id = ? WHERE id = ?').run(pollId, msgId);
     const row = db.prepare(
@@ -210,7 +206,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
       id: row.id,
       sender_id: row.sender_id,
       receiver_id: row.receiver_id,
-      content: question,
+      content: questionText,
       created_at: row.created_at,
       read_at: row.read_at,
       is_mine: true,
@@ -273,7 +269,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     const contentToStore = text || '';
     const result = db.prepare(
       `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name) VALUES (?, ?, ?, ?, ?, 'text', ?, ?, ?, ?, ?, ?, ?)`
-    ).run(me, rid, contentToStore, null, null, attachmentKind, attachmentDurationSec, attachmentEncrypted, Number.isNaN(replyToId) ? null : replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
+    ).run(me, rid, contentToStore, null, null, attachmentKind, attachmentDurationSec, attachmentEncrypted, replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
     const row = db.prepare(
       'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
     ).get(result.lastInsertRowid);

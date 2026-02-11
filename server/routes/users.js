@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { mkdirSync, existsSync, unlinkSync } from 'fs';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
+import { validate, updateUserSchema, validateParams, idParamSchema } from '../middleware/validation.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const avatarsDir = path.join(__dirname, '../uploads/avatars');
@@ -68,51 +69,38 @@ router.get('/me', (req, res) => {
   res.json(userToJson(user, getBaseUrl(req), { includeEmail: true, includePhone: true }));
 });
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const BIRTHDAY_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-router.patch('/me', (req, res) => {
-  const { display_name, username, bio, email, birthday } = req.body;
+router.patch('/me', validate(updateUserSchema), (req, res) => {
+  const data = req.validated;
   const me = req.user.userId;
   const updates = [];
   const params = [];
-  if (typeof display_name === 'string') {
+  if (data.display_name !== undefined) {
     updates.push('display_name = ?');
-    params.push(display_name.trim() || null);
+    params.push(data.display_name || null);
   }
-  if (typeof username === 'string') {
-    const u = username.trim().toLowerCase();
-    if (u.length < 3) return res.status(400).json({ error: 'Имя пользователя минимум 3 символа' });
+  if (data.username !== undefined) {
     updates.push('username = ?');
-    params.push(u);
+    params.push(data.username.toLowerCase());
   }
-  if (typeof bio === 'string') {
+  if (data.bio !== undefined) {
     updates.push('bio = ?');
-    params.push(bio.trim().slice(0, 256) || null);
+    params.push(data.bio || null);
   }
-  if (req.body.email !== undefined) {
-    const em = typeof email === 'string' ? email.trim().toLowerCase() : null;
-    if (em && !EMAIL_RE.test(em)) return res.status(400).json({ error: 'Некорректный email' });
+  if (data.email !== undefined) {
     updates.push('email = ?');
-    params.push(em || null);
+    params.push(data.email || null);
   }
-  if (req.body.birthday !== undefined) {
-    const bd = typeof birthday === 'string' ? birthday.trim() || null : null;
-    if (bd != null && !BIRTHDAY_RE.test(bd)) return res.status(400).json({ error: 'День рождения в формате ГГГГ-ММ-ДД' });
+  if (data.birthday !== undefined) {
     updates.push('birthday = ?');
-    params.push(bd);
+    params.push(data.birthday || null);
   }
-  if (req.body.phone !== undefined) {
-    const ph = typeof req.body.phone === 'string' ? req.body.phone.replace(/\D/g, '').trim() || null : null;
-    if (ph != null && ph.length < 10) return res.status(400).json({ error: 'Некорректный номер телефона' });
+  if (data.phone !== undefined) {
     updates.push('phone = ?');
-    params.push(ph);
+    params.push(data.phone || null);
   }
-  if (req.body.public_key !== undefined) {
-    const pk = typeof req.body.public_key === 'string' ? req.body.public_key.trim() : null;
+  if (data.public_key !== undefined) {
     updates.push('public_key = ?');
-    params.push(pk && pk.length <= 500 ? pk : null);
+    params.push(data.public_key || null);
   }
   const sel = 'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email, birthday, phone FROM users WHERE id = ?';
   if (updates.length === 0) {
@@ -211,9 +199,8 @@ router.get('/search', (req, res) => {
 });
 
 /** Публичный профиль: только то, что могут видеть все (без email). Количество друзей — только число, не список. */
-router.get('/:id', (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'Некорректный id' });
+router.get('/:id', validateParams(idParamSchema), (req, res) => {
+  const id = req.validatedParams.id;
   const user = db.prepare(
     'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, birthday FROM users WHERE id = ?'
   ).get(id);
