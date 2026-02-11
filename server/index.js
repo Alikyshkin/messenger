@@ -29,6 +29,7 @@ import pushRoutes from './routes/push.js';
 import gdprRoutes from './routes/gdpr.js';
 import mediaRoutes from './routes/media.js';
 import syncRoutes from './routes/sync.js';
+import versionRoutes from './routes/version.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './utils/swagger.js';
 import { metricsMiddleware, getMetrics, metrics } from './utils/metrics.js';
@@ -236,6 +237,9 @@ app.get('/metrics', async (req, res) => {
     res.status(500).end();
   }
 });
+
+// Version endpoint (до health checks, чтобы не требовал аутентификации)
+app.use('/version', versionRoutes);
 
 // Health checks
 app.get('/health', (req, res) => {

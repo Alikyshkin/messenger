@@ -13,7 +13,7 @@ import '../widgets/call_action_button.dart';
 import '../widgets/call_control_button.dart';
 import '../widgets/call_layout_button.dart';
 import '../services/call_minimized_service.dart';
-import '../utils/app_update.dart';
+import '../services/app_update_service.dart';
 
 /// Режим отображения видео: докладчик (большой удалённый), обычный, рядом слева-справа.
 enum CallLayout {
@@ -403,8 +403,11 @@ class _CallScreenState extends State<CallScreen> {
         _isConnecting = false;
         
         // Проверяем обновления когда собеседник вышел из звонка
-        // Это обеспечивает синхронизацию интерфейса и обновлений
-        AppUpdateWeb.checkAndReloadIfNeeded();
+        try {
+          context.read<AppUpdateService>().checkForUpdates();
+        } catch (_) {
+          // Игнорируем ошибки проверки обновлений
+        }
       }
       return;
     }
@@ -657,9 +660,12 @@ class _CallScreenState extends State<CallScreen> {
       Navigator.of(context).pop();
     }
     
-    // Проверяем обновления и очищаем кеш при выходе из звонка для синхронизации
-    // Это обеспечивает одинаковый интерфейс и обновления у всех пользователей
-    AppUpdateWeb.checkAndReloadIfNeeded();
+    // Проверяем обновления при выходе из звонка
+    try {
+      context.read<AppUpdateService>().checkForUpdates();
+    } catch (_) {
+      // Игнорируем ошибки проверки обновлений
+    }
   }
 
   Future<void> _loadMediaDevices() async {

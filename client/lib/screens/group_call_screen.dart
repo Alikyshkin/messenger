@@ -16,7 +16,7 @@ import '../widgets/user_avatar.dart';
 import '../widgets/call_action_button.dart';
 import '../widgets/call_control_button.dart';
 import '../services/call_minimized_service.dart';
-import '../utils/app_update.dart';
+import '../services/app_update_service.dart';
 
 /// Участник группового звонка с его PeerConnection и потоком
 class _GroupCallParticipant {
@@ -570,9 +570,12 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     _cleanup();
     if (mounted) Navigator.of(context).pop();
     
-    // Проверяем обновления и очищаем кеш при выходе из звонка для синхронизации
-    // Это обеспечивает одинаковый интерфейс и обновления у всех пользователей
-    AppUpdateWeb.checkAndReloadIfNeeded();
+    // Проверяем обновления при выходе из звонка
+    try {
+      context.read<AppUpdateService>().checkForUpdates();
+    } catch (_) {
+      // Игнорируем ошибки проверки обновлений
+    }
   }
 
   void _minimizeCall() {

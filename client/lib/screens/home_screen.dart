@@ -14,6 +14,8 @@ import '../services/app_sound_service.dart';
 import '../utils/page_visibility.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/offline_indicator.dart';
+import '../widgets/app_update_banner.dart';
+import '../services/app_update_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -35,6 +37,14 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ws = context.read<WsService>();
       ws.connect(context.read<AuthService>().token);
+      
+      // Проверяем обновления при возврате на главный экран
+      try {
+        context.read<AppUpdateService>().checkForUpdates();
+      } catch (_) {
+        // Игнорируем ошибки проверки обновлений
+      }
+      
       _load();
       _newMessageSub = ws.onNewMessage.listen((_) {
         if (!mounted) return;
@@ -163,7 +173,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            body: RefreshIndicator(
+            body: Column(
+              children: [
+                const AppUpdateBanner(),
+                Expanded(
+                  child: RefreshIndicator(
               onRefresh: _load,
               child: _loading && _chats.isEmpty
                   ? ListView.builder(
@@ -296,6 +310,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                 );
                               },
                             ),
+                  ),
+                ),
+              ],
             ),
       ),
     );

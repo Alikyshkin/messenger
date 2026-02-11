@@ -17,14 +17,18 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../widgets/ws_call_listener.dart';
 import '../widgets/minimized_call_overlay.dart';
+import '../widgets/navigation_update_listener.dart';
 import '../models/user.dart';
 import '../models/group.dart';
 import '../services/api.dart';
 
 /// Конфигурация роутов приложения с поддержкой URL для веб
 GoRouter createAppRouter(AuthService authService) {
+  final navigationObserver = NavigationUpdateObserver();
+  
   return GoRouter(
     initialLocation: '/',
+    observers: [navigationObserver],
     redirect: (context, state) {
       final auth = authService;
       final isLoggedIn = auth.isLoggedIn;
