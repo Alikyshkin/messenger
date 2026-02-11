@@ -105,8 +105,8 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
       }
       if (phones.isEmpty) {
         if (!mounted) {
-        return;
-      }
+          return;
+        }
         setState(() => _syncing = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.tr('no_phones_in_contacts'))),
@@ -245,7 +245,7 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
                       size: 64,
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurfaceVariant.withValues(alpha:0.5),
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     ),
                     const SizedBox(height: 16),
                     Text(

@@ -130,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen>
       final api = Api(auth.token);
       final list = await api.getChats();
       if (!mounted) return;
-      
+
       // Фильтруем скрытые чаты
       final filteredList = <ChatPreview>[];
       for (final chat in list) {
@@ -145,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen>
           filteredList.add(chat);
         }
       }
-      
+
       if (!mounted) return;
       // Подсчитываем общее количество непрочитанных сообщений
       final totalUnread = filteredList.fold<int>(
@@ -405,7 +405,7 @@ class _HomeScreenState extends State<HomeScreen>
                                           color: Theme.of(context)
                                               .colorScheme
                                               .onPrimaryContainer
-                                              .withValues(alpha:0.7),
+                                              .withValues(alpha: 0.7),
                                         )
                                       : null,
                                 )
@@ -418,17 +418,19 @@ class _HomeScreenState extends State<HomeScreen>
                                         context,
                                       ).colorScheme.primaryContainer,
                                       backgroundImage:
-                                          avatarUrl != null && avatarUrl.isNotEmpty
+                                          avatarUrl != null &&
+                                              avatarUrl.isNotEmpty
                                           ? NetworkImage(avatarUrl)
                                           : null,
-                                      child: avatarUrl == null || avatarUrl.isEmpty
+                                      child:
+                                          avatarUrl == null || avatarUrl.isEmpty
                                           ? Icon(
                                               Icons.person,
                                               size: AppSizes.iconXXL,
                                               color: Theme.of(context)
                                                   .colorScheme
                                                   .onPrimaryContainer
-                                                  .withValues(alpha:0.7),
+                                                  .withValues(alpha: 0.7),
                                             )
                                           : null,
                                     ),
@@ -443,7 +445,9 @@ class _HomeScreenState extends State<HomeScreen>
                                             color: Colors.green,
                                             shape: BoxShape.circle,
                                             border: Border.all(
-                                              color: Theme.of(context).colorScheme.surface,
+                                              color: Theme.of(
+                                                context,
+                                              ).colorScheme.surface,
                                               width: 2,
                                             ),
                                           ),
@@ -512,7 +516,7 @@ class _HomeScreenState extends State<HomeScreen>
                               size: AppSizes.iconSM,
                               color: Theme.of(
                                 context,
-                              ).colorScheme.error.withValues(alpha:0.7),
+                              ).colorScheme.error.withValues(alpha: 0.7),
                             ),
                             tooltip: context.tr('delete_chat'),
                             padding: EdgeInsets.zero,
@@ -691,7 +695,9 @@ class _HomeScreenState extends State<HomeScreen>
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     height: 1,
                     width: 40,
-                    color: Theme.of(context).dividerColor.withValues(alpha:0.3),
+                    color: Theme.of(
+                      context,
+                    ).dividerColor.withValues(alpha: 0.3),
                   ),
                   // Версия
                   Padding(
@@ -702,7 +708,7 @@ class _HomeScreenState extends State<HomeScreen>
                         fontSize: 9,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurfaceVariant.withValues(alpha:0.5),
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                         fontWeight: FontWeight.w500,
                         letterSpacing: 0.2,
                       ),
@@ -739,8 +745,8 @@ class _HomeScreenState extends State<HomeScreen>
                     onPressed: () async {
                       final navigator = _navigatorKey.currentState;
                       if (navigator == null) {
-      return;
-    }
+                        return;
+                      }
                       final ok = await showDialog<bool>(
                         context: navigator.context,
                         useRootNavigator: false,
@@ -761,8 +767,8 @@ class _HomeScreenState extends State<HomeScreen>
                       if (ok == true && mounted) {
                         await context.read<AuthService>().logout();
                         if (!mounted) {
-            return;
-          }
+                          return;
+                        }
                         context.go('/login');
                       }
                     },
@@ -818,7 +824,7 @@ class _NavButton extends StatelessWidget {
             height: 48,
             decoration: BoxDecoration(
               color: isActive
-                  ? theme.colorScheme.primaryContainer.withValues(alpha:0.5)
+                  ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
                   : null,
               borderRadius: BorderRadius.circular(12),
             ),

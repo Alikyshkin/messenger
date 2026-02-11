@@ -305,7 +305,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     if (signal.signal == 'offer' && signal.payload != null) {
       // Предотвращаем обработку дублирующих offer
       if (participant.offerReceived && participant.peerConnection != null) {
-        debugPrint('Duplicate offer received from ${signal.fromUserId}, ignoring');
+        debugPrint(
+          'Duplicate offer received from ${signal.fromUserId}, ignoring',
+        );
         return;
       }
       participant.offerReceived = true;
@@ -476,7 +478,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     };
 
     pc.onIceConnectionState = (state) {
-      debugPrint('Participant ${participant.user.id} ICE connection state: $state');
+      debugPrint(
+        'Participant ${participant.user.id} ICE connection state: $state',
+      );
       if (state == RTCIceConnectionState.RTCIceConnectionStateDisconnected) {
         // При временном разрыве соединения не помечаем как отключенного сразу
         // Даем время на восстановление (ICE может восстановить соединение)

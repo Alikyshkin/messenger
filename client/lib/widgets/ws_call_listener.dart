@@ -64,8 +64,8 @@ class _WsCallListenerState extends State<WsCallListener> {
           }
 
           if (!mounted) {
-        return;
-      }
+            return;
+          }
           Navigator.of(context).push(
             AppPageRoute(
               builder: (_) => GroupCallScreen(

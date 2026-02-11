@@ -453,8 +453,8 @@ class _ChatScreenState extends State<ChatScreen> {
           PopupMenuItem(
             onTap: () {
               if (!mounted) {
-        return;
-      }
+                return;
+              }
               openSheet();
             },
             child: const ListTile(
@@ -466,8 +466,8 @@ class _ChatScreenState extends State<ChatScreen> {
           PopupMenuItem(
             onTap: () {
               if (!mounted) {
-        return;
-      }
+                return;
+              }
               setState(() => _replyingTo = m);
             },
             child: const ListTile(
@@ -479,8 +479,8 @@ class _ChatScreenState extends State<ChatScreen> {
           PopupMenuItem(
             onTap: () {
               if (!mounted) {
-        return;
-      }
+                return;
+              }
               _showForwardPicker(m);
             },
             child: const ListTile(
@@ -653,8 +653,8 @@ class _ChatScreenState extends State<ChatScreen> {
           attachmentEncrypted: encrypted,
         );
         if (!mounted) {
-        return;
-      }
+          return;
+        }
         for (final msg in messages) {
           await LocalDb.upsertMessage(msg, widget.peer.id);
         }
@@ -668,8 +668,8 @@ class _ChatScreenState extends State<ChatScreen> {
         _scrollToBottom();
       } catch (e) {
         if (!mounted) {
-        return;
-      }
+          return;
+        }
         setState(() => _sending = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -691,8 +691,8 @@ class _ChatScreenState extends State<ChatScreen> {
             attachmentEncrypted: pending.encrypted,
           );
           if (!mounted) {
-        return;
-      }
+            return;
+          }
           await LocalDb.upsertMessage(msg, widget.peer.id);
           await LocalDb.updateChatLastMessage(widget.peer.id, msg);
           setState(() {
@@ -709,8 +709,8 @@ class _ChatScreenState extends State<ChatScreen> {
             attachmentEncrypted: pending.encrypted,
           );
           if (!mounted) {
-        return;
-      }
+            return;
+          }
           await LocalDb.upsertMessage(msg, widget.peer.id);
           await LocalDb.updateChatLastMessage(widget.peer.id, msg);
           setState(() {
@@ -721,8 +721,8 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       } catch (e) {
         if (!mounted) {
-        return;
-      }
+          return;
+        }
         setState(() => _sending = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -816,7 +816,7 @@ class _ChatScreenState extends State<ChatScreen> {
         // Только для реальных сетевых ошибок (нет интернета) добавляем в outbox
         await LocalDb.addToOutbox(widget.peer.id, toSend);
         if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
                 'Нет связи. Сообщение будет отправлено при появлении сети.',
@@ -1025,8 +1025,8 @@ class _ChatScreenState extends State<ChatScreen> {
       final hasPermission = await _audioRecorder.hasPermission();
       if (!hasPermission) {
         if (!mounted) {
-        return;
-      }
+          return;
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Нет доступа к микрофону')),
         );
@@ -1192,10 +1192,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       decoration: BoxDecoration(
                         color: Colors.green,
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: appBarBg,
-                          width: 2,
-                        ),
+                        border: Border.all(color: appBarBg, width: 2),
                       ),
                     ),
                   ),
@@ -1338,9 +1335,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                 Icon(
                                   Icons.phone_missed,
                                   size: 16,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurface.withValues(alpha: 0.7),
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.7),
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
@@ -1504,7 +1500,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                                                     )
                                                                     .colorScheme
                                                                     .onSurface)
-                                                          .withValues(alpha: 0.9),
+                                                          .withValues(
+                                                            alpha: 0.9,
+                                                          ),
                                                 ),
                                           ),
                                       ],
@@ -2023,7 +2021,10 @@ class _ChatScreenState extends State<ChatScreen> {
             const SizedBox(width: 6),
             Text(
               'Опрос',
-              style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.8)),
+              style: TextStyle(
+                fontSize: 12,
+                color: textColor.withValues(alpha: 0.8),
+              ),
             ),
           ],
         ),
@@ -2044,8 +2045,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   final api = Api(context.read<AuthService>().token);
                   final result = await api.votePoll(poll.id, i);
                   if (!mounted) {
-        return;
-      }
+                    return;
+                  }
                   _updatePollAfterVote(poll.id, result);
                 } catch (_) {}
               },
@@ -2201,9 +2202,9 @@ class _ChatScreenState extends State<ChatScreen> {
             height: 200,
             fit: BoxFit.cover,
             loadingBuilder: (_, child, progress) {
-                    if (progress == null) {
-                      return child;
-                    }
+              if (progress == null) {
+                return child;
+              }
               return SizedBox(
                 width: 200,
                 height: 200,

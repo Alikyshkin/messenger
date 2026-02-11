@@ -36,8 +36,8 @@ class _VideoNoteBubbleState extends State<VideoNoteBubble> {
         try {
           final controller = await createVideoControllerFromBytes(bytes);
           if (!mounted) {
-          return;
-        }
+            return;
+          }
           if (controller != null) {
             setState(() {
               _controller = controller;

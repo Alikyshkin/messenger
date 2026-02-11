@@ -87,7 +87,9 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
   }
 
   Future<void> _startRecording() async {
-    if (_controller == null || !_controller!.value.isInitialized || _recording) {
+    if (_controller == null ||
+        !_controller!.value.isInitialized ||
+        _recording) {
       return;
     }
     try {

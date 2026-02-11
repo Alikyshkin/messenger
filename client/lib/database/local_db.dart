@@ -248,14 +248,10 @@ class LocalDb {
       return;
     }
     // Помечаем чат как скрытый, чтобы он не возвращался при загрузке
-    await db.insert(
-      'hidden_chats',
-      {
-        'peer_id': peerId,
-        'hidden_at': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('hidden_chats', {
+      'peer_id': peerId,
+      'hidden_at': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
     await db.delete('chats', where: 'peer_id = ?', whereArgs: [peerId]);
     await db.delete(
       'messages',

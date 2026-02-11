@@ -161,9 +161,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                         ? Icon(
                             Icons.camera_alt,
                             size: 48,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onPrimaryContainer.withValues(alpha:0.7),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer
+                                .withValues(alpha: 0.7),
                           )
                         : null,
                   ),

@@ -220,8 +220,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           file.name,
         );
         if (!mounted) {
-        return;
-      }
+          return;
+        }
         setState(() {
           _messages.add(msg);
           _sending = false;
@@ -236,8 +236,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           list,
         );
         if (!mounted) {
-        return;
-      }
+          return;
+        }
         setState(() {
           _messages.addAll(messages);
           _sending = false;
@@ -608,8 +608,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           PopupMenuItem(
             onTap: () {
               if (!mounted) {
-        return;
-      }
+                return;
+              }
               openSheet();
             },
             child: const ListTile(
@@ -621,8 +621,8 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           PopupMenuItem(
             onTap: () {
               if (!mounted) {
-        return;
-      }
+                return;
+              }
               _onReply(m);
             },
             child: ListTile(
@@ -668,7 +668,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   decoration: BoxDecoration(
                     color: Theme.of(
                       context,
-                    ).colorScheme.surface.withValues(alpha:0.6),
+                    ).colorScheme.surface.withValues(alpha: 0.6),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -693,7 +693,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             fontSize: 10,
             color: Theme.of(
               context,
-            ).colorScheme.onSurfaceVariant.withValues(alpha:0.7),
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
           ),
         ),
       ],
