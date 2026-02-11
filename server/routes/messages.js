@@ -64,9 +64,10 @@ function getBaseUrl(req) {
 router.patch('/:peerId/read', validateParams(peerIdParamSchema), asyncHandler(async (req, res) => {
   const peerId = req.validatedParams.peerId;
   const me = req.user.userId;
-  db.prepare(
+  const stmt = db.prepare(
     'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE receiver_id = ? AND sender_id = ? AND read_at IS NULL'
-  ).run(me, peerId);
+  );
+  stmt.run(me, peerId);
   res.status(204).send();
 }));
 
