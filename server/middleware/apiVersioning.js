@@ -33,6 +33,7 @@ export function apiVersioning(req, res, next) {
     version = `v${queryVersion}`;
   }
   
+  // Всегда устанавливаем версию API (по умолчанию v1 для всех путей)
   req.apiVersion = version;
   res.setHeader('X-API-Version', version);
   

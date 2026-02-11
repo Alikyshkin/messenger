@@ -170,6 +170,7 @@ app.use('/uploads', express.static(uploadsDir));
 // Audit logging должен быть после auth middleware, но до routes
 // (применяется автоматически через middleware в routes)
 
+// API маршруты (должны быть ДО статических файлов, чтобы не перехватывались)
 app.use('/auth', authRoutes);
 app.use('/contacts', contactsRoutes);
 app.use('/messages', messagesRoutes);
@@ -292,6 +293,7 @@ app.get('/live', (req, res) => {
 
 // Веб-клиент (Flutter build) — отдаём статические файлы и fallback для SPA роутинга
 // Без долгого кэша, чтобы после пуша сразу видеть изменения
+// ВАЖНО: express.static обрабатывает только GET запросы, поэтому API маршруты (POST/PUT/DELETE) не будут перехвачены
 app.use(express.static(publicDir, {
   setHeaders: (res, path) => {
     const p = path.toLowerCase();
