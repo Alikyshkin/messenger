@@ -91,11 +91,11 @@ app.use(csrfProtect());
 // Endpoint для получения CSRF токена (для веб-форм)
 app.get('/csrf-token', csrfTokenRoute);
 
-// API Versioning (должен быть до routes)
+app.use('/api', apiLimiter); // Общий лимит для всех API запросов
+
+// API Versioning (должен быть до routes, но после rate limiting)
 app.use('/api', apiVersioning);
 app.use('/api', validateApiVersion);
-
-app.use('/api', apiLimiter); // Общий лимит для всех API запросов
 // Явно указываем UTF-8 для всех JSON-ответов API (корректное отображение кириллицы).
 app.use((req, res, next) => {
   const originalJson = res.json.bind(res);
