@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../widgets/user_avatar.dart';
-import 'contacts_screen.dart';
 import 'settings_screen.dart';
 
 String _friendsCountLabel(BuildContext context, int? count) {
