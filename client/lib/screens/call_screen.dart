@@ -8,6 +8,9 @@ import '../models/call_signal.dart';
 import '../services/ws_service.dart';
 import '../services/app_sound_service.dart';
 import '../services/auth_service.dart';
+import '../utils/webrtc_constants.dart';
+import '../utils/media_utils.dart';
+import '../widgets/connecting_participant_view.dart';
 
 /// Режим отображения видео: докладчик (большой удалённый), обычный, рядом слева-справа.
 enum CallLayout {
@@ -115,7 +118,7 @@ class _CallScreenState extends State<CallScreen> {
         _applyInitialMute();
       }
       
-      _pc = await createPeerConnection(_iceServers, {});
+      _pc = await createPeerConnection(WebRTCConstants.iceServers, {});
       _setupPeerConnection();
       for (var track in _localStream!.getTracks()) {
         await _pc!.addTrack(track, _localStream!);
@@ -136,7 +139,7 @@ class _CallScreenState extends State<CallScreen> {
       if (!mounted) return;
       setState(() {
         _state = 'ended';
-        _error = _mediaErrorMessage(e);
+        _error = MediaUtils.getMediaErrorMessage(e);
         _isConnecting = false;
       });
     }
@@ -159,57 +162,23 @@ class _CallScreenState extends State<CallScreen> {
     if (videoTracks.isNotEmpty) _cameraVideoTrack = videoTracks.first;
   }
 
-  String _mediaErrorMessage(Object e) {
-    if (kIsWeb) {
-      final msg = e.toString().toLowerCase();
-      if (msg.contains('null') || msg.contains('getusermedia') || msg.contains('media')) {
-        return 'Видеозвонок в браузере доступен только по HTTPS. Откройте сайт по https:// или используйте приложение на телефоне.';
-      }
-    }
-    if (e.toString().toLowerCase().contains('permission')) {
-      return 'Нет доступа к камере или микрофону. Разрешите доступ в настройках.';
-    }
-    return e.toString();
-  }
-
-  Map<String, dynamic> _buildVideoConstraints(String? videoDeviceId) {
-    // Улучшаем качество видео для лучшего опыта
-    final Map<String, dynamic> videoConstraint = kIsWeb
-        ? {
-            'mandatory': {'minWidth': '640', 'minHeight': '480', 'minFrameRate': '24'},
-            'facingMode': _isFrontCamera ? 'user' : 'environment',
-            'optional': [],
-          }
-        : {
-            'facingMode': _isFrontCamera ? 'user' : 'environment',
-            'width': {'ideal': 1280, 'min': 640},
-            'height': {'ideal': 720, 'min': 480},
-            'frameRate': {'ideal': 30, 'min': 24},
-          };
-    final videoConstraintMap = Map<String, dynamic>.from(videoConstraint);
-    if (videoDeviceId != null && videoDeviceId.isNotEmpty) {
-      if (kIsWeb) {
-        videoConstraintMap['optional'] = [
-          {'sourceId': videoDeviceId}
-        ];
-      } else {
-        videoConstraintMap['deviceId'] = {'exact': videoDeviceId};
-      }
-    }
-    return videoConstraintMap;
-  }
 
   Future<void> _getUserMedia({String? videoDeviceId, String? audioDeviceId}) async {
     final Map<String, dynamic> mediaConstraints = {
       'audio': audioDeviceId != null && audioDeviceId.isNotEmpty
           ? {'deviceId': {'exact': audioDeviceId}}
           : true,
-      'video': widget.isVideoCall ? _buildVideoConstraints(videoDeviceId) : false,
+      'video': widget.isVideoCall 
+          ? MediaUtils.buildVideoConstraints(
+              isFrontCamera: _isFrontCamera,
+              videoDeviceId: videoDeviceId,
+            )
+          : false,
     };
     try {
       _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
     } catch (e) {
-      throw Exception(_mediaErrorMessage(e));
+      throw Exception(MediaUtils.getMediaErrorMessage(e));
     }
     if (_localStream != null) {
       _cameraVideoTrack = _localStream!.getVideoTracks().isNotEmpty
@@ -428,7 +397,7 @@ class _CallScreenState extends State<CallScreen> {
           _applyInitialMute();
         }
         
-        _pc = await createPeerConnection(_iceServers, {});
+        _pc = await createPeerConnection(WebRTCConstants.iceServers, {});
         _setupPeerConnection();
         print('Adding local tracks (handle offer): ${_localStream!.getTracks().length}');
         for (var track in _localStream!.getTracks()) {
@@ -474,7 +443,7 @@ class _CallScreenState extends State<CallScreen> {
           AppSoundService.instance.stopRingtone();
           setState(() {
             _state = 'ended';
-            _error = _mediaErrorMessage(e);
+            _error = MediaUtils.getMediaErrorMessage(e);
             _isConnecting = false;
           });
         }
@@ -552,7 +521,7 @@ class _CallScreenState extends State<CallScreen> {
         _applyInitialMute();
       }
       
-      _pc = await createPeerConnection(_iceServers, {});
+      _pc = await createPeerConnection(WebRTCConstants.iceServers, {});
       _setupPeerConnection();
       for (var track in _localStream!.getTracks()) {
         await _pc!.addTrack(track, _localStream!);
@@ -596,7 +565,7 @@ class _CallScreenState extends State<CallScreen> {
         AppSoundService.instance.stopRingtone();
         setState(() {
           _state = 'ended';
-          _error = _mediaErrorMessage(e);
+          _error = MediaUtils.getMediaErrorMessage(e);
           _isConnecting = false;
         });
       }

@@ -10,6 +10,9 @@ import '../services/ws_service.dart';
 import '../services/app_sound_service.dart';
 import '../services/auth_service.dart';
 import '../services/api.dart';
+import '../utils/webrtc_constants.dart';
+import '../utils/media_utils.dart';
+import '../widgets/user_avatar.dart';
 
 /// Участник группового звонка с его PeerConnection и потоком
 class _GroupCallParticipant {
@@ -55,12 +58,6 @@ class GroupCallScreen extends StatefulWidget {
 }
 
 class _GroupCallScreenState extends State<GroupCallScreen> {
-  static const _iceServers = {
-    'iceServers': [
-      {'urls': 'stun:stun.l.google.com:19302'},
-    ],
-    'sdpSemantics': 'unified-plan',
-  };
 
   WsService? _ws;
   StreamSubscription<CallSignal>? _signalSub;
@@ -178,7 +175,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
       if (!mounted) return;
       setState(() {
         _state = 'ended';
-        _error = _mediaErrorMessage(e);
+        _error = MediaUtils.getMediaErrorMessage(e);
       });
     }
   }
@@ -222,7 +219,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     _GroupCallParticipant participant,
   ) async {
     try {
-      final pc = await createPeerConnection(_iceServers, {});
+      final pc = await createPeerConnection(WebRTCConstants.iceServers, {});
       participant.peerConnection = pc;
 
       // Добавляем локальные треки
@@ -306,7 +303,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
             _applyInitialMute();
           }
 
-          final pc = await createPeerConnection(_iceServers, {});
+          final pc = await createPeerConnection(WebRTCConstants.iceServers, {});
           participant.peerConnection = pc;
 
           if (_localStream != null) {
@@ -521,7 +518,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _error = _mediaErrorMessage(e);
+        _error = MediaUtils.getMediaErrorMessage(e);
         _state = 'ended';
       });
     }
@@ -581,17 +578,6 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     }
   }
 
-  String _mediaErrorMessage(dynamic e) {
-    if (e.toString().contains('Permission denied') ||
-        e.toString().contains('NotAllowedError')) {
-      return 'Нет доступа к камере/микрофону';
-    }
-    if (e.toString().contains('NotFoundError') ||
-        e.toString().contains('DevicesNotFoundError')) {
-      return 'Камера/микрофон не найдены';
-    }
-    return e.toString();
-  }
 
   @override
   void dispose() {
@@ -802,24 +788,14 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                     Container(
                       color: Colors.grey.shade900,
                       child: Center(
-                        child: CircleAvatar(
+                        child: UserAvatar(
+                          user: participant.user,
                           radius: 30,
                           backgroundColor: Colors.blue.shade700,
-                          backgroundImage: participant.user.avatarUrl != null
-                              ? NetworkImage(participant.user.avatarUrl!)
-                              : null,
-                          child: participant.user.avatarUrl == null
-                              ? Text(
-                                  participant.user.displayName.isNotEmpty
-                                      ? participant.user.displayName[0]
-                                            .toUpperCase()
-                                      : '?',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 24,
-                                  ),
-                                )
-                              : null,
+                          textStyle: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                          ),
                         ),
                       ),
                     ),
