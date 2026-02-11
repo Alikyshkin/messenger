@@ -29,6 +29,7 @@ class UserAvatar extends StatelessWidget {
     this.backgroundColor,
     this.textStyle,
     this.fallbackText,
+    this.showOnlineIndicator = false,
   }) : user = null;
 
   @override
