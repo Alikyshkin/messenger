@@ -37,12 +37,6 @@ class CallScreen extends StatefulWidget {
 }
 
 class _CallScreenState extends State<CallScreen> {
-  static const _iceServers = {
-    'iceServers': [
-      {'urls': 'stun:stun.l.google.com:19302'},
-    ],
-    'sdpSemantics': 'unified-plan',
-  };
 
   WsService? _ws;
   StreamSubscription<CallSignal>? _signalSub;
@@ -824,7 +818,7 @@ class _CallScreenState extends State<CallScreen> {
     final showRemote = _state == 'connected' && _remoteStream != null;
     // Локальное видео показываем только если есть удаленное (чтобы не дублировать в двух окнах)
     final showLocal = _state == 'connected' && _localStream != null && showRemote;
-    final isConnecting = _state == 'calling' || (_state == 'connected' && !showRemote);
+    final isConnecting = _state == 'connected' && _isConnecting && !showRemote;
     
     return Stack(
       fit: StackFit.expand,
@@ -872,6 +866,8 @@ class _CallScreenState extends State<CallScreen> {
   Widget _buildSideBySideLayout() {
     final showRemote = _state == 'connected' && _remoteStream != null;
     final showLocal = _localStream != null || _screenShareEnabled;
+    final isConnecting = _state == 'connected' && _isConnecting && !showRemote;
+    
     return Row(
       children: [
         Expanded(
@@ -894,7 +890,21 @@ class _CallScreenState extends State<CallScreen> {
             child: showRemote
                 ? RTCVideoView(_remoteRenderer,
                     objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover)
-                : Center(child: Text(widget.peer.displayName, style: const TextStyle(color: Colors.white70))),
+                : isConnecting
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const CircularProgressIndicator(color: Colors.orange),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Подключение...',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Center(child: Text(widget.peer.displayName, style: const TextStyle(color: Colors.white70))),
           ),
         ),
       ],
