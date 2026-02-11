@@ -270,15 +270,15 @@ class _HomeScreenState extends State<HomeScreen>
         if (!mounted) {
           return;
         }
+        final currentContext = context;
         final errorMessage = e is ApiException
             ? e.message
-            : context.tr('error');
+            : currentContext.tr('error');
         if (!mounted) {
           return;
         }
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
+        final scaffoldMessenger = ScaffoldMessenger.of(currentContext);
+        scaffoldMessenger.showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     }
   }
@@ -771,12 +771,14 @@ class _HomeScreenState extends State<HomeScreen>
                         if (!mounted) {
                           return;
                         }
-                        final navigator = context;
-                        await navigator.read<AuthService>().logout();
+                        final currentContext = context;
+                        final authService = currentContext.read<AuthService>();
+                        final router = currentContext;
+                        await authService.logout();
                         if (!mounted) {
                           return;
                         }
-                        navigator.go('/login');
+                        router.go('/login');
                       }
                     },
                   ),

@@ -2,13 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'dart:convert';
-import 'package:client/services/api.dart';
 
 /// Интеграционные тесты для проверки полного потока работы чата
 void main() {
   group('Chat Flow Integration Tests', () {
-    const testToken = 'test_token_123';
-
     test(
       'Complete chat flow: load messages -> send message -> receive message',
       () async {

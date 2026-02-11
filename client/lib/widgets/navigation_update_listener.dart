@@ -41,10 +41,12 @@ class NavigationUpdateObserver extends NavigatorObserver {
     }
 
     // Используем Future.microtask чтобы не блокировать навигацию
+    // Сохраняем ссылку на navigator до async операции
+    final navigator = route.navigator;
     Future.microtask(() {
       try {
         // Получаем контекст из route после микротаска
-        final navigatorContext = route.navigator?.context;
+        final navigatorContext = navigator?.context;
         if (navigatorContext == null) {
           return;
         }

@@ -24,7 +24,6 @@ void main() {
         birthday: null,
         phone: null,
       );
-      testToken = 'test_token_123';
     });
 
     testWidgets('ChatScreen loads and displays messages', (
