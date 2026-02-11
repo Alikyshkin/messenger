@@ -148,24 +148,21 @@ CREATE TABLE IF NOT EXISTS poll_votes (
 -- Таблица опросов в группах
 CREATE TABLE IF NOT EXISTS group_polls (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  message_id INTEGER NOT NULL,
+  group_message_id INTEGER NOT NULL UNIQUE,
   question TEXT NOT NULL,
   options TEXT NOT NULL, -- JSON массив строк
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (message_id) REFERENCES group_messages(id) ON DELETE CASCADE,
-  UNIQUE(message_id)
+  multiple INTEGER DEFAULT 0,
+  FOREIGN KEY (group_message_id) REFERENCES group_messages(id) ON DELETE CASCADE
 );
 
 -- Таблица голосов в опросах групп
 CREATE TABLE IF NOT EXISTS group_poll_votes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  poll_id INTEGER NOT NULL,
+  group_poll_id INTEGER NOT NULL,
   user_id INTEGER NOT NULL,
   option_index INTEGER NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (poll_id) REFERENCES group_polls(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  UNIQUE(poll_id, user_id)
+  PRIMARY KEY (group_poll_id, user_id, option_index),
+  FOREIGN KEY (group_poll_id) REFERENCES group_polls(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 -- Таблица токенов сброса пароля
