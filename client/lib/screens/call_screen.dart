@@ -547,6 +547,7 @@ class _CallScreenState extends State<CallScreen> {
     if (offerPayload == null) return;
     setState(() {
       _state = 'init';
+      _isConnecting = true;
     });
     try {
       await _renderersFuture;
@@ -593,6 +594,7 @@ class _CallScreenState extends State<CallScreen> {
         AppSoundService.instance.stopRingtone();
         setState(() {
           _state = 'connected';
+          _isConnecting = true; // Начинаем процесс подключения
         });
       }
     } catch (e) {
@@ -601,6 +603,7 @@ class _CallScreenState extends State<CallScreen> {
         setState(() {
           _state = 'ended';
           _error = _mediaErrorMessage(e);
+          _isConnecting = false;
         });
       }
     }
