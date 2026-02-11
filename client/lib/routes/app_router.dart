@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../screens/login_screen.dart';
 import '../screens/home_screen.dart';
+import '../screens/chats_list_page.dart';
 import '../screens/chat_screen.dart';
 import '../screens/group_chat_screen.dart';
-import '../screens/profile_screen.dart';
-import '../screens/contacts_screen.dart';
+import '../widgets/profile_content.dart';
+import '../widgets/contacts_content.dart';
 import '../screens/start_chat_screen.dart';
 import '../screens/create_group_screen.dart';
 import '../screens/user_profile_screen.dart';
@@ -15,6 +16,7 @@ import '../screens/forgot_password_screen.dart';
 import '../screens/register_screen.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/chat_list_refresh_service.dart';
 import '../widgets/ws_call_listener.dart';
 import '../widgets/minimized_call_overlay.dart';
 import '../widgets/navigation_update_listener.dart';
@@ -64,233 +66,246 @@ GoRouter createAppRouter(AuthService authService) {
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
       ),
-      GoRoute(
-        path: '/profile',
-        pageBuilder: (context, state) => MaterialPage<void>(
-          key: state.pageKey,
-          child: const ProfileScreen(),
-        ),
-      ),
-      GoRoute(
-        path: '/',
-        builder: (context, state) {
+      ShellRoute(
+        builder: (context, state, child) {
           final auth = Provider.of<AuthService>(context, listen: false);
           if (!auth.loaded) {
             return const _AppLoadingScreen();
           }
-          return auth.isLoggedIn
-              ? MinimizedCallOverlay(
-                  child: const WsCallListener(child: HomeScreen()),
-                )
-              : const LoginScreen();
+          if (!auth.isLoggedIn) {
+            return const LoginScreen();
+          }
+          return MinimizedCallOverlay(
+            child: WsCallListener(child: HomeScreen(child: child)),
+          );
         },
         routes: [
           GoRoute(
-            path: 'chat/:peerId',
-            builder: (context, state) {
-              final peerIdStr = state.pathParameters['peerId']!;
-              final peerId = int.tryParse(peerIdStr);
-              if (peerId == null) {
-                return const Scaffold(
-                  body: Center(child: Text('Неверный ID пользователя')),
-                );
-              }
-              // Загружаем пользователя из API
-              final auth = Provider.of<AuthService>(context, listen: false);
-              final api = Api(auth.token);
-              return FutureBuilder<User>(
-                future: api.getUserProfile(peerId),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+            path: '/',
+            builder: (context, state) => const ChatsListPage(),
+            routes: [
+              GoRoute(
+                path: 'chat/:peerId',
+                builder: (context, state) {
+                  final peerIdStr = state.pathParameters['peerId']!;
+                  final peerId = int.tryParse(peerIdStr);
+                  if (peerId == null) {
                     return const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
+                      body: Center(child: Text('Неверный ID пользователя')),
                     );
                   }
-                  if (snapshot.hasError || !snapshot.hasData) {
-                    return Scaffold(
-                      body: Center(
-                        child: Text(
-                          'Ошибка загрузки: ${snapshot.error ?? "Пользователь не найден"}',
-                        ),
-                      ),
-                    );
-                  }
-                  return ChatScreen(peer: snapshot.data!);
-                },
-              );
-            },
-          ),
-          GoRoute(
-            path: 'group/:groupId',
-            builder: (context, state) {
-              final groupIdStr = state.pathParameters['groupId']!;
-              final groupId = int.tryParse(groupIdStr);
-              if (groupId == null) {
-                return const Scaffold(
-                  body: Center(child: Text('Неверный ID группы')),
-                );
-              }
-              // Загружаем группу из API
-              final auth = Provider.of<AuthService>(context, listen: false);
-              final api = Api(auth.token);
-              return FutureBuilder<Group>(
-                future: api.getGroup(groupId),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  if (snapshot.hasError || !snapshot.hasData) {
-                    return Scaffold(
-                      body: Center(
-                        child: Text(
-                          'Ошибка загрузки: ${snapshot.error ?? "Группа не найдена"}',
-                        ),
-                      ),
-                    );
-                  }
-                  return GroupChatScreen(group: snapshot.data!);
-                },
-              );
-            },
-          ),
-          GoRoute(
-            path: 'contacts',
-            builder: (context, state) => const ContactsScreen(),
-          ),
-          GoRoute(
-            path: 'start-chat',
-            builder: (context, state) => const StartChatScreen(),
-          ),
-          GoRoute(
-            path: 'create-group',
-            builder: (context, state) => const CreateGroupScreen(),
-          ),
-          GoRoute(
-            path: 'user/:userId',
-            builder: (context, state) {
-              final userIdStr = state.pathParameters['userId']!;
-              final userId = int.tryParse(userIdStr);
-              if (userId == null) {
-                return const Scaffold(
-                  body: Center(child: Text('Неверный ID пользователя')),
-                );
-              }
-              final auth = Provider.of<AuthService>(context, listen: false);
-              final api = Api(auth.token);
-              return FutureBuilder<User>(
-                future: api.getUserProfile(userId),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  if (snapshot.hasError || !snapshot.hasData) {
-                    return Scaffold(
-                      body: Center(
-                        child: Text(
-                          'Ошибка загрузки: ${snapshot.error ?? "Пользователь не найден"}',
-                        ),
-                      ),
-                    );
-                  }
-                  return UserProfileScreen(user: snapshot.data!);
-                },
-              );
-            },
-          ),
-          GoRoute(
-            path: 'group-profile/:groupId',
-            builder: (context, state) {
-              final groupIdStr = state.pathParameters['groupId']!;
-              final groupId = int.tryParse(groupIdStr);
-              if (groupId == null) {
-                return const Scaffold(
-                  body: Center(child: Text('Неверный ID группы')),
-                );
-              }
-              final auth = Provider.of<AuthService>(context, listen: false);
-              final api = Api(auth.token);
-              return FutureBuilder<Group>(
-                future: api.getGroup(groupId),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  if (snapshot.hasError || !snapshot.hasData) {
-                    return Scaffold(
-                      body: Center(
-                        child: Text(
-                          'Ошибка загрузки: ${snapshot.error ?? "Группа не найдена"}',
-                        ),
-                      ),
-                    );
-                  }
-                  return GroupProfileScreen(group: snapshot.data!);
-                },
-              );
-            },
-          ),
-          GoRoute(
-            path: 'media/:peerId',
-            builder: (context, state) {
-              final peerIdStr = state.pathParameters['peerId']!;
-              final peerId = int.tryParse(peerIdStr);
-              if (peerId == null) {
-                return const Scaffold(body: Center(child: Text('Неверный ID')));
-              }
-              final isGroup = state.uri.queryParameters['group'] == 'true';
-              // Загружаем пользователя или группу из API
-              final auth = Provider.of<AuthService>(context, listen: false);
-              final api = Api(auth.token);
-              if (isGroup) {
-                return FutureBuilder<Group>(
-                  future: api.getGroup(peerId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Scaffold(
-                        body: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    if (snapshot.hasError || !snapshot.hasData) {
-                      return Scaffold(
-                        body: Center(
-                          child: Text(
-                            'Ошибка загрузки: ${snapshot.error ?? "Группа не найдена"}',
+                  // Загружаем пользователя из API
+                  final auth = Provider.of<AuthService>(context, listen: false);
+                  final api = Api(auth.token);
+                  return FutureBuilder<User>(
+                    future: api.getUserProfile(peerId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Scaffold(
+                          body: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      if (snapshot.hasError || !snapshot.hasData) {
+                        return Scaffold(
+                          body: Center(
+                            child: Text(
+                              'Ошибка загрузки: ${snapshot.error ?? "Пользователь не найден"}',
+                            ),
                           ),
-                        ),
-                      );
-                    }
-                    return MediaGalleryScreen(group: snapshot.data!);
-                  },
-                );
-              } else {
-                return FutureBuilder<User>(
-                  future: api.getUserProfile(peerId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Scaffold(
-                        body: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    if (snapshot.hasError || !snapshot.hasData) {
-                      return Scaffold(
-                        body: Center(
-                          child: Text(
-                            'Ошибка загрузки: ${snapshot.error ?? "Пользователь не найден"}',
+                        );
+                      }
+                      return ChatScreen(peer: snapshot.data!);
+                    },
+                  );
+                },
+              ),
+              GoRoute(
+                path: 'group/:groupId',
+                builder: (context, state) {
+                  final groupIdStr = state.pathParameters['groupId']!;
+                  final groupId = int.tryParse(groupIdStr);
+                  if (groupId == null) {
+                    return const Scaffold(
+                      body: Center(child: Text('Неверный ID группы')),
+                    );
+                  }
+                  // Загружаем группу из API
+                  final auth = Provider.of<AuthService>(context, listen: false);
+                  final api = Api(auth.token);
+                  return FutureBuilder<Group>(
+                    future: api.getGroup(groupId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Scaffold(
+                          body: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      if (snapshot.hasError || !snapshot.hasData) {
+                        return Scaffold(
+                          body: Center(
+                            child: Text(
+                              'Ошибка загрузки: ${snapshot.error ?? "Группа не найдена"}',
+                            ),
                           ),
-                        ),
-                      );
-                    }
-                    return MediaGalleryScreen(peer: snapshot.data!);
+                        );
+                      }
+                      return GroupChatScreen(group: snapshot.data!);
+                    },
+                  );
+                },
+              ),
+              GoRoute(
+                path: 'contacts',
+                builder: (context, state) => ContactsContent(
+                  onFriendRequestChanged: () {
+                    context.read<ChatListRefreshService>().requestRefresh();
                   },
-                );
-              }
-            },
+                  navigator: null,
+                ),
+              ),
+              GoRoute(
+                path: 'start-chat',
+                builder: (context, state) => const StartChatScreen(),
+              ),
+              GoRoute(
+                path: 'create-group',
+                builder: (context, state) => const CreateGroupScreen(),
+              ),
+              GoRoute(
+                path: 'user/:userId',
+                builder: (context, state) {
+                  final userIdStr = state.pathParameters['userId']!;
+                  final userId = int.tryParse(userIdStr);
+                  if (userId == null) {
+                    return const Scaffold(
+                      body: Center(child: Text('Неверный ID пользователя')),
+                    );
+                  }
+                  final auth = Provider.of<AuthService>(context, listen: false);
+                  final api = Api(auth.token);
+                  return FutureBuilder<User>(
+                    future: api.getUserProfile(userId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Scaffold(
+                          body: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      if (snapshot.hasError || !snapshot.hasData) {
+                        return Scaffold(
+                          body: Center(
+                            child: Text(
+                              'Ошибка загрузки: ${snapshot.error ?? "Пользователь не найден"}',
+                            ),
+                          ),
+                        );
+                      }
+                      return UserProfileScreen(user: snapshot.data!);
+                    },
+                  );
+                },
+              ),
+              GoRoute(
+                path: 'group-profile/:groupId',
+                builder: (context, state) {
+                  final groupIdStr = state.pathParameters['groupId']!;
+                  final groupId = int.tryParse(groupIdStr);
+                  if (groupId == null) {
+                    return const Scaffold(
+                      body: Center(child: Text('Неверный ID группы')),
+                    );
+                  }
+                  final auth = Provider.of<AuthService>(context, listen: false);
+                  final api = Api(auth.token);
+                  return FutureBuilder<Group>(
+                    future: api.getGroup(groupId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Scaffold(
+                          body: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      if (snapshot.hasError || !snapshot.hasData) {
+                        return Scaffold(
+                          body: Center(
+                            child: Text(
+                              'Ошибка загрузки: ${snapshot.error ?? "Группа не найдена"}',
+                            ),
+                          ),
+                        );
+                      }
+                      return GroupProfileScreen(group: snapshot.data!);
+                    },
+                  );
+                },
+              ),
+              GoRoute(
+                path: 'profile',
+                builder: (context, state) =>
+                    const ProfileContent(navigator: null),
+              ),
+              GoRoute(
+                path: 'media/:peerId',
+                builder: (context, state) {
+                  final peerIdStr = state.pathParameters['peerId']!;
+                  final peerId = int.tryParse(peerIdStr);
+                  if (peerId == null) {
+                    return const Scaffold(
+                      body: Center(child: Text('Неверный ID')),
+                    );
+                  }
+                  final isGroup = state.uri.queryParameters['group'] == 'true';
+                  // Загружаем пользователя или группу из API
+                  final auth = Provider.of<AuthService>(context, listen: false);
+                  final api = Api(auth.token);
+                  if (isGroup) {
+                    return FutureBuilder<Group>(
+                      future: api.getGroup(peerId),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Scaffold(
+                            body: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        if (snapshot.hasError || !snapshot.hasData) {
+                          return Scaffold(
+                            body: Center(
+                              child: Text(
+                                'Ошибка загрузки: ${snapshot.error ?? "Группа не найдена"}',
+                              ),
+                            ),
+                          );
+                        }
+                        return MediaGalleryScreen(group: snapshot.data!);
+                      },
+                    );
+                  } else {
+                    return FutureBuilder<User>(
+                      future: api.getUserProfile(peerId),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Scaffold(
+                            body: Center(child: CircularProgressIndicator()),
+                          );
+                        }
+                        if (snapshot.hasError || !snapshot.hasData) {
+                          return Scaffold(
+                            body: Center(
+                              child: Text(
+                                'Ошибка загрузки: ${snapshot.error ?? "Пользователь не найден"}',
+                              ),
+                            ),
+                          );
+                        }
+                        return MediaGalleryScreen(peer: snapshot.data!);
+                      },
+                    );
+                  }
+                },
+              ),
+            ],
           ),
         ],
       ),

@@ -176,6 +176,30 @@ void main() {
 - Размер бандла (bundle size check)
 - Проверка сообщений коммитов
 
+#### Release (`.github/workflows/release.yml`)
+
+**Триггер:** Push тега `v*` (например, `v1.0.0`)
+
+**Сборки:**
+- **Web** — `messenger-web.zip` для развёртывания на веб-сервер
+- **Android** — `messenger-android.apk` для установки на устройство
+- **Linux** — `messenger-linux.zip` (AppImage, библиотеки)
+- **Windows** — `messenger-windows.zip` (`.exe` и DLL)
+- **macOS** — `messenger-macos.zip` (`.app`)
+
+**Как создать релиз:**
+1. Обновите версию в `client/pubspec.yaml` (например, `1.0.1+2`)
+2. Добавьте описание в `CHANGELOG.md` в секцию `[1.0.1]`
+3. Создайте и запушьте тег:
+   ```bash
+   git tag v1.0.0
+   git push origin v1.0.0
+   ```
+4. GitHub Actions соберёт все платформы и создаст GitHub Release с артефактами
+5. Сборки появятся на странице [Releases](https://github.com/Alikyshkin/messenger/releases)
+
+**Требования:** в секретах репозитория должны быть `DOCKER_USERNAME` и `DOCKER_PASSWORD` для Docker Hub.
+
 #### Performance (`.github/workflows/performance.yml`)
 
 - Lighthouse проверка производительности веб-версии

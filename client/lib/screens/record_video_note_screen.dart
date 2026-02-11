@@ -6,6 +6,7 @@ import 'package:camera/camera.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../services/e2ee_service.dart';
+import '../utils/media_utils.dart';
 import '../widgets/app_back_button.dart';
 
 class RecordVideoNoteScreen extends StatefulWidget {
@@ -40,8 +41,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
 
   String _cameraErrorMessage(Object e) {
     if (kIsWeb) {
-      // В браузере камера работает только по HTTPS; по HTTP браузер блокирует доступ
-      return 'Видеокружок в браузере доступен только по HTTPS. Откройте сайт по https:// или используйте приложение на телефоне.';
+      return MediaUtils.mediaUnavailableMessage;
     }
     if (e.toString().toLowerCase().contains('permission')) {
       return 'Нет доступа к камере. Разрешите доступ в настройках.';
@@ -56,7 +56,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
         setState(() {
           _loading = false;
           _error = kIsWeb
-              ? 'Видеокружок в браузере доступен только по HTTPS. Откройте сайт по https:// или используйте приложение на телефоне.'
+              ? MediaUtils.mediaUnavailableMessage
               : 'Камера недоступна';
         });
         return;

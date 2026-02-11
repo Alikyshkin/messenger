@@ -227,6 +227,7 @@ class _CallScreenState extends State<CallScreen> {
     String? audioDeviceId,
     bool? isVideoCall,
   }) async {
+    MediaUtils.ensureCanUseMedia();
     final callType = isVideoCall ?? widget.isVideoCall;
     final Map<String, dynamic> mediaConstraints = {
       'audio': audioDeviceId != null && audioDeviceId.isNotEmpty

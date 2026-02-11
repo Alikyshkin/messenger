@@ -31,7 +31,7 @@ CREATE INDEX IF NOT EXISTS idx_poll_votes_poll_user ON poll_votes(poll_id, user_
 
 -- Индексы для таблицы group_poll_votes
 CREATE INDEX IF NOT EXISTS idx_group_poll_votes_user ON group_poll_votes(user_id);
-CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll_user ON group_poll_votes(poll_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll_user ON group_poll_votes(group_poll_id, user_id);
 
 -- Индексы для таблицы reset_tokens
 CREATE INDEX IF NOT EXISTS idx_reset_tokens_user_expires ON reset_tokens(user_id, expires_at);

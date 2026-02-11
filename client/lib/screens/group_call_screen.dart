@@ -199,6 +199,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   }
 
   Future<void> _getUserMedia() async {
+    MediaUtils.ensureCanUseMedia();
     final Map<String, dynamic> videoConstraint = kIsWeb
         ? {
             'mandatory': {

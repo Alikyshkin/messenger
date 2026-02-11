@@ -30,7 +30,9 @@ import '../widgets/nav_badge.dart';
 import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final Widget? child;
+
+  const HomeScreen({super.key, this.child});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -48,6 +50,13 @@ class _HomeScreenState extends State<HomeScreen>
   List<FriendRequest> _friendRequests = [];
   int _totalUnreadCount = 0;
   _NavigationItem _currentView = _NavigationItem.chats;
+
+  _NavigationItem _viewFromPath(String path) {
+    if (path.startsWith('/contacts')) return _NavigationItem.contacts;
+    if (path.startsWith('/profile')) return _NavigationItem.profile;
+    return _NavigationItem.chats;
+  }
+
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   bool _initialized = false;
@@ -583,12 +592,23 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  bool get _isMainRoute {
+    final path = GoRouterState.of(context).uri.path;
+    return path == '/' ||
+        path.startsWith('/contacts') ||
+        path.startsWith('/profile');
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
+    _currentView = _viewFromPath(GoRouterState.of(context).uri.path);
+    final content = _isMainRoute ? _buildContentView(context) : widget.child!;
     return OfflineIndicator(
       child: Scaffold(
-        appBar: AppBar(title: Text(_getAppBarTitle(context))),
+        appBar: _isMainRoute
+            ? AppBar(title: Text(_getAppBarTitle(context)))
+            : null,
         body: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -635,9 +655,7 @@ class _HomeScreenState extends State<HomeScreen>
                             onPressed: () {
                               if (mounted &&
                                   _currentView != _NavigationItem.profile) {
-                                setState(() {
-                                  _currentView = _NavigationItem.profile;
-                                });
+                                context.go('/profile');
                               }
                             },
                           );
@@ -670,9 +688,7 @@ class _HomeScreenState extends State<HomeScreen>
                     isActive: _currentView == _NavigationItem.chats,
                     onPressed: () {
                       if (mounted && _currentView != _NavigationItem.chats) {
-                        setState(() {
-                          _currentView = _NavigationItem.chats;
-                        });
+                        context.go('/');
                       }
                     },
                   ),
@@ -701,9 +717,7 @@ class _HomeScreenState extends State<HomeScreen>
                     isActive: _currentView == _NavigationItem.contacts,
                     onPressed: () {
                       if (mounted && _currentView != _NavigationItem.contacts) {
-                        setState(() {
-                          _currentView = _NavigationItem.contacts;
-                        });
+                        context.go('/contacts');
                       }
                     },
                   ),
@@ -802,15 +816,15 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
             Expanded(
-              child: Navigator(
-                key: _navigatorKey,
-                onGenerateRoute: (settings) {
-                  return MaterialPageRoute(
-                    builder: (context) => _buildContentView(context),
-                    settings: settings,
-                  );
-                },
-              ),
+              child: _isMainRoute
+                  ? Navigator(
+                      key: _navigatorKey,
+                      onGenerateRoute: (settings) => MaterialPageRoute(
+                        builder: (_) => _buildContentView(context),
+                        settings: settings,
+                      ),
+                    )
+                  : content,
             ),
           ],
         ),

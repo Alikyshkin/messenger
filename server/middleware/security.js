@@ -49,10 +49,11 @@ export function securityHeaders() {
     },
     
     // Permissions Policy (Feature Policy)
+    // camera и microphone разрешены для звонков (self = страница мессенджера)
     permissionsPolicy: {
       features: {
-        camera: ["'none'"],
-        microphone: ["'none'"],
+        camera: ["'self'"],
+        microphone: ["'self'"],
         geolocation: ["'none'"],
       },
     },

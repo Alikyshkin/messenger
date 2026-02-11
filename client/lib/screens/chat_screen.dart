@@ -158,12 +158,13 @@ class _ChatScreenState extends State<ChatScreen> {
     if (!m.content.startsWith('e2ee:')) return m;
     // Для своих сообщений используем публичный ключ получателя (peer),
     // потому что сообщение было зашифровано для него.
-    // Для входящих сообщений используем публичный ключ отправителя.
+    // Для входящих сообщений используем sender_public_key (ключ на момент отправки).
+    // Fallback: если sender_public_key нет (старые сообщения), пробуем peer.publicKey.
     String? keyToUse;
     if (myId != null && m.senderId == myId) {
       keyToUse = widget.peer.publicKey;
     } else {
-      keyToUse = m.senderPublicKey;
+      keyToUse = m.senderPublicKey ?? widget.peer.publicKey;
     }
     if (keyToUse == null || keyToUse.isEmpty) {
       return m;
@@ -214,7 +215,9 @@ class _ChatScreenState extends State<ChatScreen> {
       final raw = await Api.getAttachmentBytes(m.attachmentUrl!);
       Uint8List bytes = Uint8List.fromList(raw);
       if (m.attachmentEncrypted) {
-        final key = m.isMine ? widget.peer.publicKey : m.senderPublicKey;
+        final key = m.isMine
+            ? widget.peer.publicKey
+            : (m.senderPublicKey ?? widget.peer.publicKey);
         if (key == null) {
           return null;
         }

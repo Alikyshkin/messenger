@@ -1,17 +1,33 @@
 import 'package:flutter/foundation.dart';
+import 'secure_context.dart';
 
 /// Утилиты для работы с медиа (камера, микрофон)
 class MediaUtils {
+  /// Сообщение, когда звонок недоступен (не secure context или Permissions-Policy)
+  static const String mediaUnavailableMessage =
+      'Звонки в браузере требуют HTTPS. Откройте сайт напрямую по https:// (не через предпросмотр Google). '
+      'Если уже на HTTPS — проверьте, что страница в отдельной вкладке. '
+      'Либо используйте приложение на телефоне.';
+
+  /// Перед звонком: проверка secure context на вебе. Бросает, если недоступно.
+  static void ensureCanUseMedia() {
+    if (kIsWeb && !isSecureContext) {
+      throw StateError(mediaUnavailableMessage);
+    }
+  }
+
   /// Формирует сообщение об ошибке медиа в понятном для пользователя виде
   static String getMediaErrorMessage(Object e) {
     final errorStr = e.toString().toLowerCase();
 
-    // Проверка для Web платформы
+    // Проверка для Web платформы (secure context, Permissions-Policy и т.п.)
     if (kIsWeb) {
       if (errorStr.contains('null') ||
           errorStr.contains('getusermedia') ||
-          errorStr.contains('media')) {
-        return 'Видеозвонок в браузере доступен только по HTTPS. Откройте сайт по https:// или используйте приложение на телефоне.';
+          errorStr.contains('media') ||
+          errorStr.contains('secure') ||
+          errorStr.contains('only secure')) {
+        return mediaUnavailableMessage;
       }
     }
 
