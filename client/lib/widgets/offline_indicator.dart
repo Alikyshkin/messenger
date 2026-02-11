@@ -60,7 +60,9 @@ class _OfflineIndicatorState extends State<OfflineIndicator> {
   }
 
   void _onWsChange() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     try {
       final ws = context.read<WsService>();
       final newConnected = ws.connected;

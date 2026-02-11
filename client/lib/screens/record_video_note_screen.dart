@@ -97,7 +97,9 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
         _recordSeconds = 0;
       });
       _recordTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-        if (mounted && _recording) setState(() => _recordSeconds++);
+        if (mounted && _recording) {
+          setState(() => _recordSeconds++);
+        }
       });
     } catch (e) {
       setState(() => _error = 'Ошибка записи');
@@ -105,7 +107,9 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
   }
 
   Future<void> _stopAndSend() async {
-    if (_controller == null || !_recording || _sending) return;
+    if (_controller == null || !_recording || _sending) {
+      return;
+    }
     _recordTimer?.cancel();
     setState(() {
       _recording = false;

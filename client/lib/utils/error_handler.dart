@@ -13,7 +13,9 @@ class ErrorHandler {
     String? Function(dynamic error)? getErrorMessage,
     bool showSnackBar = false,
   }) {
-    if (!context.mounted) return true;
+    if (!context.mounted) {
+      return true;
+    }
 
     String? errorMessage;
 
@@ -42,7 +44,9 @@ class ErrorHandler {
     dynamic error, {
     String? Function(dynamic error)? getErrorMessage,
   }) {
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      return;
+    }
 
     String message;
     if (error is ApiException) {

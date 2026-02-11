@@ -30,10 +30,14 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   void initState() {
     super.initState();
     _player.playerStateStream.listen((state) {
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     });
     _player.positionStream.listen((_) {
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     });
   }
 

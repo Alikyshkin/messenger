@@ -32,7 +32,9 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
 
   Future<void> _load() async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -42,14 +44,18 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
       final contacts = await api.getContacts();
       final incoming = await api.getFriendRequestsIncoming();
       final outgoingIds = await _getOutgoingRequestIds(api);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _contactIds = contacts.map((u) => u.id).toSet();
         _pendingIds = {...outgoingIds, ...incoming.map((r) => r.fromUserId)};
         _loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = e is ApiException ? e.message : context.tr('load_error');
         _loading = false;
@@ -69,7 +75,9 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
   Future<void> _syncContacts() async {
     final status = await Permission.contacts.request();
     if (!status.isGranted) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(context.tr('contacts_permission')),
@@ -90,11 +98,15 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
       for (final c in contacts) {
         for (final p in c.phones) {
           final norm = _normalizePhone(p.number);
-          if (norm.length >= 10) phones.add(norm);
+          if (norm.length >= 10) {
+            phones.add(norm);
+          }
         }
       }
       if (phones.isEmpty) {
-        if (!mounted) return;
+        if (!mounted) {
+        return;
+      }
         setState(() => _syncing = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(context.tr('no_phones_in_contacts'))),
@@ -103,9 +115,13 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
       }
       final api = Api(auth.token);
       final found = await api.findUsersByPhones(phones.toList());
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       await _load();
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _users = found
             .where(
@@ -115,7 +131,9 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
         _syncing = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() => _syncing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -141,7 +159,9 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
     final auth = context.read<AuthService>();
     try {
       await Api(auth.token).addContact(u.username);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _pendingIds.add(u.id);
         _users = _users.where((x) => x.id != u.id).toList();
@@ -154,7 +174,9 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
         ),
       );
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
@@ -246,7 +268,9 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
           : RefreshIndicator(
               onRefresh: () async {
                 await _load();
-                if (mounted) _syncContacts();
+                if (mounted) {
+                  _syncContacts();
+                }
               },
               child: ListView.builder(
                 padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),

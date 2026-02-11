@@ -107,7 +107,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     try {
       final api = Api(auth.token);
       final group = await api.getGroup(widget.group.id);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       _groupMembers = group.members;
 
       // Инициализируем участников (исключая себя)
@@ -127,7 +129,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
         }
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = 'Ошибка загрузки участников группы';
         _state = 'ended';
@@ -184,7 +188,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
 
       setState(() => _state = 'connected');
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _state = 'ended';
         _error = MediaUtils.getMediaErrorMessage(e);
@@ -218,7 +224,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   }
 
   void _applyInitialMute() {
-    if (_localStream == null) return;
+    if (_localStream == null) {
+      return;
+    }
     for (var t in _localStream!.getVideoTracks()) {
       t.enabled = _cameraEnabled;
     }
@@ -273,7 +281,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
 
   Future<void> _handleSignal(CallSignal signal) async {
     // Фильтруем сигналы только для этой группы
-    if (signal.groupId != null && signal.groupId != widget.group.id) return;
+    if (signal.groupId != null && signal.groupId != widget.group.id) {
+      return;
+    }
 
     // Игнорируем сигналы не от участников группы
     if (!_participants.containsKey(signal.fromUserId)) return;
@@ -426,7 +436,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     final pc = participant.peerConnection!;
 
     pc.onIceCandidate = (RTCIceCandidate? candidate) {
-      if (candidate == null) return;
+      if (candidate == null) {
+        return;
+      }
       _ws!.sendCallSignal(
         participant.user.id,
         'ice',
@@ -537,7 +549,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
         await _createPeerConnectionForParticipant(participant);
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = MediaUtils.getMediaErrorMessage(e);
         _state = 'ended';
@@ -567,7 +581,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     // Очищаем состояние минимизации
     context.read<CallMinimizedService>().endCall();
     _cleanup();
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
 
     // Проверяем обновления при выходе из звонка
     try {
@@ -600,7 +616,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   }
 
   void _toggleCamera() {
-    if (_localStream == null) return;
+    if (_localStream == null) {
+      return;
+    }
     setState(() => _cameraEnabled = !_cameraEnabled);
     for (var track in _localStream!.getVideoTracks()) {
       track.enabled = _cameraEnabled;
@@ -608,7 +626,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   }
 
   void _toggleMic() {
-    if (_localStream == null) return;
+    if (_localStream == null) {
+      return;
+    }
     setState(() => _micEnabled = !_micEnabled);
     for (var track in _localStream!.getAudioTracks()) {
       track.enabled = _micEnabled;
@@ -756,7 +776,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     ];
 
     final count = allParticipants.length;
-    if (count == 0) return _buildWaitingView();
+    if (count == 0) {
+      return _buildWaitingView();
+    }
 
     // Определяем количество колонок в зависимости от количества участников
     int columns;

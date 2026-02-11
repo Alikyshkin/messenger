@@ -21,7 +21,9 @@ class AuthService extends ChangeNotifier {
   bool get loaded => _loaded;
 
   Future<void> load() async {
-    if (_loaded) return;
+    if (_loaded) {
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString(_keyToken) ?? '';
     if (_token.isNotEmpty) {
@@ -56,7 +58,9 @@ class AuthService extends ChangeNotifier {
   bool _isRefreshing = false;
 
   Future<void> refreshUser() async {
-    if (_token.isEmpty || _isRefreshing) return;
+    if (_token.isEmpty || _isRefreshing) {
+      return;
+    }
     _isRefreshing = true;
     try {
       final u = await Api(_token).me();
@@ -93,7 +97,9 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> _ensureE2EEKeys() async {
-    if (_token.isEmpty) return;
+    if (_token.isEmpty) {
+      return;
+    }
     try {
       final e2ee = E2EEService();
       final publicKey = await e2ee.ensureKeyPair();

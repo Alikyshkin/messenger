@@ -53,16 +53,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _displayName.text.trim().isEmpty ? null : _displayName.text.trim(),
         _email.text.trim().isEmpty ? null : _email.text.trim(),
       );
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       Navigator.of(context).pushNamedAndRemoveUntil('/', (r) => false);
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = e.message;
         _loading = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = context.tr('connection_error');
         _loading = false;

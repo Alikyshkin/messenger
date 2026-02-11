@@ -59,13 +59,17 @@ class _UserSearchWidgetState extends State<UserSearchWidget> {
     try {
       final api = Api(context.read<AuthService>().token);
       final list = await api.searchUsers(q);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _results = list;
         _searching = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = e is ApiException ? e.message : context.tr('error');
         _searching = false;

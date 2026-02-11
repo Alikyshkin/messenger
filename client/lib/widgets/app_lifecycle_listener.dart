@@ -50,7 +50,9 @@ class _AppUpdateLifecycleListenerState extends State<AppUpdateLifecycleListener>
   }
 
   void _checkForUpdates() {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     try {
       final updateService = Provider.of<AppUpdateService>(

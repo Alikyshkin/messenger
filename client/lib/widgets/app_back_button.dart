@@ -7,7 +7,9 @@ class AppBackButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canPop = Navigator.canPop(context);
-    if (!canPop) return const SizedBox.shrink();
+    if (!canPop) {
+      return const SizedBox.shrink();
+    }
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     return Padding(

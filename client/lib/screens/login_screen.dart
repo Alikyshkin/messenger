@@ -37,16 +37,22 @@ class _LoginScreenState extends State<LoginScreen> {
         _username.text.trim(),
         _password.text,
       );
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       context.go('/');
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = e.message;
         _loading = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = context.tr('connection_error');
         _loading = false;

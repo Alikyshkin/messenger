@@ -30,7 +30,9 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
 
   Future<void> _load() async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     setState(() => _loading = true);
     try {
       final g = await Api(auth.token).getGroup(widget.group.id);
@@ -63,7 +65,9 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
         ],
       ),
     );
-    if (ok != true || !mounted) return;
+    if (ok != true || !mounted) {
+      return;
+    }
     final auth = context.read<AuthService>();
     try {
       await Api(auth.token).removeGroupMember(widget.group.id, auth.user!.id);

@@ -47,7 +47,9 @@ class _ContactsContentState extends State<ContactsContent> {
 
   Future<void> _load() async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     setState(() => _loading = true);
     try {
       final api = Api(auth.token);
@@ -111,7 +113,9 @@ class _ContactsContentState extends State<ContactsContent> {
         ],
       ),
     );
-    if (ok != true || !mounted) return;
+    if (ok != true || !mounted) {
+      return;
+    }
     try {
       await Api(auth.token).removeContact(u.id);
       if (!mounted) return;

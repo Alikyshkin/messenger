@@ -37,7 +37,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _load() async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     setState(() => _loading = true);
     try {
       final u = await Api(auth.token).getUserProfile(widget.user.id);
@@ -56,8 +58,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   String _friendsCountLabel(BuildContext context, int? count) {
-    if (count == null) return '—';
-    if (count == 0) return context.tr('zero_friends');
+    if (count == null) {
+      return '—';
+    }
+    if (count == 0) {
+      return context.tr('zero_friends');
+    }
     if (count == 1) {
       return context.tr('one_friend');
     }
@@ -69,7 +75,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   String _formatBirthday(BuildContext context, String iso) {
     final parts = iso.split('-');
-    if (parts.length != 3) return iso;
+    if (parts.length != 3) {
+      return iso;
+    }
     final months = [
       context.tr('jan'),
       context.tr('feb'),
@@ -87,7 +95,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     final day = int.tryParse(parts[2]) ?? 0;
     final month = int.tryParse(parts[1]);
     final year = parts[0];
-    if (month == null || month < 1 || month > 12) return iso;
+    if (month == null || month < 1 || month > 12) {
+      return iso;
+    }
     return '$day ${months[month - 1]} $year';
   }
 

@@ -29,7 +29,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
 
   Future<void> _load() async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -402,7 +404,9 @@ class _ContactsScreenState extends State<ContactsScreen> {
         ],
       ),
     );
-    if (ok != true || !mounted) return;
+    if (ok != true || !mounted) {
+      return;
+    }
     try {
       await Api(auth.token).removeContact(u.id);
       if (!mounted) return;

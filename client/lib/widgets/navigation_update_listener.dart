@@ -27,7 +27,9 @@ class NavigationUpdateObserver extends NavigatorObserver {
   }
 
   void _checkForUpdatesIfHome(Route<dynamic>? route) {
-    if (route == null) return;
+    if (route == null) {
+      return;
+    }
 
     // Проверяем, является ли это главным экраном (путь "/")
     final routeSettings = route.settings;
@@ -43,7 +45,9 @@ class NavigationUpdateObserver extends NavigatorObserver {
       try {
         // Получаем контекст из route после микротаска
         final navigatorContext = route.navigator?.context;
-        if (navigatorContext == null) return;
+        if (navigatorContext == null) {
+          return;
+        }
 
         // Проверяем обновления при навигации на главный экран
         final updateService = Provider.of<AppUpdateService>(

@@ -74,7 +74,9 @@ class _HomeScreenState extends State<HomeScreen>
         _load();
         _loadFriendRequests();
         _newMessageSub = ws.onNewMessage.listen((_) {
-          if (!mounted) return;
+          if (!mounted) {
+            return;
+          }
           _load();
           _loadFriendRequests();
         });
@@ -112,7 +114,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _load() async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -154,7 +158,9 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _flushOutbox() async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     final items = await LocalDb.getOutbox();
     if (items.isEmpty) return;
     final api = Api(auth.token);
@@ -166,12 +172,16 @@ class _HomeScreenState extends State<HomeScreen>
         await LocalDb.updateChatLastMessage(item.peerId, msg);
       } catch (_) {}
     }
-    if (items.isNotEmpty && mounted) _load();
+    if (items.isNotEmpty && mounted) {
+      _load();
+    }
   }
 
   Future<void> _loadFriendRequests() async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     try {
       final api = Api(auth.token);
       final requests = await api.getFriendRequestsIncoming();
@@ -191,7 +201,9 @@ class _HomeScreenState extends State<HomeScreen>
     bool isGroup,
   ) async {
     final navigator = _navigatorKey.currentState;
-    if (navigator == null) return;
+    if (navigator == null) {
+      return;
+    }
 
     final title = isGroup ? (chat.group!.name) : (chat.peer!.displayName);
 
@@ -670,7 +682,9 @@ class _HomeScreenState extends State<HomeScreen>
                     isActive: false,
                     onPressed: () async {
                       final navigator = _navigatorKey.currentState;
-                      if (navigator == null) return;
+                      if (navigator == null) {
+      return;
+    }
                       final ok = await showDialog<bool>(
                         context: navigator.context,
                         useRootNavigator: false,
@@ -690,7 +704,9 @@ class _HomeScreenState extends State<HomeScreen>
                       );
                       if (ok == true && mounted) {
                         await context.read<AuthService>().logout();
-                        if (!mounted) return;
+                        if (!mounted) {
+            return;
+          }
                         context.go('/login');
                       }
                     },

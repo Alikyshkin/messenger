@@ -241,7 +241,9 @@ class Api {
 
   /// Найти пользователей по номерам телефонов (из контактов устройства).
   Future<List<User>> findUsersByPhones(List<String> phones) async {
-    if (phones.isEmpty) return [];
+    if (phones.isEmpty) {
+      return [];
+    }
     try {
       final r = await http.post(
         Uri.parse('$base/users/find-by-phones'),
@@ -256,7 +258,9 @@ class Api {
           : (json as List<dynamic>? ?? []);
       return list.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
     } catch (e) {
-      if (e is ApiException) rethrow;
+      if (e is ApiException) {
+        rethrow;
+      }
       throw ApiException(
         500,
         'Ошибка при поиске пользователей по телефонам: ${e.toString()}',
@@ -353,7 +357,9 @@ class Api {
     int limit = 100,
   }) async {
     final params = <String, String>{'limit': limit.toString()};
-    if (before != null) params['before'] = before.toString();
+    if (before != null) {
+      params['before'] = before.toString();
+    }
     final r = await http.get(
       Uri.parse('$base/messages/$peerId').replace(queryParameters: params),
       headers: _headers,
@@ -381,7 +387,9 @@ class Api {
       'receiver_id': receiverId,
       'content': content,
     };
-    if (replyToId != null) body['reply_to_id'] = replyToId;
+    if (replyToId != null) {
+      body['reply_to_id'] = replyToId;
+    }
     if (isForwarded) {
       body['is_forwarded'] = true;
       if (forwardFromSenderId != null) {
@@ -465,7 +473,9 @@ class Api {
     List<({List<int> bytes, String filename})> files, {
     bool attachmentEncrypted = false,
   }) async {
-    if (files.isEmpty) return [];
+    if (files.isEmpty) {
+      return [];
+    }
     final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['receiver_id'] = receiverId.toString();
@@ -721,7 +731,9 @@ class Api {
         Uri.parse('$base/groups/$groupId'),
       );
       request.headers['Authorization'] = 'Bearer $token';
-      if (name != null) request.fields['name'] = name;
+      if (name != null) {
+        request.fields['name'] = name;
+      }
       request.files.add(
         http.MultipartFile.fromBytes(
           'avatar',
@@ -775,7 +787,9 @@ class Api {
     int limit = 100,
   }) async {
     final params = <String, String>{'limit': limit.toString()};
-    if (before != null) params['before'] = before.toString();
+    if (before != null) {
+      params['before'] = before.toString();
+    }
     final r = await http.get(
       Uri.parse(
         '$base/groups/$groupId/messages',
@@ -811,7 +825,9 @@ class Api {
     String? forwardFromDisplayName,
   }) async {
     final body = <String, dynamic>{'content': content};
-    if (replyToId != null) body['reply_to_id'] = replyToId;
+    if (replyToId != null) {
+      body['reply_to_id'] = replyToId;
+    }
     if (isForwarded) {
       body['is_forwarded'] = true;
       if (forwardFromSenderId != null) {
@@ -860,7 +876,9 @@ class Api {
     List<({List<int> bytes, String filename})> files, {
     bool attachmentEncrypted = false,
   }) async {
-    if (files.isEmpty) return [];
+    if (files.isEmpty) {
+      return [];
+    }
     final request = http.MultipartRequest(
       'POST',
       Uri.parse('$base/groups/$groupId/messages'),

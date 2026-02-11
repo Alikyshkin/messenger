@@ -8,8 +8,12 @@ import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
 
 String _friendsCountLabel(BuildContext context, int? count) {
-  if (count == null) return '—';
-  if (count == 0) return context.tr('no_friends');
+  if (count == null) {
+    return '—';
+  }
+  if (count == 0) {
+    return context.tr('no_friends');
+  }
   if (count == 1) {
     return context.tr('one_friend');
   }
@@ -21,7 +25,9 @@ String _friendsCountLabel(BuildContext context, int? count) {
 
 String _formatBirthday(BuildContext context, String iso) {
   final parts = iso.split('-');
-  if (parts.length != 3) return iso;
+    if (parts.length != 3) {
+      return iso;
+    }
   final months = [
     context.tr('jan'),
     context.tr('feb'),
@@ -39,7 +45,9 @@ String _formatBirthday(BuildContext context, String iso) {
   final day = int.tryParse(parts[2]) ?? 0;
   final month = int.tryParse(parts[1]);
   final year = parts[0];
-  if (month == null || month < 1 || month > 12) return iso;
+    if (month == null || month < 1 || month > 12) {
+      return iso;
+    }
   return '$day ${months[month - 1]} $year';
 }
 
@@ -71,7 +79,9 @@ class _ProfileContentState extends State<ProfileContent> {
     return Consumer<AuthService>(
       builder: (context, auth, _) {
         final u = auth.user;
-        if (u == null) return Center(child: Text(context.tr('not_authorized')));
+        if (u == null) {
+          return Center(child: Text(context.tr('not_authorized')));
+        }
         return Column(
           children: [
             // Заголовок и кнопка настроек

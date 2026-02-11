@@ -35,19 +35,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
     try {
       await Api('').forgotPassword(email);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _loading = false;
         _sent = true;
       });
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = e.message;
         _loading = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = context.tr('connection_error');
         _loading = false;

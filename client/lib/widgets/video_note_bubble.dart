@@ -30,10 +30,14 @@ class _VideoNoteBubbleState extends State<VideoNoteBubble> {
     super.initState();
     if (widget.videoBytesFuture != null) {
       widget.videoBytesFuture!.then((bytes) async {
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
         try {
           final controller = await createVideoControllerFromBytes(bytes);
-          if (!mounted) return;
+          if (!mounted) {
+          return;
+        }
           if (controller != null) {
             setState(() {
               _controller = controller;
@@ -45,7 +49,9 @@ class _VideoNoteBubbleState extends State<VideoNoteBubble> {
             );
           }
         } catch (e) {
-          if (mounted) setState(() => _error = 'Ошибка загрузки');
+          if (mounted) {
+            setState(() => _error = 'Ошибка загрузки');
+          }
         }
       });
     } else if (widget.videoUrl != null) {
@@ -91,7 +97,9 @@ class _VideoNoteBubbleState extends State<VideoNoteBubble> {
     }
     return GestureDetector(
       onTap: () {
-        if (!_initialized) return;
+        if (!_initialized) {
+          return;
+        }
         if (_controller!.value.isPlaying) {
           _controller!.pause();
         } else {

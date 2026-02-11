@@ -25,7 +25,9 @@ class _AddContactScreenState extends State<AddContactScreen> {
       final added = await Api(
         context.read<AuthService>().token,
       ).addContact(u.username);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       Navigator.of(context).pop();
       ScaffoldMessenger.of(
         context,
@@ -34,7 +36,9 @@ class _AddContactScreenState extends State<AddContactScreen> {
         context,
       ).push(AppPageRoute(builder: (_) => ChatScreen(peer: added)));
     } on ApiException catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() => _error = e.message);
     }
   }

@@ -62,7 +62,9 @@ class AppUpdateService extends ChangeNotifier {
   /// Использует троттлинг чтобы не проверять слишком часто
   Future<void> checkForUpdates() async {
     // Если уже идет проверка, пропускаем
-    if (_isChecking) return;
+    if (_isChecking) {
+      return;
+    }
 
     // Если прошло недостаточно времени с последней проверки, пропускаем
     if (_lastCheckTime != null) {

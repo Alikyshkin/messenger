@@ -25,7 +25,9 @@ class AppSoundService {
 
   /// Запускает рингтон (входящий звонок) в цикле.
   Future<void> playRingtone() async {
-    if (_ringtonePlaying) return;
+    if (_ringtonePlaying) {
+      return;
+    }
     await _initPlayers();
     try {
       await _ringtonePlayer.setAsset(
@@ -44,7 +46,9 @@ class AppSoundService {
 
   /// Останавливает рингтон.
   Future<void> stopRingtone() async {
-    if (!_ringtonePlaying) return;
+    if (!_ringtonePlaying) {
+      return;
+    }
     try {
       await _ringtonePlayer.stop();
       _ringtonePlaying = false;
@@ -54,7 +58,9 @@ class AppSoundService {
   /// Один раз проигрывает звук уведомления о новом сообщении.
   /// Не проигрывается во время активного звонка, чтобы не было писка в ухе.
   Future<void> playNotification() async {
-    if (_inCall) return;
+    if (_inCall) {
+      return;
+    }
     await _initPlayers();
     try {
       await _notificationPlayer.setAsset(

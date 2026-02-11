@@ -37,10 +37,14 @@ class _WsCallListenerState extends State<WsCallListener> {
     if (!mounted) return;
     final ws = context.read<WsService>();
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     _sub?.cancel();
     _sub = ws.callSignals.listen((signal) async {
-      if (!mounted || signal.signal != 'offer') return;
+      if (!mounted || signal.signal != 'offer') {
+        return;
+      }
 
       // Если это групповой звонок, обрабатываем отдельно
       if (signal.groupId != null) {
@@ -59,7 +63,9 @@ class _WsCallListenerState extends State<WsCallListener> {
             await focusWindow();
           }
 
-          if (!mounted) return;
+          if (!mounted) {
+        return;
+      }
           Navigator.of(context).push(
             AppPageRoute(
               builder: (_) => GroupCallScreen(
@@ -103,7 +109,9 @@ class _WsCallListenerState extends State<WsCallListener> {
         await focusWindow();
       }
 
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       // Определяем тип звонка из сигнала
       // Если isVideoCall явно указан как false, то голосовой звонок
       // Если null или true, то видеозвонок (для совместимости со старыми клиентами)

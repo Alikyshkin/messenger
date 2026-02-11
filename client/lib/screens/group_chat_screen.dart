@@ -36,7 +36,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     _load();
     final ws = context.read<WsService>();
     void onUpdate() {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       _drainIncoming(ws);
     }
 
@@ -66,7 +68,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   Future<void> _drainIncoming(WsService ws) async {
     Message? m;
     while ((m = ws.takeIncomingGroupFor(widget.group.id)) != null) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() => _messages.add(m!));
     }
     ReactionUpdate? ru;
@@ -87,7 +91,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       final reactions = await Api(
         context.read<AuthService>().token,
       ).setGroupMessageReaction(widget.group.id, m.id, emoji);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final idx = _messages.indexWhere((msg) => msg.id == m.id);
       if (idx >= 0) {
         setState(
@@ -144,14 +150,18 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
   Future<void> _load() async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final list = await Api(auth.token).getGroupMessages(widget.group.id);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _messages = list;
         _loading = false;
@@ -162,7 +172,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         ).markGroupMessagesRead(widget.group.id, list.last.id);
       }
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _loading = false;
         _error = e is ApiException ? e.message : context.tr('load_error');
@@ -185,12 +197,16 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       allowMultiple: true,
       withData: true,
     );
-    if (result == null || result.files.isEmpty) return;
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
     final files = result.files
         .where((f) => f.bytes != null && f.bytes!.isNotEmpty)
         .take(_maxMultipleFiles)
         .toList();
-    if (files.isEmpty) return;
+    if (files.isEmpty) {
+      return;
+    }
     setState(() => _sending = true);
     if (!mounted) return;
     try {
@@ -203,7 +219,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           file.bytes!.toList(),
           file.name,
         );
-        if (!mounted) return;
+        if (!mounted) {
+        return;
+      }
         setState(() {
           _messages.add(msg);
           _sending = false;
@@ -217,7 +235,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           '',
           list,
         );
-        if (!mounted) return;
+        if (!mounted) {
+        return;
+      }
         setState(() {
           _messages.addAll(messages);
           _sending = false;
@@ -225,7 +245,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       }
       _scrollToBottom();
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() => _sending = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -237,7 +259,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
   Future<void> _sendText() async {
     final content = _text.text.trim();
-    if (content.isEmpty || _sending) return;
+    if (content.isEmpty || _sending) {
+      return;
+    }
     final replyToId = _replyingTo?.id;
     setState(() {
       _sending = true;
@@ -248,7 +272,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       final msg = await Api(
         context.read<AuthService>().token,
       ).sendGroupMessage(widget.group.id, content, replyToId: replyToId);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _messages.add(msg);
         _sending = false;
@@ -258,7 +284,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         context.read<AuthService>().token,
       ).markGroupMessagesRead(widget.group.id, msg.id);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() => _sending = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -273,7 +301,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   }
 
   String _senderName(Message m) {
-    if (m.isMine) return context.tr('you_prefix').trim();
+    if (m.isMine) {
+      return context.tr('you_prefix').trim();
+    }
     return m.senderDisplayName ?? '?';
   }
 
@@ -291,7 +321,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   ),
                 )
                 .then((_) {
-                  if (mounted) _load();
+                  if (mounted) {
+                    _load();
+                  }
                 });
           },
           child: Row(
@@ -575,7 +607,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         items: [
           PopupMenuItem(
             onTap: () {
-              if (!mounted) return;
+              if (!mounted) {
+        return;
+      }
               openSheet();
             },
             child: const ListTile(
@@ -586,7 +620,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
           ),
           PopupMenuItem(
             onTap: () {
-              if (!mounted) return;
+              if (!mounted) {
+        return;
+      }
               _onReply(m);
             },
             child: ListTile(
@@ -619,7 +655,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
               final hasMine = myId != null && r.userIds.contains(myId);
               return InkWell(
                 onTap: () {
-                  if (hasMine) _setGroupReaction(m, r.emoji);
+                  if (hasMine) {
+                    _setGroupReaction(m, r.emoji);
+                  }
                 },
                 borderRadius: BorderRadius.circular(12),
                 child: Container(

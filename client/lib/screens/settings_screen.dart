@@ -59,7 +59,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   /// Форматирует YYYY-MM-DD в "15 марта 1990" (или по локали).
   static String _formatBirthday(BuildContext context, String iso) {
     final parts = iso.split('-');
-    if (parts.length != 3) return iso;
+    if (parts.length != 3) {
+      return iso;
+    }
     final months = [
       context.tr('jan'),
       context.tr('feb'),
@@ -77,7 +79,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final day = int.tryParse(parts[2]) ?? 0;
     final month = int.tryParse(parts[1]);
     final year = parts[0];
-    if (month == null || month < 1 || month > 12) return iso;
+    if (month == null || month < 1 || month > 12) {
+      return iso;
+    }
     return '$day ${months[month - 1]} $year';
   }
 
@@ -99,7 +103,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       lastDate: DateTime.now(),
       helpText: context.tr('birthday_help'),
     );
-    if (picked == null || !mounted) return;
+    if (picked == null || !mounted) {
+      return;
+    }
     setState(
       () => _birthday =
           '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}',
@@ -108,7 +114,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadCacheSize() async {
     final size = await getAttachmentCacheSizeBytes();
-    if (mounted) setState(() => _cacheSizeBytes = size);
+    if (mounted) {
+      setState(() => _cacheSizeBytes = size);
+    }
   }
 
   Future<void> _changePassword() async {
@@ -218,10 +226,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       allowMultiple: false,
       withData: true,
     );
-    if (result == null || result.files.isEmpty) return;
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
     final file = result.files.single;
     final bytes = file.bytes;
-    if (bytes == null || bytes.isEmpty) return;
+    if (bytes == null || bytes.isEmpty) {
+      return;
+    }
     final filename = file.name;
     setState(() => _loading = true);
     try {
@@ -411,7 +423,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildProfileContent(BuildContext context) {
     final auth = context.watch<AuthService>();
     final u = auth.user;
-    if (u == null) return const SizedBox.shrink();
+    if (u == null) {
+      return const SizedBox.shrink();
+    }
 
     return ListView(
       padding: AppSpacing.screenPaddingVertical,
@@ -874,7 +888,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
-    if (confirm != true || !mounted) return;
+    if (confirm != true || !mounted) {
+      return;
+    }
     setState(() => _loading = true);
     try {
       final auth = context.read<AuthService>();
@@ -902,8 +918,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes Б';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} КБ';
+    if (bytes < 1024) {
+      return '$bytes Б';
+    }
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} КБ';
+    }
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} МБ';
   }
 
@@ -934,7 +954,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 itemBuilder: (_, i) {
                   final chat = chats[i];
                   final peer = chat.peer;
-                  if (peer == null) return const SizedBox.shrink();
+                  if (peer == null) {
+                    return const SizedBox.shrink();
+                  }
                   return ListTile(
                     leading: CircleAvatar(
                       backgroundImage:

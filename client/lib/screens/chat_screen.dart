@@ -68,7 +68,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final ws = context.read<WsService>();
     _ws = ws;
     void onUpdate() {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       _drainIncoming(ws);
     }
 
@@ -121,7 +123,9 @@ class _ChatScreenState extends State<ChatScreen> {
       }
       await LocalDb.upsertMessage(decrypted, widget.peer.id);
       await LocalDb.updateChatLastMessage(widget.peer.id, decrypted);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final wasAtBottom = _isAtBottom();
       setState(() => _messages.add(decrypted));
       // Прокручиваем к новому сообщению только если пользователь был внизу
@@ -200,15 +204,21 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final name = m.attachmentFilename ?? 'файл';
       final cached = await getCachedAttachmentBytes(widget.peer.id, m.id, name);
-      if (cached != null) return Uint8List.fromList(cached);
+      if (cached != null) {
+        return Uint8List.fromList(cached);
+      }
 
       final raw = await Api.getAttachmentBytes(m.attachmentUrl!);
       Uint8List bytes = Uint8List.fromList(raw);
       if (m.attachmentEncrypted) {
         final key = m.isMine ? widget.peer.publicKey : m.senderPublicKey;
-        if (key == null) return null;
+        if (key == null) {
+          return null;
+        }
         final dec = await _e2ee.decryptBytes(bytes, key);
-        if (dec == null) return null;
+        if (dec == null) {
+          return null;
+        }
         bytes = dec;
       }
       await putCachedAttachment(widget.peer.id, m.id, name, bytes);
@@ -232,18 +242,24 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _load() async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     setState(() {
       _loading = true;
       _error = null;
     });
     final peerId = widget.peer.id;
     final cached = await LocalDb.getMessages(peerId);
-    if (cached.isNotEmpty && mounted) setState(() => _messages = cached);
+    if (cached.isNotEmpty && mounted) {
+      setState(() => _messages = cached);
+    }
     try {
       final api = Api(auth.token);
       final list = await api.getMessages(peerId);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final ws = _ws ?? context.read<WsService>();
       await _drainIncoming(ws);
       final myId = auth.user?.id;
@@ -263,7 +279,9 @@ class _ChatScreenState extends State<ChatScreen> {
           await LocalDb.upsertMessage(toAdd, peerId);
         }
       }
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final fromDb = await LocalDb.getMessages(peerId);
       final merged = <Message>[...decryptedList];
       final mergedIds = merged.map((m) => m.id).toSet();
@@ -274,7 +292,9 @@ class _ChatScreenState extends State<ChatScreen> {
         }
       }
       merged.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _messages = merged;
         _loading = false;
@@ -282,18 +302,24 @@ class _ChatScreenState extends State<ChatScreen> {
       _scrollToBottom(force: true); // При загрузке всегда прокручиваем вниз
       await api.markMessagesRead(peerId);
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _error = e is ApiException ? e.message : 'Ошибка загрузки';
         _loading = false;
-        if (_messages.isEmpty) _messages = cached;
+        if (_messages.isEmpty) {
+          _messages = cached;
+        }
       });
     }
   }
 
   /// Проверяет, находится ли пользователь внизу списка сообщений
   bool _isAtBottom() {
-    if (!_scroll.hasClients) return false;
+    if (!_scroll.hasClients) {
+      return false;
+    }
     final position = _scroll.position;
     // Считаем что пользователь внизу, если он находится в пределах 100px от конца
     return position.pixels >= position.maxScrollExtent - 100;
@@ -315,7 +341,9 @@ class _ChatScreenState extends State<ChatScreen> {
       final reactions = await Api(
         context.read<AuthService>().token,
       ).setMessageReaction(m.id, emoji);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final idx = _messages.indexWhere((msg) => msg.id == m.id);
       if (idx >= 0) {
         setState(
@@ -424,7 +452,9 @@ class _ChatScreenState extends State<ChatScreen> {
         items: [
           PopupMenuItem(
             onTap: () {
-              if (!mounted) return;
+              if (!mounted) {
+        return;
+      }
               openSheet();
             },
             child: const ListTile(
@@ -435,7 +465,9 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           PopupMenuItem(
             onTap: () {
-              if (!mounted) return;
+              if (!mounted) {
+        return;
+      }
               setState(() => _replyingTo = m);
             },
             child: const ListTile(
@@ -446,7 +478,9 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           PopupMenuItem(
             onTap: () {
-              if (!mounted) return;
+              if (!mounted) {
+        return;
+      }
               _showForwardPicker(m);
             },
             child: const ListTile(
@@ -464,12 +498,16 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _showForwardPicker(Message m) async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     List<ChatPreview> chats;
     try {
       chats = await Api(auth.token).getChats();
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Ошибка загрузки чатов')));
@@ -501,7 +539,9 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
             ...others.map((chat) {
               final p = chat.peer;
-              if (p == null) return const SizedBox.shrink();
+              if (p == null) {
+                return const SizedBox.shrink();
+              }
               return ListTile(
                 title: Text(p.displayName),
                 subtitle: Text('@${p.username}'),
@@ -512,9 +552,13 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
-    if (selected == null || !mounted) return;
+    if (selected == null || !mounted) {
+      return;
+    }
     final selectedPeer = selected.peer;
-    if (selectedPeer == null) return;
+    if (selectedPeer == null) {
+      return;
+    }
     final content = m.content;
     if (content.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -537,14 +581,18 @@ class _ChatScreenState extends State<ChatScreen> {
         forwardFromSenderId: m.senderId,
         forwardFromDisplayName: fromName,
       );
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Переслано в чат с ${selectedPeer.displayName}'),
         ),
       );
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e is ApiException ? e.message : 'Ошибка пересылки'),
@@ -591,7 +639,9 @@ class _ChatScreenState extends State<ChatScreen> {
           list,
           attachmentEncrypted: encrypted,
         );
-        if (!mounted) return;
+        if (!mounted) {
+        return;
+      }
         for (final msg in messages) {
           await LocalDb.upsertMessage(msg, widget.peer.id);
         }
@@ -604,7 +654,9 @@ class _ChatScreenState extends State<ChatScreen> {
         });
         _scrollToBottom();
       } catch (e) {
-        if (!mounted) return;
+        if (!mounted) {
+        return;
+      }
         setState(() => _sending = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -625,7 +677,9 @@ class _ChatScreenState extends State<ChatScreen> {
             pending.filename,
             attachmentEncrypted: pending.encrypted,
           );
-          if (!mounted) return;
+          if (!mounted) {
+        return;
+      }
           await LocalDb.upsertMessage(msg, widget.peer.id);
           await LocalDb.updateChatLastMessage(widget.peer.id, msg);
           setState(() {
@@ -641,7 +695,9 @@ class _ChatScreenState extends State<ChatScreen> {
             pending.durationSec,
             attachmentEncrypted: pending.encrypted,
           );
-          if (!mounted) return;
+          if (!mounted) {
+        return;
+      }
           await LocalDb.upsertMessage(msg, widget.peer.id);
           await LocalDb.updateChatLastMessage(widget.peer.id, msg);
           setState(() {
@@ -651,7 +707,9 @@ class _ChatScreenState extends State<ChatScreen> {
           _scrollToBottom();
         }
       } catch (e) {
-        if (!mounted) return;
+        if (!mounted) {
+        return;
+      }
         setState(() => _sending = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -673,7 +731,9 @@ class _ChatScreenState extends State<ChatScreen> {
         toSend,
         replyToId: replyToId,
       );
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final toShow = toSend != content
           ? Message(
               id: msg.id,
@@ -709,7 +769,9 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       _scrollToBottom();
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() => _sending = false);
       // Проверяем тип ошибки
       if (e is ApiException) {
@@ -788,7 +850,9 @@ class _ChatScreenState extends State<ChatScreen> {
           name.endsWith('.png') ||
           name.endsWith('.gif') ||
           name.endsWith('.webp');
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _pendingAttachment = PendingFile(
           bytes: bytes,
@@ -855,14 +919,18 @@ class _ChatScreenState extends State<ChatScreen> {
         result.options.map((e) => e.trim()).where((e) => e.isNotEmpty).toList(),
         multiple: result.multiple,
       );
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _messages.add(msg);
         _sending = false;
       });
       _scrollToBottom();
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() => _sending = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -923,7 +991,9 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final hasPermission = await _audioRecorder.hasPermission();
       if (!hasPermission) {
-        if (!mounted) return;
+        if (!mounted) {
+        return;
+      }
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Нет доступа к микрофону')),
         );
@@ -939,14 +1009,18 @@ class _ChatScreenState extends State<ChatScreen> {
         const RecordConfig(encoder: AudioEncoder.aacLc, sampleRate: 44100),
         path: path,
       );
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _isRecording = true;
         _recordPath = path;
         _recordStartTime = DateTime.now();
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -964,7 +1038,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final startTime = _recordStartTime;
     try {
       final path = await _audioRecorder.stop();
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(() {
         _isRecording = false;
         _recordPath = null;
@@ -994,7 +1070,9 @@ class _ChatScreenState extends State<ChatScreen> {
           encrypted = true;
         }
       }
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       setState(
         () => _pendingAttachment = PendingVoice(
           bytes: voiceBytes,
@@ -1898,7 +1976,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 try {
                   final api = Api(context.read<AuthService>().token);
                   final result = await api.votePoll(poll.id, i);
-                  if (!mounted) return;
+                  if (!mounted) {
+        return;
+      }
                   _updatePollAfterVote(poll.id, result);
                 } catch (_) {}
               },

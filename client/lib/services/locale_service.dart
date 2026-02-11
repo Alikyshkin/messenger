@@ -11,7 +11,9 @@ class LocaleService extends ChangeNotifier {
   bool get loaded => _loaded;
 
   Future<void> load() async {
-    if (_loaded) return;
+    if (_loaded) {
+      return;
+    }
     final prefs = await SharedPreferences.getInstance();
     final code = prefs.getString(_keyLocale);
     if (code == 'en') {
@@ -26,7 +28,9 @@ class LocaleService extends ChangeNotifier {
   }
 
   Future<void> setLocale(Locale value) async {
-    if (_locale?.languageCode == value.languageCode) return;
+    if (_locale?.languageCode == value.languageCode) {
+      return;
+    }
     _locale = value;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyLocale, value.languageCode);

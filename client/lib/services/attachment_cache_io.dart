@@ -5,7 +5,9 @@ import 'package:path_provider/path_provider.dart';
 const _cacheDirName = 'messenger_attachment_cache';
 
 String _safeFilename(String name) {
-  if (name.isEmpty) return 'файл';
+  if (name.isEmpty) {
+    return 'файл';
+  }
   return name
       .replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_')
       .replaceAll(RegExp(r'_+'), '_');
@@ -62,7 +64,9 @@ Future<int> getAttachmentCacheSizeBytes() async {
   if (!await root.exists()) return 0;
   int total = 0;
   await for (final entity in root.list(recursive: true, followLinks: false)) {
-    if (entity is File) total += await entity.length();
+    if (entity is File) {
+      total += await entity.length();
+    }
   }
   return total;
 }

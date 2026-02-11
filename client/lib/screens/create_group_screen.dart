@@ -40,7 +40,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
   Future<void> _loadContacts() async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      return;
+    }
     setState(() => _loading = true);
     try {
       final list = await Api(auth.token).getContacts();
@@ -64,9 +66,13 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
       allowMultiple: false,
       withData: true,
     );
-    if (result == null || result.files.isEmpty) return;
+    if (result == null || result.files.isEmpty) {
+      return;
+    }
     final file = result.files.single;
-    if (file.bytes == null || file.bytes!.isEmpty) return;
+    if (file.bytes == null || file.bytes!.isEmpty) {
+      return;
+    }
     setState(() {
       _avatarBytes = Uint8List.fromList(file.bytes!);
       _avatarFilename = file.name;

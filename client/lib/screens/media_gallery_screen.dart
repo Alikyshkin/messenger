@@ -63,7 +63,9 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen>
 
     try {
       final auth = context.read<AuthService>();
-      if (!auth.isLoggedIn) return;
+      if (!auth.isLoggedIn) {
+        return;
+      }
 
       final api = Api(auth.token);
       final offset = loadMore ? _media.length : 0;

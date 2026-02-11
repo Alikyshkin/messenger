@@ -86,7 +86,9 @@ class _CallScreenState extends State<CallScreen> {
   void initState() {
     super.initState();
     AppSoundService.instance.setInCall(true);
-    if (!widget.isIncoming) AppSoundService.instance.stopRingtone();
+    if (!widget.isIncoming) {
+      AppSoundService.instance.stopRingtone();
+    }
     _renderersFuture = _initRenderers();
     _ws = context.read<WsService>();
     
@@ -108,7 +110,9 @@ class _CallScreenState extends State<CallScreen> {
       _startOutgoingCall();
     }
     _signalSub = _ws!.callSignals.listen((s) {
-      if (!mounted || s.fromUserId != widget.peer.id) return;
+      if (!mounted || s.fromUserId != widget.peer.id) {
+        return;
+      }
       _handleSignal(s);
     });
   }
@@ -117,7 +121,9 @@ class _CallScreenState extends State<CallScreen> {
     await _localRenderer.initialize();
     await _remoteRenderer.initialize();
     await _screenRenderer.initialize();
-    if (mounted) setState(() => _renderersInitialized = true);
+    if (mounted) {
+      setState(() => _renderersInitialized = true);
+    }
   }
 
   Future<void> _startOutgoingCall() async {
@@ -165,7 +171,9 @@ class _CallScreenState extends State<CallScreen> {
 
   /// Применяем состояние видео и микрофона к трекам с учетом типа звонка.
   void _applyInitialMuteForCallType(bool isVideoCall) {
-    if (_localStream == null) return;
+    if (_localStream == null) {
+      return;
+    }
     // Для голосового звонка камера выключена
     if (!isVideoCall) {
       _cameraEnabled = false;
@@ -177,7 +185,9 @@ class _CallScreenState extends State<CallScreen> {
       t.enabled = _micEnabled;
     }
     final videoTracks = _localStream!.getVideoTracks();
-    if (videoTracks.isNotEmpty) _cameraVideoTrack = videoTracks.first;
+    if (videoTracks.isNotEmpty) {
+      _cameraVideoTrack = videoTracks.first;
+    }
   }
 
   /// Очистка потоков и PeerConnection при переподключении
@@ -238,7 +248,9 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _toggleCamera() {
-    if (_localStream == null || _screenShareEnabled) return;
+    if (_localStream == null || _screenShareEnabled) {
+      return;
+    }
     final videoTracks = _localStream!.getVideoTracks();
     for (final t in videoTracks) {
       t.enabled = !t.enabled;
@@ -248,7 +260,9 @@ class _CallScreenState extends State<CallScreen> {
 
   /// Переключение между передней и задней камерой.
   Future<void> _switchCamera() async {
-    if (_localStream == null || _screenShareEnabled || _pc == null) return;
+    if (_localStream == null || _screenShareEnabled || _pc == null) {
+      return;
+    }
     _isFrontCamera = !_isFrontCamera;
     try {
       // Получаем новое видео с другой камеры
@@ -271,7 +285,9 @@ class _CallScreenState extends State<CallScreen> {
       if (_renderersInitialized && _localStream != null) {
         _localRenderer.srcObject = _localStream;
       }
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     } catch (e) {
       // Возвращаемся к предыдущей камере при ошибке
       _isFrontCamera = !_isFrontCamera;
@@ -284,7 +300,9 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _toggleMic() {
-    if (_localStream == null) return;
+    if (_localStream == null) {
+      return;
+    }
     final audioTracks = _localStream!.getAudioTracks();
     for (final t in audioTracks) {
       t.enabled = !t.enabled;
@@ -293,7 +311,9 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _toggleScreenShare() async {
-    if (_pc == null || _localStream == null) return;
+    if (_pc == null || _localStream == null) {
+      return;
+    }
     if (_screenShareEnabled) {
       await _stopScreenShare();
     } else {
@@ -313,7 +333,9 @@ class _CallScreenState extends State<CallScreen> {
       }
       final screenTrack = screenVideoTracks.first;
       screenTrack.onEnded = () {
-        if (mounted) _stopScreenShare();
+        if (mounted) {
+          _stopScreenShare();
+        }
       };
       final senders = await _pc!.getSenders();
       RTCRtpSender? videoSender;
@@ -327,8 +349,12 @@ class _CallScreenState extends State<CallScreen> {
         await videoSender.replaceTrack(screenTrack);
       }
       _screenStream = screenStream;
-      if (_renderersInitialized) _screenRenderer.srcObject = screenStream;
-      if (mounted) setState(() => _screenShareEnabled = true);
+      if (_renderersInitialized) {
+        _screenRenderer.srcObject = screenStream;
+      }
+      if (mounted) {
+        setState(() => _screenShareEnabled = true);
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -339,7 +365,9 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _stopScreenShare() async {
-    if (_pc == null || !_screenShareEnabled) return;
+    if (_pc == null || !_screenShareEnabled) {
+      return;
+    }
     final senders = await _pc!.getSenders();
     RTCRtpSender? videoSender;
     for (final s in senders) {
@@ -365,12 +393,16 @@ class _CallScreenState extends State<CallScreen> {
     await _screenStream?.dispose();
     _screenStream = null;
     _screenRenderer.srcObject = null;
-    if (mounted) setState(() => _screenShareEnabled = false);
+    if (mounted) {
+      setState(() => _screenShareEnabled = false);
+    }
   }
 
   void _setupPeerConnection() {
     _pc!.onIceCandidate = (RTCIceCandidate? candidate) {
-      if (candidate == null) return;
+      if (candidate == null) {
+        return;
+      }
       _ws!.sendCallSignal(widget.peer.id, 'ice', {
         'candidate': candidate.candidate,
         'sdpMid': candidate.sdpMid,
@@ -422,7 +454,9 @@ class _CallScreenState extends State<CallScreen> {
       } else if (state == RTCIceConnectionState.RTCIceConnectionStateFailed ||
           state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
         // Только при полном провале или закрытии завершаем звонок
-        if (mounted) _endCall();
+        if (mounted) {
+          _endCall();
+        }
       } else if (state ==
               RTCIceConnectionState.RTCIceConnectionStateConnected ||
           state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
@@ -478,7 +512,9 @@ class _CallScreenState extends State<CallScreen> {
         setState(() => _state = 'ringing');
         return;
       }
-      if (_state == 'ringing') return;
+      if (_state == 'ringing') {
+        return;
+      }
       
       // Определяем тип звонка из сигнала
       final incomingIsVideoCall = s.isVideoCall ?? true;
@@ -589,7 +625,9 @@ class _CallScreenState extends State<CallScreen> {
       return;
     }
     if (s.signal == 'answer' && s.payload != null) {
-      if (_pc == null) return;
+      if (_pc == null) {
+        return;
+      }
       try {
         var desc = RTCSessionDescription(
           s.payload!['sdp'] as String,
@@ -648,7 +686,9 @@ class _CallScreenState extends State<CallScreen> {
 
   Future<void> _acceptCall() async {
     final offerPayload = widget.initialSignal?.payload;
-    if (offerPayload == null) return;
+    if (offerPayload == null) {
+      return;
+    }
     setState(() {
       _state = 'init';
       _isConnecting = true;
@@ -734,7 +774,9 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _endCall() async {
     AppSoundService.instance.stopRingtone();
     _signalSub?.cancel();
-    if (_screenShareEnabled) await _stopScreenShare();
+    if (_screenShareEnabled) {
+      await _stopScreenShare();
+    }
     _localRenderer.srcObject = null;
     // Очищаем состояние минимизации
     if (mounted) {
@@ -768,7 +810,9 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _loadMediaDevices() async {
     try {
       final devices = await navigator.mediaDevices.enumerateDevices();
-      if (mounted) setState(() => _mediaDevices = devices);
+      if (mounted) {
+        setState(() => _mediaDevices = devices);
+      }
     } catch (_) {}
   }
 
@@ -1314,7 +1358,9 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Widget _buildLayoutSwitcher() {
-    if (_state != 'connected') return const SizedBox.shrink();
+    if (_state != 'connected') {
+      return const SizedBox.shrink();
+    }
     return Positioned(
       left: 16,
       top: 80,
@@ -1411,7 +1457,9 @@ class _CallScreenState extends State<CallScreen> {
               TabBar(
                 onTap: (i) {
                   setState(() => _panelTabIndex = i);
-                  if (i == 1) _loadMediaDevices();
+                  if (i == 1) {
+                    _loadMediaDevices();
+                  }
                 },
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white70,
@@ -1521,7 +1569,9 @@ class _CallScreenState extends State<CallScreen> {
                 )
                 .toList(),
             onChanged: (id) {
-              if (id == null) return;
+              if (id == null) {
+                return;
+              }
               setState(() => _selectedVideoDeviceId = id);
               _getUserMedia(
                 videoDeviceId: id,
@@ -1574,7 +1624,9 @@ class _CallScreenState extends State<CallScreen> {
                 )
                 .toList(),
             onChanged: (id) {
-              if (id == null) return;
+              if (id == null) {
+                return;
+              }
               setState(() => _selectedAudioDeviceId = id);
               _getUserMedia(
                 videoDeviceId: _selectedVideoDeviceId,

@@ -24,7 +24,9 @@ class ImagePreviewScreen extends StatelessWidget {
       bytes = await bytesFuture;
     }
     if (bytes == null || bytes.isEmpty) {
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Не удалось загрузить файл')),
       );
@@ -32,12 +34,16 @@ class ImagePreviewScreen extends StatelessWidget {
     }
     try {
       await saveOrDownloadFile(bytes, filename);
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        return;
+      }
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Сохранено')));
     } catch (_) {
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        return;
+      }
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Не удалось сохранить')));
@@ -97,7 +103,9 @@ class ImagePreviewScreen extends StatelessWidget {
                   imageUrl!,
                   fit: BoxFit.contain,
                   loadingBuilder: (_, child, progress) {
-                    if (progress == null) return child;
+                    if (progress == null) {
+                      return child;
+                    }
                     return const Center(
                       child: CircularProgressIndicator(color: Colors.white),
                     );

@@ -8,7 +8,9 @@ class AppUpdateWeb {
   /// Проверяет наличие обновлений и перезагружает страницу с очисткой кеша
   /// Вызывается при выходе из звонка для синхронизации интерфейса и обновлений
   static Future<void> checkAndReloadIfNeeded() async {
-    if (!kIsWeb) return;
+    if (!kIsWeb) {
+      return;
+    }
 
     try {
       // Очищаем кеш перед перезагрузкой
@@ -38,13 +40,17 @@ class AppUpdateWeb {
 
   /// Принудительно перезагружает страницу с очисткой кеша
   static void forceReloadWithCacheClear() {
-    if (!kIsWeb) return;
+    if (!kIsWeb) {
+      return;
+    }
     checkAndReloadIfNeeded();
   }
 
   /// Очищает кеш браузера для текущего домена
   static Future<void> clearCache() async {
-    if (!kIsWeb) return;
+    if (!kIsWeb) {
+      return;
+    }
 
     try {
       // Очищаем кеш через Cache API если доступен
