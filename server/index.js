@@ -35,6 +35,7 @@ import { securityHeaders } from './middleware/security.js';
 import { csrfProtect, csrfTokenRoute } from './middleware/csrf.js';
 import { auditMiddleware } from './utils/auditLog.js';
 import { getAllCircuitBreakerStates } from './utils/circuitBreaker.js';
+import { apiVersioning, validateApiVersion } from './middleware/apiVersioning.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const uploadsDir = join(__dirname, 'uploads');
@@ -89,6 +90,10 @@ app.use(csrfProtect());
 
 // Endpoint для получения CSRF токена (для веб-форм)
 app.get('/csrf-token', csrfTokenRoute);
+
+// API Versioning (должен быть до routes)
+app.use('/api', apiVersioning);
+app.use('/api', validateApiVersion);
 
 app.use('/api', apiLimiter); // Общий лимит для всех API запросов
 // Явно указываем UTF-8 для всех JSON-ответов API (корректное отображение кириллицы).
