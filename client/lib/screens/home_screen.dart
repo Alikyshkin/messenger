@@ -353,11 +353,12 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildChatsView(BuildContext context) {
     return Column(
       children: [
-        // Заголовок
+        // Заголовок и кнопка нового чата
         Container(
           padding: AppSpacing.navigationPadding,
           height: AppSizes.appBarHeight,
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Padding(
                 padding: const EdgeInsets.only(left: 16),
@@ -367,6 +368,14 @@ class _HomeScreenState extends State<HomeScreen>
                     context,
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add),
+                tooltip: context.tr('new_chat'),
+                onPressed: () async {
+                  await context.push('/start-chat');
+                  _load();
+                },
               ),
             ],
           ),
