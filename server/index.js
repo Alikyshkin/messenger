@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { mkdirSync, existsSync } from 'fs';
@@ -48,6 +49,20 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
   maxAge: 86400, // 24 часа
+}));
+
+// Сжатие ответов (gzip/brotli)
+app.use(compression({
+  filter: (req, res) => {
+    // Сжимаем только если клиент поддерживает сжатие
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    // Используем стандартный фильтр compression
+    return compression.filter(req, res);
+  },
+  level: 6, // Уровень сжатия (1-9, по умолчанию 6)
+  threshold: 1024, // Минимальный размер для сжатия (1KB)
 }));
 
 app.use(express.json());
