@@ -6,6 +6,8 @@ import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
+import 'empty_state_widget.dart';
+import 'user_list_tile.dart';
 
 /// Унифицированный виджет поиска пользователей
 /// Используется для поиска пользователей для чата или добавления в друзья

@@ -9,7 +9,6 @@ import '../utils/app_page_route.dart';
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
 import 'skeleton.dart';
-import 'user_avatar.dart';
 import 'user_list_tile.dart';
 import 'section_card.dart';
 import 'error_state_widget.dart';
@@ -47,10 +46,8 @@ class _ContactsContentState extends State<ContactsContent> {
     setState(() => _loading = true);
     try {
       final api = Api(auth.token);
-      final [contacts, requests] = await Future.wait([
-        api.getContacts(),
-        api.getFriendRequestsIncoming(),
-      ]);
+      final contacts = await api.getContacts();
+      final requests = await api.getFriendRequestsIncoming();
       if (!mounted) return;
       setState(() {
         _contacts = contacts;
