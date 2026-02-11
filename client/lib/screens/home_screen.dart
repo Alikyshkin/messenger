@@ -17,15 +17,29 @@ import '../widgets/skeleton.dart';
 import '../widgets/offline_indicator.dart';
 import '../widgets/app_update_banner.dart';
 import '../widgets/user_avatar.dart';
+import '../widgets/contacts_content.dart';
+import '../widgets/start_chat_content.dart';
+import '../widgets/profile_content.dart';
+import '../widgets/error_state_widget.dart';
+import '../widgets/empty_state_widget.dart';
 import '../services/app_update_service.dart';
 import '../config/version.dart' show AppVersion;
-import 'profile_screen.dart';
+import '../styles/app_spacing.dart';
+import '../styles/app_sizes.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
+}
+
+enum _NavigationItem {
+  chats,
+  contacts,
+  newChat,
+  profile,
 }
 
 class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMixin {
@@ -36,6 +50,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   StreamSubscription<Message>? _newMessagePayloadSub;
   List<FriendRequest> _friendRequests = [];
   int _totalUnreadCount = 0;
+  _NavigationItem _currentView = _NavigationItem.chats;
 
   bool _initialized = false;
 
@@ -172,20 +187,174 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     return content;
   }
 
+  String _getAppBarTitle(BuildContext context) {
+    switch (_currentView) {
+      case _NavigationItem.chats:
+        return context.tr('chats');
+      case _NavigationItem.contacts:
+        return context.tr('contacts');
+      case _NavigationItem.newChat:
+        return context.tr('new_chat');
+      case _NavigationItem.profile:
+        return context.tr('profile');
+    }
+  }
+
+  Widget _buildContentView(BuildContext context) {
+    switch (_currentView) {
+      case _NavigationItem.chats:
+        return _buildChatsView(context);
+      case _NavigationItem.contacts:
+        return ContactsContent(
+          onFriendRequestChanged: () {
+            _loadFriendRequests();
+          },
+        );
+      case _NavigationItem.newChat:
+        return const StartChatContent();
+      case _NavigationItem.profile:
+        return const ProfileContent();
+    }
+  }
+
+  Widget _buildChatsView(BuildContext context) {
+    return Column(
+      children: [
+        const AppUpdateBanner(),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _load,
+            child: _loading && _chats.isEmpty
+                ? ListView.builder(
+                    padding: AppSpacing.listPadding,
+                    itemCount: 10,
+                    itemBuilder: (_, __) => const Card(child: SkeletonChatTile()),
+                  )
+                : _error != null && _chats.isEmpty
+                    ? ErrorStateWidget(
+                        message: _error!,
+                        onRetry: _load,
+                        retryLabel: context.tr('retry'),
+                      )
+                    : _chats.isEmpty
+                        ? EmptyStateWidget(message: context.tr('no_chats'))
+                        : ListView.builder(
+                            padding: AppSpacing.listPadding,
+                            itemCount: _chats.length,
+                            itemBuilder: (context, i) {
+                              final c = _chats[i];
+                              final unread = c.unreadCount;
+                              final isGroup = c.isGroup;
+                              final title = isGroup ? (c.group!.name) : (c.peer!.displayName);
+                              final avatarUrl = isGroup ? c.group!.avatarUrl : c.peer!.avatarUrl;
+                              String subtitleText = '';
+                              if (c.lastMessage != null) {
+                                if (c.lastMessage!.isMine) {
+                                  subtitleText = '${context.tr('you_prefix')}${c.lastMessage!.isPoll ? context.tr('poll_prefix') : ''}${_previewContent(context, c.lastMessage!.content)}';
+                                } else {
+                                  final prefix = isGroup && c.lastMessage!.senderDisplayName != null
+                                      ? '${c.lastMessage!.senderDisplayName}: '
+                                      : '';
+                                  subtitleText = '$prefix${c.lastMessage!.isPoll ? context.tr('poll_prefix') : ''}${_previewContent(context, c.lastMessage!.content)}';
+                                }
+                              }
+                              return Card(
+                                margin: EdgeInsets.only(bottom: AppSpacing.sm),
+                                child: ListTile(
+                                  contentPadding: AppSpacing.cardPadding,
+                                  leading: CircleAvatar(
+                                    radius: AppSizes.avatarLG,
+                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                                    backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                                        ? NetworkImage(avatarUrl)
+                                        : null,
+                                    child: avatarUrl == null || avatarUrl.isEmpty
+                                        ? Icon(
+                                            isGroup ? Icons.group : Icons.person,
+                                            size: AppSizes.iconXXL,
+                                            color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                                          )
+                                        : null,
+                                  ),
+                                  title: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          title,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (unread > 0)
+                                        Container(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: AppSpacing.sm,
+                                            vertical: AppSpacing.xs,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context).colorScheme.primary,
+                                            borderRadius: BorderRadius.circular(AppSizes.radiusLG),
+                                          ),
+                                          child: Text(
+                                            unread > 99 ? '99+' : '$unread',
+                                            style: TextStyle(
+                                              color: Theme.of(context).colorScheme.onPrimary,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  subtitle: c.lastMessage != null
+                                      ? Padding(
+                                          padding: EdgeInsets.only(top: AppSpacing.xs),
+                                          child: Text(
+                                            subtitleText,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        )
+                                      : null,
+                                  onTap: () async {
+                                    if (isGroup) {
+                                      await context.push('/group/${c.group!.id}');
+                                    } else {
+                                      await context.push('/chat/${c.peer!.id}');
+                                    }
+                                    _load();
+                                  },
+                                ),
+                              );
+                            },
+                          ),
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     return OfflineIndicator(
       child: Scaffold(
             appBar: AppBar(
-              title: Text(context.tr('chats')),
+              title: Text(_getAppBarTitle(context)),
             ),
             body: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Левая навигация: профиль, чаты, друзья, новый чат, внизу выход
                 Container(
-                  width: 72,
+                  width: AppSizes.navigationWidth,
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surfaceContainerLowest,
                     border: Border(
@@ -197,21 +366,34 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   ),
                   child: Column(
                     children: [
-                      const SizedBox(height: 8),
+                      AppSpacing.spacingVerticalSM,
                       Consumer<AuthService>(
                         builder: (context, auth, _) {
                           final user = auth.user;
+                          final isActive = _currentView == _NavigationItem.profile;
                           return IconButton(
                             icon: user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
-                                ? UserAvatar(user: user, radius: 20)
-                                : const Icon(Icons.account_circle_outlined, size: 28),
+                                ? UserAvatar(
+                                    user: user,
+                                    radius: AppSizes.avatarSM,
+                                  )
+                                : Icon(
+                                    Icons.account_circle_outlined,
+                                    size: AppSizes.iconXL,
+                                    color: isActive
+                                        ? Theme.of(context).colorScheme.primary
+                                        : null,
+                                  ),
                             tooltip: context.tr('my_profile'),
+                            style: IconButton.styleFrom(
+                              backgroundColor: isActive
+                                  ? Theme.of(context).colorScheme.primaryContainer
+                                  : null,
+                            ),
                             onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => const ProfileScreen(),
-                                ),
-                              );
+                              setState(() {
+                                _currentView = _NavigationItem.profile;
+                              });
                             },
                           );
                         },
@@ -220,16 +402,25 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                         icon: Stack(
                           clipBehavior: Clip.none,
                           children: [
-                            const Icon(Icons.chat_outlined, size: 28),
+                            Icon(
+                              Icons.chat_outlined,
+                              size: AppSizes.iconXL,
+                              color: _currentView == _NavigationItem.chats
+                                  ? Theme.of(context).colorScheme.primary
+                                  : null,
+                            ),
                             if (_totalUnreadCount > 0)
                               Positioned(
-                                right: -4,
-                                top: -4,
+                                right: -AppSpacing.xs,
+                                top: -AppSpacing.xs,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.md,
+                                    vertical: AppSpacing.xs,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.red,
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(AppSizes.radiusMD),
                                   ),
                                   child: Text(
                                     _totalUnreadCount > 99 ? '99+' : '$_totalUnreadCount',
@@ -244,24 +435,40 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                           ],
                         ),
                         tooltip: context.tr('chats'),
+                        style: IconButton.styleFrom(
+                          backgroundColor: _currentView == _NavigationItem.chats
+                              ? Theme.of(context).colorScheme.primaryContainer
+                              : null,
+                        ),
                         onPressed: () {
-                          // Уже на экране чатов
+                          setState(() {
+                            _currentView = _NavigationItem.chats;
+                          });
                         },
                       ),
                       IconButton(
                         icon: Stack(
                           clipBehavior: Clip.none,
                           children: [
-                            const Icon(Icons.people_outline, size: 28),
+                            Icon(
+                              Icons.people_outline,
+                              size: AppSizes.iconXL,
+                              color: _currentView == _NavigationItem.contacts
+                                  ? Theme.of(context).colorScheme.primary
+                                  : null,
+                            ),
                             if (_friendRequests.isNotEmpty)
                               Positioned(
-                                right: -4,
-                                top: -4,
+                                right: -AppSpacing.xs,
+                                top: -AppSpacing.xs,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.md,
+                                    vertical: AppSpacing.xs,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.red,
-                                    borderRadius: BorderRadius.circular(10),
+                                    borderRadius: BorderRadius.circular(AppSizes.radiusMD),
                                   ),
                                   child: Text(
                                     _friendRequests.length > 99 ? '99+' : '${_friendRequests.length}',
@@ -276,25 +483,40 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                           ],
                         ),
                         tooltip: context.tr('contacts'),
+                        style: IconButton.styleFrom(
+                          backgroundColor: _currentView == _NavigationItem.contacts
+                              ? Theme.of(context).colorScheme.primaryContainer
+                              : null,
+                        ),
                         onPressed: () {
-                          context.push('/contacts').then((_) {
-                            _loadFriendRequests();
+                          setState(() {
+                            _currentView = _NavigationItem.contacts;
                           });
                         },
                       ),
                       IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 28),
+                        icon: Icon(
+                          Icons.edit_outlined,
+                          size: AppSizes.iconXL,
+                          color: _currentView == _NavigationItem.newChat
+                              ? Theme.of(context).colorScheme.primary
+                              : null,
+                        ),
                         tooltip: context.tr('new_chat'),
+                        style: IconButton.styleFrom(
+                          backgroundColor: _currentView == _NavigationItem.newChat
+                              ? Theme.of(context).colorScheme.primaryContainer
+                              : null,
+                        ),
                         onPressed: () {
-                          context.push('/start-chat').then((_) {
-                            _load();
-                            _loadFriendRequests();
+                          setState(() {
+                            _currentView = _NavigationItem.newChat;
                           });
                         },
                       ),
                       const Spacer(),
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
+                        padding: EdgeInsets.only(bottom: AppSpacing.sm),
                         child: Text(
                           'v${AppVersion.displayVersion}',
                           style: TextStyle(
@@ -305,7 +527,16 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.logout, size: 28),
+                        icon: const Icon(Icons.settings, size: AppSizes.iconXL),
+                        tooltip: context.tr('settings'),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.logout, size: AppSizes.iconXL),
                         tooltip: context.tr('logout'),
                         onPressed: () async {
                           final ok = await showDialog<bool>(
@@ -331,152 +562,12 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                           }
                         },
                       ),
-                      const SizedBox(height: 8),
+                      AppSpacing.spacingVerticalSM,
                     ],
                   ),
                 ),
                 Expanded(
-                  child: Column(
-              children: [
-                const AppUpdateBanner(),
-                Expanded(
-                  child: RefreshIndicator(
-              onRefresh: _load,
-              child: _loading && _chats.isEmpty
-                  ? ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-                      itemCount: 10,
-                      itemBuilder: (_, __) => const Card(child: SkeletonChatTile()),
-                    )
-                  : _error != null && _chats.isEmpty
-                      ? Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error), textAlign: TextAlign.center),
-                                const SizedBox(height: 20),
-                                FilledButton.icon(
-                                  onPressed: _load,
-                                  icon: const Icon(Icons.refresh, size: 20),
-                                  label: Text(context.tr('retry')),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      : _chats.isEmpty
-                          ? Center(
-                              child: Padding(
-                                padding: const EdgeInsets.all(32),
-                                child: Text(
-                                  context.tr('no_chats'),
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-                              itemCount: _chats.length,
-                              itemBuilder: (context, i) {
-                                final c = _chats[i];
-                                final unread = c.unreadCount;
-                                final isGroup = c.isGroup;
-                                final title = isGroup ? (c.group!.name) : (c.peer!.displayName);
-                                final avatarUrl = isGroup ? c.group!.avatarUrl : c.peer!.avatarUrl;
-                                String subtitleText = '';
-                                if (c.lastMessage != null) {
-                                  if (c.lastMessage!.isMine) {
-                                    subtitleText = '${context.tr('you_prefix')}${c.lastMessage!.isPoll ? context.tr('poll_prefix') : ''}${_previewContent(context, c.lastMessage!.content)}';
-                                  } else {
-                                    final prefix = isGroup && c.lastMessage!.senderDisplayName != null
-                                        ? '${c.lastMessage!.senderDisplayName}: '
-                                        : '';
-                                    subtitleText = '$prefix${c.lastMessage!.isPoll ? context.tr('poll_prefix') : ''}${_previewContent(context, c.lastMessage!.content)}';
-                                  }
-                                }
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  child: ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                    leading: CircleAvatar(
-                                      radius: 28,
-                                      backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                      backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                                          ? NetworkImage(avatarUrl)
-                                          : null,
-                                      child: avatarUrl == null || avatarUrl.isEmpty
-                                          ? Icon(
-                                              isGroup ? Icons.group : Icons.person,
-                                              size: 32,
-                                              color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
-                                            )
-                                          : null,
-                                    ),
-                                    title: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            title,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 16,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        if (unread > 0)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(context).colorScheme.primary,
-                                              borderRadius: BorderRadius.circular(12),
-                                            ),
-                                            child: Text(
-                                              unread > 99 ? '99+' : '$unread',
-                                              style: TextStyle(
-                                                color: Theme.of(context).colorScheme.onPrimary,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    subtitle: c.lastMessage != null
-                                        ? Padding(
-                                            padding: const EdgeInsets.only(top: 4),
-                                            child: Text(
-                                              subtitleText,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: TextStyle(
-                                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                          )
-                                        : null,
-                                    onTap: () async {
-                                      if (isGroup) {
-                                        await context.push('/group/${c.group!.id}');
-                                      } else {
-                                        await context.push('/chat/${c.peer!.id}');
-                                      }
-                                      _load();
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                  ),
-                ),
-              ],
-            ),
+                  child: _buildContentView(context),
                 ),
               ],
             ),
