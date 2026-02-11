@@ -286,6 +286,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               hintText: context.tr('display_name_hint'),
             ),
             textCapitalization: TextCapitalization.words,
+            enableInteractiveSelection: true,
           ),
           const SizedBox(height: 16),
           TextField(
@@ -296,6 +297,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               helperText: context.tr('username_helper'),
             ),
             autocorrect: false,
+            enableInteractiveSelection: true,
+            enableSuggestions: false,
           ),
           const SizedBox(height: 16),
           TextField(
@@ -307,6 +310,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             maxLines: 3,
             maxLength: 256,
+            enableInteractiveSelection: true,
           ),
           const SizedBox(height: 16),
           TextField(
@@ -318,6 +322,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             keyboardType: TextInputType.emailAddress,
             autocorrect: false,
+            enableInteractiveSelection: true,
+            enableSuggestions: false,
           ),
           const SizedBox(height: 16),
           TextField(
@@ -329,6 +335,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             keyboardType: TextInputType.phone,
             autocorrect: false,
+            enableInteractiveSelection: true,
+            enableSuggestions: false,
           ),
           const SizedBox(height: 16),
           ListTile(
@@ -452,6 +460,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             obscureText: !_passwordVisible,
             autocorrect: false,
+            enableInteractiveSelection: true,
+            enableSuggestions: false,
           ),
           const SizedBox(height: 12),
           TextField(
@@ -466,6 +476,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             obscureText: !_passwordVisible,
+            enableInteractiveSelection: true,
+            enableSuggestions: false,
             autocorrect: false,
           ),
           const SizedBox(height: 12),
@@ -481,6 +493,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             obscureText: !_passwordVisible,
+            enableInteractiveSelection: true,
+            enableSuggestions: false,
             autocorrect: false,
           ),
           const SizedBox(height: 12),

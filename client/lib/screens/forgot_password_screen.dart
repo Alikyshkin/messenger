@@ -93,6 +93,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ),
                   keyboardType: TextInputType.emailAddress,
                   autocorrect: false,
+                  enableInteractiveSelection: true,
+                  enableSuggestions: false,
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _submit(),
                 ),

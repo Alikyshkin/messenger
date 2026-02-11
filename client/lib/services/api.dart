@@ -209,14 +209,23 @@ class Api {
   /// Найти пользователей по номерам телефонов (из контактов устройства).
   Future<List<User>> findUsersByPhones(List<String> phones) async {
     if (phones.isEmpty) return [];
-    final r = await http.post(
-      Uri.parse('$base/users/find-by-phones'),
-      headers: _headers,
-      body: jsonEncode({'phones': phones}),
-    );
-    _checkResponse(r);
-    final list = jsonDecode(_utf8Body(r)) as List<dynamic>;
-    return list.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
+    try {
+      final r = await http.post(
+        Uri.parse('$base/users/find-by-phones'),
+        headers: _headers,
+        body: jsonEncode({'phones': phones}),
+      );
+      _checkResponse(r);
+      final json = jsonDecode(_utf8Body(r));
+      // API может вернуть массив или объект с data
+      final list = json is Map<String, dynamic> 
+          ? (json['data'] as List<dynamic>? ?? [])
+          : (json as List<dynamic>? ?? []);
+      return list.map((e) => User.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException(500, 'Ошибка при поиске пользователей по телефонам: ${e.toString()}');
+    }
   }
 
   Future<List<ChatPreview>> getChats() async {
@@ -291,7 +300,11 @@ class Api {
       headers: _headers,
     );
     _checkResponse(r);
-    final list = jsonDecode(_utf8Body(r)) as List<dynamic>;
+    final json = jsonDecode(_utf8Body(r));
+    // API возвращает { data: [...], pagination: {...} } или просто массив
+    final list = json is Map<String, dynamic> 
+        ? (json['data'] as List<dynamic>? ?? [])
+        : (json as List<dynamic>);
     return list.map((e) => Message.fromJson(e as Map<String, dynamic>)).toList();
   }
 
@@ -620,7 +633,11 @@ class Api {
       headers: _headers,
     );
     _checkResponse(r);
-    final list = jsonDecode(_utf8Body(r)) as List<dynamic>;
+    final json = jsonDecode(_utf8Body(r));
+    // API возвращает { data: [...], pagination: {...} } или просто массив
+    final list = json is Map<String, dynamic> 
+        ? (json['data'] as List<dynamic>? ?? [])
+        : (json as List<dynamic>);
     return list.map((e) => Message.fromJson(e as Map<String, dynamic>)).toList();
   }
 

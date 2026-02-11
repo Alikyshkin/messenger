@@ -8,7 +8,6 @@ import { authLimiter, registerLimiter, passwordResetLimiter } from '../middlewar
 import { validate, registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema } from '../middleware/validation.js';
 import { log } from '../utils/logger.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
-import { checkAccountLockout, recordFailedAttempt, resetFailedAttempts, isAccountLocked } from '../utils/accountLockout.js';
 import { auditLog, AUDIT_EVENTS } from '../utils/auditLog.js';
 
 const router = Router();
@@ -136,7 +135,7 @@ router.post('/register', registerLimiter, validate(registerSchema), asyncHandler
  *       401:
  *         description: Неверные учетные данные
  */
-router.post('/login', authLimiter, checkAccountLockout, validate(loginSchema), asyncHandler(async (req, res) => {
+router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async (req, res) => {
   const { username, password } = req.validated;
   const normalizedUsername = username.trim().toLowerCase();
   
@@ -160,14 +159,9 @@ router.post('/login', authLimiter, checkAccountLockout, validate(loginSchema), a
   const isPasswordValid = bcrypt.compareSync(password, user.password_hash);
   
   if (!isPasswordValid) {
-    // Регистрируем неудачную попытку входа
-    recordFailedAttempt(user.id, normalizedUsername);
     log.warn({ userId: user.id, username: normalizedUsername, ip: req.ip }, 'Failed login attempt - invalid password');
     return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
   }
-  
-  // Успешный вход - сбрасываем счетчик неудачных попыток
-  resetFailedAttempts(user.id);
   
   const token = signToken(user.id, user.username);
   

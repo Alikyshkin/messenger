@@ -186,6 +186,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               border: const OutlineInputBorder(),
             ),
             textCapitalization: TextCapitalization.words,
+            enableInteractiveSelection: true,
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),

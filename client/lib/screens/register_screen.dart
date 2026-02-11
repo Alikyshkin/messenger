@@ -95,6 +95,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   keyboardType: TextInputType.name,
                   autocorrect: false,
                   enableSuggestions: false,
+                  enableInteractiveSelection: true,
                   autofocus: true,
                   validator: (v) {
                     if (v == null || v.trim().length < 3) {
@@ -113,6 +114,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   textInputAction: TextInputAction.next,
                   keyboardType: TextInputType.name,
                   autocorrect: false,
+                  enableInteractiveSelection: true,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -125,6 +127,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   textInputAction: TextInputAction.next,
                   keyboardType: TextInputType.emailAddress,
                   autocorrect: false,
+                  enableInteractiveSelection: true,
+                  enableSuggestions: false,
                 ),
                 const SizedBox(height: 16),
                 TextFormField(
@@ -143,6 +147,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: !_passwordVisible,
                   enableSuggestions: false,
                   autocorrect: false,
+                  enableInteractiveSelection: true,
                   onFieldSubmitted: (_) => _submit(),
                   validator: (v) {
                     if (v == null || v.length < 6) return context.tr('min_6_chars');

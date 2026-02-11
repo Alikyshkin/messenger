@@ -343,6 +343,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                       ),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     ),
+                    enableInteractiveSelection: true,
                     textCapitalization: TextCapitalization.sentences,
                     onSubmitted: (_) => _sendText(),
                   ),

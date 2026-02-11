@@ -96,6 +96,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             textInputAction: TextInputAction.next,
                             autocorrect: false,
+                            enableInteractiveSelection: true,
+                            enableSuggestions: false,
                             validator: (v) =>
                                 v == null || v.trim().isEmpty ? context.tr('enter_username') : null,
                           ),
@@ -112,6 +114,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ),
                             obscureText: !_passwordVisible,
+                            enableInteractiveSelection: true,
+                            enableSuggestions: false,
+                            autocorrect: false,
                             onFieldSubmitted: (_) => _submit(),
                             validator: (v) =>
                                 v == null || v.isEmpty ? context.tr('enter_password') : null,

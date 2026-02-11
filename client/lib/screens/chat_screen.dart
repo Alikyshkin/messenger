@@ -1324,6 +1324,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       border: OutlineInputBorder(),
                     ),
                     textInputAction: TextInputAction.send,
+                    enableInteractiveSelection: true,
                     onSubmitted: (_) => _send(),
                   ),
                 ),
@@ -1708,6 +1709,7 @@ class _CreatePollDialogState extends State<_CreatePollDialog> {
                 hintText: 'Текст вопроса',
               ),
               maxLines: 2,
+              enableInteractiveSelection: true,
             ),
             const SizedBox(height: 16),
             ..._optionControllers.asMap().entries.map((entry) {
@@ -1724,6 +1726,7 @@ class _CreatePollDialogState extends State<_CreatePollDialog> {
                           labelText: 'Вариант ${i + 1}',
                           hintText: 'Текст варианта',
                         ),
+                        enableInteractiveSelection: true,
                       ),
                     ),
                     IconButton(

@@ -56,9 +56,9 @@ class _CallScreenState extends State<CallScreen> {
   String? _error;
   final List<Map<String, dynamic>> _pendingCandidates = [];
 
-  /// Видео и микрофон изначально выключены при подключении.
-  bool _cameraEnabled = false;
-  bool _micEnabled = false;
+  /// Видео и микрофон включены по умолчанию для видеозвонка.
+  bool _cameraEnabled = true;
+  bool _micEnabled = true;
 
   /// Демонстрация экрана.
   bool _screenShareEnabled = false;
@@ -113,7 +113,10 @@ class _CallScreenState extends State<CallScreen> {
       for (var track in _localStream!.getTracks()) {
         await _pc!.addTrack(track, _localStream!);
       }
-      var offer = await _pc!.createOffer({});
+      var offer = await _pc!.createOffer({
+        'offerToReceiveAudio': true,
+        'offerToReceiveVideo': true,
+      });
       await _pc!.setLocalDescription(offer);
       _ws!.sendCallSignal(widget.peer.id, 'offer', {
         'sdp': offer.sdp,
@@ -128,9 +131,10 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
-  /// После получения потока выключаем видео и микрофон по умолчанию.
+  /// Применяем состояние видео и микрофона к трекам.
   void _applyInitialMute() {
     if (_localStream == null) return;
+    // Включаем видео и микрофон по умолчанию для видеозвонка
     for (var t in _localStream!.getVideoTracks()) {
       t.enabled = _cameraEnabled;
     }
@@ -292,10 +296,30 @@ class _CallScreenState extends State<CallScreen> {
       });
     };
     _pc!.onTrack = (event) {
+      print('onTrack event: ${event.track.kind}, streams: ${event.streams.length}');
       if (event.streams.isNotEmpty) {
-        _remoteStream = event.streams.first;
-        if (_renderersInitialized) _remoteRenderer.srcObject = _remoteStream;
-        if (mounted) setState(() {});
+        final stream = event.streams.first;
+        _remoteStream = stream;
+        print('Remote stream received: ${stream.id}, tracks: ${stream.getTracks().length}');
+        if (_renderersInitialized) {
+          _remoteRenderer.srcObject = stream;
+        }
+        if (mounted) {
+          setState(() {});
+        }
+      } else {
+        // Если потоков нет, но есть трек - это нестандартная ситуация
+        print('Track without stream: ${event.track.kind}, enabled: ${event.track.enabled}');
+        // Обновляем состояние, возможно поток появится позже
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    };
+    _pc!.onConnectionState = (state) {
+      print('PeerConnection connectionState: $state');
+      if (mounted) {
+        setState(() {});
       }
     };
     _pc!.onIceConnectionState = (state) {
@@ -324,7 +348,9 @@ class _CallScreenState extends State<CallScreen> {
         _applyInitialMute();
         _pc = await createPeerConnection(_iceServers, {});
         _setupPeerConnection();
+        print('Adding local tracks (handle offer): ${_localStream!.getTracks().length}');
         for (var track in _localStream!.getTracks()) {
+          print('Adding track: ${track.kind}, enabled: ${track.enabled}');
           await _pc!.addTrack(track, _localStream!);
         }
         var desc = RTCSessionDescription(
@@ -332,7 +358,23 @@ class _CallScreenState extends State<CallScreen> {
           s.payload!['type'] as String,
         );
         await _pc!.setRemoteDescription(desc);
-        var answer = await _pc!.createAnswer({});
+        // Обрабатываем отложенные ICE кандидаты перед созданием answer
+        for (var c in _pendingCandidates) {
+          try {
+            await _pc!.addCandidate(RTCIceCandidate(
+              c['candidate'] as String,
+              c['sdpMid'] as String?,
+              c['sdpMLineIndex'] as int?,
+            ));
+          } catch (e) {
+            print('Error adding pending candidate: $e');
+          }
+        }
+        _pendingCandidates.clear();
+        var answer = await _pc!.createAnswer({
+          'offerToReceiveAudio': true,
+          'offerToReceiveVideo': true,
+        });
         await _pc!.setLocalDescription(answer);
         _ws!.sendCallSignal(widget.peer.id, 'answer', {
           'sdp': answer.sdp,
@@ -354,11 +396,25 @@ class _CallScreenState extends State<CallScreen> {
       return;
     }
     if (s.signal == 'answer' && s.payload != null) {
+      if (_pc == null) return;
       var desc = RTCSessionDescription(
         s.payload!['sdp'] as String,
         s.payload!['type'] as String,
       );
-      await _pc?.setRemoteDescription(desc);
+      await _pc!.setRemoteDescription(desc);
+      // Обрабатываем отложенные ICE кандидаты
+      for (var c in _pendingCandidates) {
+        try {
+          await _pc!.addCandidate(RTCIceCandidate(
+            c['candidate'] as String,
+            c['sdpMid'] as String?,
+            c['sdpMLineIndex'] as int?,
+          ));
+        } catch (e) {
+          print('Error adding pending candidate: $e');
+        }
+      }
+      _pendingCandidates.clear();
       if (mounted) {
         AppSoundService.instance.stopRingtone();
         setState(() => _state = 'connected');
@@ -398,15 +454,23 @@ class _CallScreenState extends State<CallScreen> {
         offerPayload['type'] as String,
       );
       await _pc!.setRemoteDescription(desc);
+      // Обрабатываем отложенные ICE кандидаты перед созданием answer
       for (var c in _pendingCandidates) {
-        await _pc!.addCandidate(RTCIceCandidate(
-          c['candidate'] as String,
-          c['sdpMid'] as String?,
-          c['sdpMLineIndex'] as int?,
-        ));
+        try {
+          await _pc!.addCandidate(RTCIceCandidate(
+            c['candidate'] as String,
+            c['sdpMid'] as String?,
+            c['sdpMLineIndex'] as int?,
+          ));
+        } catch (e) {
+          print('Error adding pending candidate: $e');
+        }
       }
       _pendingCandidates.clear();
-      var answer = await _pc!.createAnswer({});
+      var answer = await _pc!.createAnswer({
+        'offerToReceiveAudio': true,
+        'offerToReceiveVideo': true,
+      });
       await _pc!.setLocalDescription(answer);
       _ws!.sendCallSignal(widget.peer.id, 'answer', {
         'sdp': answer.sdp,
@@ -521,7 +585,8 @@ class _CallScreenState extends State<CallScreen> {
           children: [
             _buildVideoLayout(),
             _buildOverlayTitle(),
-            if (_state == 'connected' && _renderersInitialized) _buildLocalPreview(isControlsVisible),
+            // Показываем превью локального видео только когда есть удаленное видео (чтобы не дублировать)
+            if (_state == 'connected' && _renderersInitialized && _remoteStream != null) _buildLocalPreview(isControlsVisible),
             if (_state == 'ringing') _buildIncomingControls(),
             if (isControlsVisible) ...[
               _buildLayoutSwitcher(),
@@ -549,7 +614,8 @@ class _CallScreenState extends State<CallScreen> {
 
   Widget _buildSpeakerLayout() {
     final showRemote = _state == 'connected' && _remoteStream != null;
-    final showLocal = _state == 'calling' || (_state == 'connected' && _localStream != null);
+    // Локальное видео показываем только если есть удаленное (чтобы не дублировать в двух окнах)
+    final showLocal = _state == 'connected' && _localStream != null && showRemote;
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -564,7 +630,7 @@ class _CallScreenState extends State<CallScreen> {
             mirror: true,
             objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
           )
-        else if (showLocal && _screenShareEnabled)
+        else if (_state == 'connected' && _screenShareEnabled)
           RTCVideoView(
             _screenRenderer,
             objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,

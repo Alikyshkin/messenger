@@ -12,6 +12,8 @@ import { validateFile } from '../middleware/fileValidation.js';
 import { FILE_LIMITS, ALLOWED_FILE_TYPES, SEARCH_CONFIG } from '../config/constants.js';
 import { get, set, del, CacheKeys } from '../utils/cache.js';
 import config from '../config/index.js';
+import { asyncHandler } from '../middleware/errorHandler.js';
+import Joi from 'joi';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const avatarsDir = path.join(__dirname, '../uploads/avatars');
@@ -221,8 +223,19 @@ function normalizePhone(s) {
 }
 
 /** Найти пользователей по списку номеров телефонов (из контактов устройства). */
-router.post('/find-by-phones', (req, res) => {
-  const phones = req.body.phones;
+const findUsersByPhonesSchema = Joi.object({
+  phones: Joi.array().items(Joi.string().min(10).max(15)).min(1).max(1000).required()
+    .label('Номера телефонов')
+    .messages({
+      'any.required': 'Список номеров телефонов обязателен',
+      'array.base': 'Номера телефонов должны быть списком',
+      'array.min': 'Список номеров телефонов не может быть пустым',
+      'array.max': 'Слишком много номеров телефонов (максимум 1000)',
+    }),
+});
+
+router.post('/find-by-phones', validate(findUsersByPhonesSchema), asyncHandler(async (req, res) => {
+  const phones = req.validated.phones;
   if (!Array.isArray(phones) || phones.length === 0) return res.json([]);
   const normalizedSet = new Set(phones.map(normalizePhone).filter(p => p.length >= 10));
   if (normalizedSet.size === 0) return res.json([]);
@@ -235,7 +248,7 @@ router.post('/find-by-phones', (req, res) => {
   `).all(me);
   const matched = allWithPhone.filter(u => normalizedSet.has(normalizePhone(u.phone || '')));
   res.json(matched.map(r => userToJson(r, baseUrl)));
-});
+}));
 
 router.get('/search', (req, res) => {
   const q = (req.query.q || '').trim();
