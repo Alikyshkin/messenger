@@ -22,6 +22,9 @@ class _GroupCallParticipant {
   String state = 'connecting'; // connecting | connected | disconnected | failed
   bool hasVideo = false;
   bool hasAudio = false;
+  final List<Map<String, dynamic>> pendingCandidates =
+      []; // Отложенные ICE кандидаты
+  bool offerReceived = false; // Флаг, что offer уже был обработан
 
   _GroupCallParticipant(this.user);
 
@@ -31,6 +34,7 @@ class _GroupCallParticipant {
     if (rendererInitialized) {
       renderer.dispose();
     }
+    pendingCandidates.clear();
   }
 }
 
@@ -64,17 +68,17 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   MediaStream? _localStream;
   final RTCVideoRenderer _localRenderer = RTCVideoRenderer();
   bool _localRendererInitialized = false;
-  
+
   // Участники группового звонка (кроме текущего пользователя)
   final Map<int, _GroupCallParticipant> _participants = {};
-  
+
   String _state = 'init'; // init | calling | ringing | connected | ended
   String? _error;
-  
+
   bool _cameraEnabled = true;
   bool _micEnabled = true;
   bool _isFrontCamera = true;
-  
+
   int? _myUserId;
   List<GroupMember>? _groupMembers;
 
@@ -96,27 +100,29 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
       Navigator.of(context).pop();
       return;
     }
-    
+
     _myUserId = auth.userId;
     _ws = context.read<WsService>();
-    
+
     // Загружаем актуальный список участников группы
     try {
       final api = Api(auth.token);
       final group = await api.getGroup(widget.group.id);
       if (!mounted) return;
       _groupMembers = group.members;
-      
+
       // Инициализируем участников (исключая себя)
       if (_groupMembers != null) {
         for (final member in _groupMembers!) {
           if (member.id != _myUserId) {
-            final participant = _GroupCallParticipant(User(
-              id: member.id,
-              username: member.username,
-              displayName: member.displayName,
-              avatarUrl: member.avatarUrl,
-            ));
+            final participant = _GroupCallParticipant(
+              User(
+                id: member.id,
+                username: member.username,
+                displayName: member.displayName,
+                avatarUrl: member.avatarUrl,
+              ),
+            );
             _participants[member.id] = participant;
           }
         }
@@ -131,9 +137,10 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     }
 
     _signalSub = _ws!.callSignals.listen(_handleSignal);
-    
+
     if (widget.isIncoming) {
-      if (widget.initialSignal != null && widget.initialSignal!.signal == 'offer') {
+      if (widget.initialSignal != null &&
+          widget.initialSignal!.signal == 'offer') {
         AppSoundService.instance.playRingtone();
         setState(() => _state = 'ringing');
       }
@@ -145,8 +152,11 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   Future<void> _startOutgoingCall() async {
     setState(() => _state = 'calling');
     try {
-      await _getUserMedia();
-      _applyInitialMute();
+      // Получаем медиа только один раз
+      if (_localStream == null) {
+        await _getUserMedia();
+        _applyInitialMute();
+      }
       
       // Инициализируем renderers для всех участников
       for (final participant in _participants.values) {
@@ -177,7 +187,11 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   Future<void> _getUserMedia() async {
     final Map<String, dynamic> videoConstraint = kIsWeb
         ? {
-            'mandatory': {'minWidth': '640', 'minHeight': '480', 'minFrameRate': '24'},
+            'mandatory': {
+              'minWidth': '640',
+              'minHeight': '480',
+              'minFrameRate': '24',
+            },
             'facingMode': _isFrontCamera ? 'user' : 'environment',
           }
         : {
@@ -186,12 +200,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
             'height': {'ideal': 720, 'min': 480},
             'frameRate': {'ideal': 30, 'min': 24},
           };
-    
-    final mediaConstraints = {
-      'audio': true,
-      'video': videoConstraint,
-    };
-    
+
+    final mediaConstraints = {'audio': true, 'video': videoConstraint};
+
     _localStream = await navigator.mediaDevices.getUserMedia(mediaConstraints);
     if (_localRendererInitialized && _localStream != null) {
       _localRenderer.srcObject = _localStream;
@@ -208,145 +219,195 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     }
   }
 
-  Future<void> _createPeerConnectionForParticipant(_GroupCallParticipant participant) async {
-    final pc = await createPeerConnection(_iceServers, {});
-    participant.peerConnection = pc;
-    
-    // Добавляем локальные треки
-    if (_localStream != null) {
-      for (var track in _localStream!.getTracks()) {
-        await pc.addTrack(track, _localStream!);
+  Future<void> _createPeerConnectionForParticipant(
+    _GroupCallParticipant participant,
+  ) async {
+    try {
+      final pc = await createPeerConnection(_iceServers, {});
+      participant.peerConnection = pc;
+
+      // Добавляем локальные треки
+      if (_localStream != null) {
+        for (var track in _localStream!.getTracks()) {
+          await pc.addTrack(track, _localStream!);
+        }
+      }
+
+      // Настраиваем обработчики
+      _setupParticipantPeerConnection(participant);
+
+      // Создаем offer
+      final offer = await pc.createOffer({
+        'offerToReceiveAudio': true,
+        'offerToReceiveVideo': true,
+      });
+      await pc.setLocalDescription(offer);
+
+      // Отправляем offer
+      _ws!.sendCallSignal(
+        participant.user.id,
+        'offer',
+        {'sdp': offer.sdp, 'type': offer.type},
+        true,
+        widget.group.id,
+      );
+    } catch (e) {
+      print(
+        'Error creating PeerConnection for participant ${participant.user.id}: $e',
+      );
+      if (mounted) {
+        setState(() {
+          participant.state = 'failed';
+        });
       }
     }
-    
-    // Настраиваем обработчики
-    pc.onIceCandidate = (RTCIceCandidate? candidate) {
-      if (candidate == null) return;
-      _ws!.sendCallSignal(participant.user.id, 'ice', {
-        'candidate': candidate.candidate,
-        'sdpMid': candidate.sdpMid,
-        'sdpMLineIndex': candidate.sdpMLineIndex,
-      }, true, widget.group.id);
-    };
-    
-    pc.onTrack = (event) {
-      if (event.streams.isNotEmpty) {
-        participant.remoteStream = event.streams.first;
-        participant.hasVideo = event.track.kind == 'video';
-        participant.hasAudio = event.track.kind == 'audio';
-        if (participant.rendererInitialized) {
-          participant.renderer.srcObject = participant.remoteStream;
-        }
-        if (mounted) {
-          setState(() {
-            participant.state = 'connected';
-          });
-        }
-      }
-    };
-    
-    pc.onIceConnectionState = (state) {
-      if (state == RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
-          state == RTCIceConnectionState.RTCIceConnectionStateFailed ||
-          state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
-        if (mounted) {
-          setState(() {
-            participant.state = 'disconnected';
-          });
-        }
-      }
-    };
-    
-    // Создаем offer
-    final offer = await pc.createOffer({
-      'offerToReceiveAudio': true,
-      'offerToReceiveVideo': true,
-    });
-    await pc.setLocalDescription(offer);
-    
-    // Отправляем offer
-    _ws!.sendCallSignal(participant.user.id, 'offer', {
-      'sdp': offer.sdp,
-      'type': offer.type,
-    }, true, widget.group.id);
   }
 
   Future<void> _handleSignal(CallSignal signal) async {
+    // Фильтруем сигналы только для этой группы
+    if (signal.groupId != null && signal.groupId != widget.group.id) return;
+
     // Игнорируем сигналы не от участников группы
     if (!_participants.containsKey(signal.fromUserId)) return;
-    
+
     final participant = _participants[signal.fromUserId]!;
-    
+
     if (signal.signal == 'hangup' || signal.signal == 'reject') {
       if (mounted) {
         setState(() {
           participant.state = 'disconnected';
         });
       }
+      // Закрываем PeerConnection при отключении
+      participant.peerConnection?.close();
+      participant.peerConnection = null;
       return;
     }
-    
+
     if (signal.signal == 'offer' && signal.payload != null) {
-      // Инициализируем renderer для участника
-      if (!participant.rendererInitialized) {
-        await participant.renderer.initialize();
-        participant.rendererInitialized = true;
+      // Предотвращаем обработку дублирующих offer
+      if (participant.offerReceived && participant.peerConnection != null) {
+        print('Duplicate offer received from ${signal.fromUserId}, ignoring');
+        return;
       }
-      
-      // Создаем PeerConnection если его еще нет
-      if (participant.peerConnection == null) {
-        await _getUserMedia();
-        _applyInitialMute();
-        final pc = await createPeerConnection(_iceServers, {});
-        participant.peerConnection = pc;
-        
-        if (_localStream != null) {
-          for (var track in _localStream!.getTracks()) {
-            await pc.addTrack(track, _localStream!);
+      participant.offerReceived = true;
+
+      try {
+        // Инициализируем renderer для участника
+        if (!participant.rendererInitialized) {
+          await participant.renderer.initialize();
+          participant.rendererInitialized = true;
+        }
+
+        // Создаем PeerConnection если его еще нет
+        if (participant.peerConnection == null) {
+          // Получаем медиа только если еще не получили
+          if (_localStream == null) {
+            await _getUserMedia();
+            _applyInitialMute();
+          }
+
+          final pc = await createPeerConnection(_iceServers, {});
+          participant.peerConnection = pc;
+
+          if (_localStream != null) {
+            for (var track in _localStream!.getTracks()) {
+              await pc.addTrack(track, _localStream!);
+            }
+          }
+
+          _setupParticipantPeerConnection(participant);
+        }
+
+        final pc = participant.peerConnection!;
+        final desc = RTCSessionDescription(
+          signal.payload!['sdp'] as String,
+          signal.payload!['type'] as String,
+        );
+        await pc.setRemoteDescription(desc);
+
+        // Обрабатываем отложенные ICE кандидаты перед созданием answer
+        for (var c in participant.pendingCandidates) {
+          try {
+            await pc.addCandidate(
+              RTCIceCandidate(
+                c['candidate'] as String,
+                c['sdpMid'] as String?,
+                c['sdpMLineIndex'] as int?,
+              ),
+            );
+          } catch (e) {
+            print('Error adding pending candidate: $e');
           }
         }
-        
-        _setupParticipantPeerConnection(participant);
-      }
-      
-      final pc = participant.peerConnection!;
-      final desc = RTCSessionDescription(
-        signal.payload!['sdp'] as String,
-        signal.payload!['type'] as String,
-      );
-      await pc.setRemoteDescription(desc);
-      
-      final answer = await pc.createAnswer({
-        'offerToReceiveAudio': true,
-        'offerToReceiveVideo': true,
-      });
-      await pc.setLocalDescription(answer);
-      
-      _ws!.sendCallSignal(signal.fromUserId, 'answer', {
-        'sdp': answer.sdp,
-        'type': answer.type,
-      }, true, widget.group.id);
-      
-      AppSoundService.instance.stopRingtone();
-      if (mounted) {
-        setState(() {
-          _state = 'connected';
-          participant.state = 'connected';
+        participant.pendingCandidates.clear();
+
+        final answer = await pc.createAnswer({
+          'offerToReceiveAudio': true,
+          'offerToReceiveVideo': true,
         });
+        await pc.setLocalDescription(answer);
+
+        _ws!.sendCallSignal(
+          signal.fromUserId,
+          'answer',
+          {'sdp': answer.sdp, 'type': answer.type},
+          true,
+          widget.group.id,
+        );
+
+        AppSoundService.instance.stopRingtone();
+        if (mounted) {
+          setState(() {
+            _state = 'connected';
+            participant.state = 'connected';
+          });
+        }
+      } catch (e) {
+        print('Error handling offer signal: $e');
+        if (mounted) {
+          setState(() {
+            participant.state = 'failed';
+          });
+        }
       }
-    } else if (signal.signal == 'answer' && signal.payload != null && participant.peerConnection != null) {
-      final desc = RTCSessionDescription(
-        signal.payload!['sdp'] as String,
-        signal.payload!['type'] as String,
-      );
-      await participant.peerConnection!.setRemoteDescription(desc);
-    } else if (signal.signal == 'ice' && signal.payload != null && participant.peerConnection != null) {
+    } else if (signal.signal == 'answer' &&
+        signal.payload != null &&
+        participant.peerConnection != null) {
       try {
-        await participant.peerConnection!.addCandidate(RTCIceCandidate(
-          signal.payload!['candidate'] as String,
-          signal.payload!['sdpMid'] as String?,
-          signal.payload!['sdpMLineIndex'] as int?,
-        ));
+        final desc = RTCSessionDescription(
+          signal.payload!['sdp'] as String,
+          signal.payload!['type'] as String,
+        );
+        await participant.peerConnection!.setRemoteDescription(desc);
+        if (mounted) {
+          setState(() {
+            participant.state = 'connected';
+          });
+        }
+      } catch (e) {
+        print('Error handling answer signal: $e');
+        if (mounted) {
+          setState(() {
+            participant.state = 'failed';
+          });
+        }
+      }
+    } else if (signal.signal == 'ice' && signal.payload != null) {
+      // Если PeerConnection еще не создан, сохраняем кандидата
+      if (participant.peerConnection == null) {
+        participant.pendingCandidates.add(signal.payload!);
+        return;
+      }
+
+      try {
+        await participant.peerConnection!.addCandidate(
+          RTCIceCandidate(
+            signal.payload!['candidate'] as String,
+            signal.payload!['sdpMid'] as String?,
+            signal.payload!['sdpMLineIndex'] as int?,
+          ),
+        );
       } catch (e) {
         print('Error adding ICE candidate: $e');
       }
@@ -355,16 +416,22 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
 
   void _setupParticipantPeerConnection(_GroupCallParticipant participant) {
     final pc = participant.peerConnection!;
-    
+
     pc.onIceCandidate = (RTCIceCandidate? candidate) {
       if (candidate == null) return;
-      _ws!.sendCallSignal(participant.user.id, 'ice', {
-        'candidate': candidate.candidate,
-        'sdpMid': candidate.sdpMid,
-        'sdpMLineIndex': candidate.sdpMLineIndex,
-      }, true, widget.group.id);
+      _ws!.sendCallSignal(
+        participant.user.id,
+        'ice',
+        {
+          'candidate': candidate.candidate,
+          'sdpMid': candidate.sdpMid,
+          'sdpMLineIndex': candidate.sdpMLineIndex,
+        },
+        true,
+        widget.group.id,
+      );
     };
-    
+
     pc.onTrack = (event) {
       if (event.streams.isNotEmpty) {
         participant.remoteStream = event.streams.first;
@@ -380,8 +447,16 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
         }
       }
     };
-    
+
+    pc.onConnectionState = (state) {
+      print('Participant ${participant.user.id} connection state: $state');
+      if (mounted) {
+        setState(() {});
+      }
+    };
+
     pc.onIceConnectionState = (state) {
+      print('Participant ${participant.user.id} ICE connection state: $state');
       if (state == RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
           state == RTCIceConnectionState.RTCIceConnectionStateFailed ||
           state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
@@ -390,8 +465,35 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
             participant.state = 'disconnected';
           });
         }
+        // Проверяем, остались ли подключенные участники
+        _checkIfCallShouldEnd();
+      } else if (state ==
+              RTCIceConnectionState.RTCIceConnectionStateConnected ||
+          state == RTCIceConnectionState.RTCIceConnectionStateCompleted) {
+        if (mounted) {
+          setState(() {
+            participant.state = 'connected';
+          });
+        }
       }
     };
+  }
+
+  void _checkIfCallShouldEnd() {
+    final connectedCount = _participants.values
+        .where((p) => p.state == 'connected')
+        .length;
+    // Если нет подключенных участников и мы не в процессе звонка, можно завершить
+    if (connectedCount == 0 &&
+        _state == 'connected' &&
+        _participants.isNotEmpty) {
+      // Не завершаем автоматически, просто обновляем состояние
+      if (mounted) {
+        setState(() {
+          _state = 'calling'; // Возвращаемся в состояние вызова
+        });
+      }
+    }
   }
 
   void _acceptCall() async {
@@ -399,8 +501,11 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     setState(() => _state = 'connected');
     
     try {
-      await _getUserMedia();
-      _applyInitialMute();
+      // Получаем медиа только если еще не получили
+      if (_localStream == null) {
+        await _getUserMedia();
+        _applyInitialMute();
+      }
       
       // Инициализируем renderers для всех участников
       for (final participant in _participants.values) {
@@ -433,7 +538,13 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
     // Также отправляем hangup каждому участнику индивидуально
     for (final participant in _participants.values) {
       if (participant.peerConnection != null) {
-        _ws!.sendCallSignal(participant.user.id, 'hangup', null, true, widget.group.id);
+        _ws!.sendCallSignal(
+          participant.user.id,
+          'hangup',
+          null,
+          true,
+          widget.group.id,
+        );
       }
     }
     _cleanup();
@@ -442,8 +553,10 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
 
   void _cleanup() {
     AppSoundService.instance.stopRingtone();
+    _localStream?.getTracks().forEach((t) => t.stop());
     _localStream?.dispose();
     if (_localRendererInitialized) {
+      _localRenderer.srcObject = null;
       _localRenderer.dispose();
     }
     for (final participant in _participants.values) {
@@ -470,10 +583,12 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   }
 
   String _mediaErrorMessage(dynamic e) {
-    if (e.toString().contains('Permission denied') || e.toString().contains('NotAllowedError')) {
+    if (e.toString().contains('Permission denied') ||
+        e.toString().contains('NotAllowedError')) {
       return 'Нет доступа к камере/микрофону';
     }
-    if (e.toString().contains('NotFoundError') || e.toString().contains('DevicesNotFoundError')) {
+    if (e.toString().contains('NotFoundError') ||
+        e.toString().contains('DevicesNotFoundError')) {
       return 'Камера/микрофон не найдены';
     }
     return e.toString();
@@ -510,7 +625,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
       );
     }
 
-    final connectedParticipants = _participants.values.where((p) => p.state == 'connected').toList();
+    final connectedParticipants = _participants.values
+        .where((p) => p.state == 'connected')
+        .toList();
     final totalParticipants = _participants.length + 1; // +1 для себя
 
     return Scaffold(
@@ -520,22 +637,25 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
           fit: StackFit.expand,
           children: [
             // Видео сетка участников
-            if (_state == 'connected' && connectedParticipants.isNotEmpty)
-              _buildVideoGrid(connectedParticipants)
+            if (_state == 'connected' && (connectedParticipants.isNotEmpty || connectingParticipants.isNotEmpty))
+              _buildVideoGrid(connectedParticipants, connectingParticipants)
             else if (_state == 'ringing')
               _buildRingingView()
             else if (_state == 'calling')
               _buildCallingView()
             else
               _buildWaitingView(),
-            
+
             // Заголовок с названием группы
             Positioned(
               top: 16,
               left: 16,
               right: 16,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(20),
@@ -543,26 +663,28 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.videocam,
-                      color: Colors.white70,
-                      size: 16,
-                    ),
+                    Icon(Icons.videocam, color: Colors.white70, size: 16),
                     const SizedBox(width: 8),
                     Text(
                       widget.group.name,
-                      style: const TextStyle(color: Colors.white70, fontSize: 14),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '($totalParticipants)',
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-            
+
             // Кнопки управления
             if (_state == 'ringing')
               _buildIncomingControls()
@@ -577,22 +699,27 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   Widget _buildVideoGrid(List<_GroupCallParticipant> participants) {
     // Добавляем локальное видео в начало списка
     final allParticipants = [
-      if (_localRendererInitialized && _localStream != null) null, // null означает локальное видео
+      if (_localRendererInitialized && _localStream != null)
+        null, // null означает локальное видео
       ...participants,
     ];
-    
+
     final count = allParticipants.length;
     if (count == 0) return _buildWaitingView();
-    
+
     // Определяем количество колонок в зависимости от количества участников
     int columns;
-    if (count <= 2) columns = 1;
-    else if (count <= 4) columns = 2;
-    else if (count <= 9) columns = 3;
-    else columns = 4;
-    
+    if (count <= 2)
+      columns = 1;
+    else if (count <= 4)
+      columns = 2;
+    else if (count <= 9)
+      columns = 3;
+    else
+      columns = 4;
+
     final rows = (count / columns).ceil();
-    
+
     return GridView.builder(
       padding: const EdgeInsets.all(8),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -625,7 +752,10 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                     bottom: 4,
                     left: 4,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black54,
                         borderRadius: BorderRadius.circular(4),
@@ -652,10 +782,13 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (participant.rendererInitialized && participant.remoteStream != null && participant.hasVideo)
+                  if (participant.rendererInitialized &&
+                      participant.remoteStream != null &&
+                      participant.hasVideo)
                     RTCVideoView(
                       participant.renderer,
-                      objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+                      objectFit:
+                          RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
                     )
                   else
                     Container(
@@ -670,9 +803,13 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                           child: participant.user.avatarUrl == null
                               ? Text(
                                   participant.user.displayName.isNotEmpty
-                                      ? participant.user.displayName[0].toUpperCase()
+                                      ? participant.user.displayName[0]
+                                            .toUpperCase()
                                       : '?',
-                                  style: const TextStyle(color: Colors.white, fontSize: 24),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24,
+                                  ),
                                 )
                               : null,
                         ),
@@ -682,7 +819,10 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                     bottom: 4,
                     left: 4,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.black54,
                         borderRadius: BorderRadius.circular(4),
@@ -691,11 +831,18 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (!participant.hasAudio)
-                            const Icon(Icons.mic_off, color: Colors.red, size: 12),
+                            const Icon(
+                              Icons.mic_off,
+                              color: Colors.red,
+                              size: 12,
+                            ),
                           const SizedBox(width: 4),
                           Text(
                             participant.user.displayName,
-                            style: const TextStyle(color: Colors.white, fontSize: 10),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                            ),
                           ),
                         ],
                       ),
@@ -723,7 +870,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                 : null,
             child: widget.group.avatarUrl == null
                 ? Text(
-                    widget.group.name.isNotEmpty ? widget.group.name[0].toUpperCase() : 'G',
+                    widget.group.name.isNotEmpty
+                        ? widget.group.name[0].toUpperCase()
+                        : 'G',
                     style: const TextStyle(color: Colors.white, fontSize: 48),
                   )
                 : null,
@@ -731,7 +880,11 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
           const SizedBox(height: 24),
           Text(
             widget.group.name,
-            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -756,7 +909,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                 : null,
             child: widget.group.avatarUrl == null
                 ? Text(
-                    widget.group.name.isNotEmpty ? widget.group.name[0].toUpperCase() : 'G',
+                    widget.group.name.isNotEmpty
+                        ? widget.group.name[0].toUpperCase()
+                        : 'G',
                     style: const TextStyle(color: Colors.white, fontSize: 48),
                   )
                 : null,
@@ -764,7 +919,11 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
           const SizedBox(height: 24),
           Text(
             widget.group.name,
-            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -834,7 +993,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
             onPressed: _toggleMic,
             icon: Icon(_micEnabled ? Icons.mic : Icons.mic_off),
             style: IconButton.styleFrom(
-              backgroundColor: _micEnabled ? Colors.grey.shade700 : Colors.red.shade700,
+              backgroundColor: _micEnabled
+                  ? Colors.grey.shade700
+                  : Colors.red.shade700,
               foregroundColor: Colors.white,
             ),
           ),
@@ -843,7 +1004,9 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
             onPressed: _toggleCamera,
             icon: Icon(_cameraEnabled ? Icons.videocam : Icons.videocam_off),
             style: IconButton.styleFrom(
-              backgroundColor: _cameraEnabled ? Colors.grey.shade700 : Colors.red.shade700,
+              backgroundColor: _cameraEnabled
+                  ? Colors.grey.shade700
+                  : Colors.red.shade700,
               foregroundColor: Colors.white,
             ),
           ),
