@@ -421,7 +421,7 @@ wss.on('connection', (ws, req) => {
     });
   });
 
-  ws.on('message', (raw) => {
+  ws.on('message', async (raw) => {
     try {
       const data = JSON.parse(raw.toString());
       
