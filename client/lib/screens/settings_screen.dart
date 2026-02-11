@@ -934,9 +934,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _showClearCacheByChat() async {
     final chats = await LocalDb.getChats();
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     final navigator = widget.navigator;
-    final sheetContext = navigator?.context ?? context;
+    final currentContext = context;
+    if (!mounted) {
+      return;
+    }
+    final sheetContext = navigator?.context ?? currentContext;
     showModalBottomSheet<void>(
       context: sheetContext,
       useRootNavigator: navigator != null ? false : true,

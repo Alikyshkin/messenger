@@ -12,7 +12,6 @@ import 'package:client/services/ws_service.dart';
 void main() {
   group('ChatScreen Tests', () {
     late User testPeer;
-    late String testToken;
 
     setUp(() {
       testPeer = User(

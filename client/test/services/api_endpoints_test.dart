@@ -2,12 +2,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'dart:convert';
-import 'package:client/services/api.dart';
 
 void main() {
   group('API Endpoints Tests', () {
-    const testToken = 'test_token_123';
-
     test('getMessages handles pagination response', () async {
       MockClient((request) async {
         if (request.url.path.contains('/messages/2')) {

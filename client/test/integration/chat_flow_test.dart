@@ -8,11 +8,6 @@ import 'package:client/services/api.dart';
 void main() {
   group('Chat Flow Integration Tests', () {
     const testToken = 'test_token_123';
-    late Api api;
-
-    setUp(() {
-      api = Api(testToken);
-    });
 
     test(
       'Complete chat flow: load messages -> send message -> receive message',

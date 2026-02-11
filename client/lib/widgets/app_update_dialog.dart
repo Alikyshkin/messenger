@@ -24,11 +24,12 @@ class _AppUpdateDialogListenerState extends State<AppUpdateDialogListener> {
         if (updateService.hasUpdate && !_hasShownDialog && mounted) {
           _hasShownDialog = true;
           // Используем Future.microtask чтобы не блокировать build
+          final dialogContext = context;
           Future.microtask(() {
             if (!mounted) {
               return;
             }
-            _showUpdateDialog(context, updateService);
+            _showUpdateDialog(dialogContext, updateService);
           });
         }
 

@@ -2118,7 +2118,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   width: 200,
                   height: 200,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, _) => Row(
+                  errorBuilder: (_, _, _) => Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.broken_image, color: textColor, size: 48),
@@ -2193,7 +2193,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               );
             },
-            errorBuilder: (_, __, _) => Row(
+            errorBuilder: (_, _, _) => Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.broken_image, color: textColor, size: 48),
@@ -2310,8 +2310,9 @@ class _ChatScreenState extends State<ChatScreen> {
       return _undecryptedPlaceholder;
     }
     final replacementCount = content.runes.where((r) => r == 0xFFFD).length;
-    if (content.isNotEmpty && replacementCount > content.length ~/ 2)
+    if (content.isNotEmpty && replacementCount > content.length ~/ 2) {
       return _undecryptedPlaceholder;
+    }
     return content;
   }
 }

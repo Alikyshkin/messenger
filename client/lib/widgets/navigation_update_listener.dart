@@ -50,9 +50,6 @@ class NavigationUpdateObserver extends NavigatorObserver {
         }
 
         // Проверяем обновления при навигации на главный экран
-        if (!mounted) {
-          return;
-        }
         final updateService = Provider.of<AppUpdateService>(
           navigatorContext,
           listen: false,
