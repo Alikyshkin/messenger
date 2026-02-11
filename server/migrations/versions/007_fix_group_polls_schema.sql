@@ -3,7 +3,7 @@
 
 -- Исправляем таблицу group_polls
 -- Создаем временную таблицу с правильной структурой
-CREATE TABLE group_polls_temp (
+CREATE TABLE IF NOT EXISTS group_polls_temp (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   group_message_id INTEGER NOT NULL UNIQUE,
   question TEXT NOT NULL,
@@ -13,31 +13,31 @@ CREATE TABLE group_polls_temp (
 );
 
 -- Копируем данные из старой таблицы
--- Используем прямое копирование с правильными именами колонок
+-- Используем message_id (старое название), так как group_message_id может еще не существовать
 INSERT INTO group_polls_temp (id, group_message_id, question, options, multiple)
 SELECT 
   id,
   COALESCE(
-    (SELECT group_message_id FROM group_polls WHERE group_polls.id = gp.id),
-    (SELECT message_id FROM group_polls WHERE group_polls.id = gp.id)
+    (SELECT group_message_id FROM group_polls WHERE group_polls.id = gp.id LIMIT 1),
+    (SELECT message_id FROM group_polls WHERE group_polls.id = gp.id LIMIT 1)
   ) as group_message_id,
   question,
   options,
   COALESCE(
-    (SELECT multiple FROM group_polls WHERE group_polls.id = gp.id),
+    (SELECT multiple FROM group_polls WHERE group_polls.id = gp.id LIMIT 1),
     0
   ) as multiple
 FROM group_polls AS gp;
 
 -- Удаляем старую таблицу
-DROP TABLE group_polls;
+DROP TABLE IF EXISTS group_polls;
 
 -- Переименовываем новую таблицу
 ALTER TABLE group_polls_temp RENAME TO group_polls;
 
 -- Исправляем таблицу group_poll_votes
 -- Создаем новую таблицу с правильной структурой
-CREATE TABLE group_poll_votes_temp (
+CREATE TABLE IF NOT EXISTS group_poll_votes_temp (
   group_poll_id INTEGER NOT NULL,
   user_id INTEGER NOT NULL,
   option_index INTEGER NOT NULL,
@@ -47,19 +47,16 @@ CREATE TABLE group_poll_votes_temp (
 );
 
 -- Копируем данные из старой таблицы
--- Используем прямое копирование с правильными именами колонок
+-- Используем poll_id (старое название) напрямую, так как group_poll_id еще не существует
 INSERT INTO group_poll_votes_temp (group_poll_id, user_id, option_index)
 SELECT 
-  COALESCE(
-    (SELECT group_poll_id FROM group_poll_votes WHERE group_poll_votes.user_id = gpv.user_id AND group_poll_votes.option_index = gpv.option_index LIMIT 1),
-    (SELECT poll_id FROM group_poll_votes WHERE group_poll_votes.user_id = gpv.user_id AND group_poll_votes.option_index = gpv.option_index LIMIT 1)
-  ) as group_poll_id,
+  poll_id as group_poll_id,
   user_id,
   option_index
-FROM group_poll_votes AS gpv;
+FROM group_poll_votes;
 
 -- Удаляем старую таблицу
-DROP TABLE group_poll_votes;
+DROP TABLE IF EXISTS group_poll_votes;
 
 -- Переименовываем новую таблицу
 ALTER TABLE group_poll_votes_temp RENAME TO group_poll_votes;
