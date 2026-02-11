@@ -165,38 +165,6 @@ class _ContactsContentState extends State<ContactsContent> {
                           child: ListView(
                             padding: AppSpacing.listPadding,
                             children: [
-                              Card(
-                                child: ListTile(
-                                  contentPadding: AppSpacing.listItemPadding,
-                                  leading: CircleAvatar(
-                                    radius: AppSizes.avatarMD,
-                                    backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-                                    child: Icon(
-                                      Icons.people_alt_outlined,
-                                      color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                    ),
-                                  ),
-                                  title: Text(
-                                    context.tr('possible_friends'),
-                                    style: const TextStyle(fontWeight: FontWeight.w600),
-                                  ),
-                                  subtitle: Text(
-                                    context.tr('possible_friends_subtitle'),
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                  trailing: const Icon(Icons.chevron_right),
-                                  onTap: () async {
-                                    await Navigator.of(context).push(
-                                      MaterialPageRoute(builder: (_) => const PossibleFriendsScreen()),
-                                    );
-                                    _load();
-                                  },
-                                ),
-                              ),
-                              AppSpacing.spacingVerticalMD,
                               if (_requests.isNotEmpty) ...[
                                 SectionCard(
                                   title: context.tr('friend_requests'),
