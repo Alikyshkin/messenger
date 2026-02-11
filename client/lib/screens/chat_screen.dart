@@ -635,21 +635,54 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _sending = false);
-      // Проверяем, была ли это реальная сетевая ошибка или ошибка парсинга
-      // Если это ApiException с кодом 201, значит сообщение было отправлено, но была ошибка парсинга
-      if (e is ApiException && e.statusCode == 201) {
-        // Сообщение было отправлено, но была ошибка парсинга - не добавляем в outbox
+      // Проверяем тип ошибки
+      if (e is ApiException) {
+        // Если статус 201 - сообщение успешно отправлено на сервер
+        if (e.statusCode == 201) {
+          // Сообщение отправлено, но была ошибка парсинга ответа
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Сообщение отправлено, но произошла ошибка при обработке ответа: ${e.message}'),
+            ),
+          );
+          return;
+        }
+        // Для всех остальных ApiException (400, 401, 500 и т.д.) - запрос дошел до сервера
+        // Это не "нет связи", а ошибка сервера/валидации - не добавляем в outbox
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Сообщение отправлено, но произошла ошибка при обработке ответа: ${e.message}'),
+            content: Text(e.message),
           ),
         );
-      } else {
-        // Для реальных сетевых ошибок добавляем в outbox
+        return;
+      }
+      
+      // Проверяем, является ли это реальной сетевой ошибкой
+      // (когда запрос вообще не дошел до сервера - нет интернета, таймаут и т.д.)
+      final errorStr = e.toString().toLowerCase();
+      final isNetworkError = errorStr.contains('socketexception') ||
+          errorStr.contains('timeoutexception') ||
+          errorStr.contains('httpexception') ||
+          errorStr.contains('clientexception') ||
+          errorStr.contains('failed host lookup') ||
+          errorStr.contains('network is unreachable') ||
+          errorStr.contains('connection refused') ||
+          errorStr.contains('connection timed out') ||
+          errorStr.contains('no address associated with hostname');
+      
+      if (isNetworkError) {
+        // Только для реальных сетевых ошибок (нет интернета) добавляем в outbox
         await LocalDb.addToOutbox(widget.peer.id, toSend);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Нет связи. Сообщение будет отправлено при появлении сети.'),
+          ),
+        );
+      } else {
+        // Для других ошибок просто показываем сообщение
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка отправки: ${e.toString()}'),
           ),
         );
       }
@@ -967,6 +1000,37 @@ class _ChatScreenState extends State<ChatScreen> {
                         itemCount: _messages.length,
                         itemBuilder: (context, i) {
                           final m = _messages[i];
+                          // Специальное отображение для пропущенных звонков
+                          if (m.messageType == 'missed_call') {
+                            return Center(
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.phone_missed,
+                                      size: 16,
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      m.isMine ? 'Пропущенный звонок' : 'Пропущенный звонок',
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
                           return Align(
                             alignment: m.isMine ? Alignment.centerRight : Alignment.centerLeft,
                             child: GestureDetector(

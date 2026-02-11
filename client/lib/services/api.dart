@@ -353,6 +353,22 @@ class Api {
     }
   }
 
+  Future<Message> sendMissedCallMessage(int receiverId) async {
+    final body = <String, dynamic>{
+      'receiver_id': receiverId,
+      'type': 'missed_call',
+      'content': '',
+    };
+    final r = await http.post(
+      Uri.parse('$base/messages'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    _checkResponse(r);
+    final json = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+    return Message.fromJson(json);
+  }
+
   Future<Message> sendMessageWithFile(
     int receiverId,
     String content,
