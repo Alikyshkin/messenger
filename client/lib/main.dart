@@ -212,7 +212,7 @@ class MessengerApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()..load()),
         ChangeNotifierProvider(create: (_) => LocaleService()..load()),
-        ChangeNotifierProvider(create: (_) => ThemeService()..load()),
+        ChangeNotifierProvider(create: (_) => ThemeService()),
         ChangeNotifierProvider(create: (_) => WsService()),
       ],
       child: Consumer2<ThemeService, LocaleService>(
