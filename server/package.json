@@ -11,7 +11,11 @@
     "migrate": "node scripts/migrate.js",
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/auth.test.js tests/api.test.js tests/websocket.test.js"
+    "test": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/auth.test.js tests/api.test.js tests/websocket.test.js",
+    "lint": "echo '⚠️ Lint не настроен. Добавьте ESLint для проверки кода.'",
+    "audit": "npm audit --audit-level=moderate",
+    "audit:fix": "npm audit fix",
+    "outdated": "npm outdated"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

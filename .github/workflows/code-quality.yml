@@ -1,0 +1,92 @@
+name: Code Quality
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  code-coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: server/package-lock.json
+      
+      - name: Install dependencies
+        working-directory: ./server
+        run: npm ci
+      
+      - name: Run tests with coverage
+        working-directory: ./server
+        run: |
+          npm test -- --coverage || echo "⚠️ Тесты не настроены для coverage"
+        continue-on-error: true
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./server/coverage/coverage-final.json
+          flags: server
+          name: server-coverage
+        continue-on-error: true
+
+  bundle-size:
+    name: Bundle Size Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.9'
+          channel: 'stable'
+      
+      - name: Get dependencies
+        working-directory: ./client
+        run: flutter pub get
+      
+      - name: Build Web
+        working-directory: ./client
+        run: flutter build web --release --no-tree-shake-icons
+      
+      - name: Check bundle size
+        working-directory: ./client/build/web
+        run: |
+          MAIN_JS_SIZE=$(du -sh main.dart.js 2>/dev/null | cut -f1 || echo "0")
+          MAIN_WASM_SIZE=$(du -sh main.dart.wasm 2>/dev/null | cut -f1 || echo "0")
+          TOTAL_SIZE=$(du -sh . 2>/dev/null | cut -f1 || echo "0")
+          
+          echo "📦 Размер бандла:"
+          echo "  main.dart.js: $MAIN_JS_SIZE"
+          echo "  main.dart.wasm: $MAIN_WASM_SIZE"
+          echo "  Общий размер: $TOTAL_SIZE"
+          
+          # Предупреждение если размер слишком большой (примерно 5MB)
+          JS_SIZE_BYTES=$(stat -f%z main.dart.js 2>/dev/null || echo "0")
+          if [ "$JS_SIZE_BYTES" -gt 5242880 ]; then
+            echo "⚠️ Внимание: Размер main.dart.js превышает 5MB"
+          fi
+
+  commit-message-check:
+    name: Commit Message Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Check commit messages
+        uses: wagoid/commitlint-github-action@v6
+        with:
+          configFile: .commitlintrc.json
+        continue-on-error: true

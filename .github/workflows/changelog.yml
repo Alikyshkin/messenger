@@ -1,0 +1,34 @@
+name: Update Changelog
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  update-changelog:
+    name: Update Changelog
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Generate changelog
+        uses: metcalfc/changelog-generator@v4.3.1
+        with:
+          myToken: ${{ secrets.GITHUB_TOKEN }}
+          ignoreLabels: |
+            ignore-for-release
+            skip-changelog
+          outputFile: CHANGELOG.md
+        continue-on-error: true
+      
+      - name: Commit changelog
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "docs: обновлен CHANGELOG для ${{ github.ref_name }}" || exit 0
+          git push || exit 0

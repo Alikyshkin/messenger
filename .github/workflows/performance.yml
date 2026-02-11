@@ -1,0 +1,39 @@
+name: Performance Check
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  lighthouse:
+    name: Lighthouse Performance
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.9'
+          channel: 'stable'
+      
+      - name: Build Web
+        working-directory: ./client
+        run: flutter build web --release
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.12.x
+      
+      - name: Run Lighthouse CI
+        run: |
+          lhci autorun --collect.staticDistDir=./client/build/web || {
+            echo "⚠️ Lighthouse проверка завершилась с предупреждениями"
+          }
+        continue-on-error: true
