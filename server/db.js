@@ -2,11 +2,22 @@ import Database from 'better-sqlite3';
 import { mkdirSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { runMigrations } from './migrations/index.js';
+import { log } from './utils/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dbPath = process.env.MESSENGER_DB_PATH || join(__dirname, 'messenger.db');
 const dbDir = dirname(dbPath);
 if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
+
+// Применяем миграции перед созданием подключения
+try {
+  runMigrations(dbPath);
+} catch (error) {
+  log.error({ error }, 'Ошибка при применении миграций');
+  // Продолжаем выполнение для обратной совместимости
+}
+
 const db = new Database(dbPath);
 
 db.exec(`
