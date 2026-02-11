@@ -17,6 +17,10 @@ db.exec(`
     password_hash TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+  
+  CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL;
+  CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone) WHERE phone IS NOT NULL;
 
   CREATE TABLE IF NOT EXISTS contacts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -42,7 +46,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
   CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
   CREATE INDEX IF NOT EXISTS idx_messages_created ON messages(created_at);
+  CREATE INDEX IF NOT EXISTS idx_messages_sender_receiver ON messages(sender_id, receiver_id);
+  CREATE INDEX IF NOT EXISTS idx_messages_receiver_read ON messages(receiver_id, read_at);
+  CREATE INDEX IF NOT EXISTS idx_messages_created_desc ON messages(created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_contacts_user ON contacts(user_id);
+  CREATE INDEX IF NOT EXISTS idx_contacts_contact ON contacts(contact_id);
 `);
 
 // Заявки в друзья: после одобрения добавляем в contacts обе стороны
@@ -60,6 +68,8 @@ try {
     );
     CREATE INDEX IF NOT EXISTS idx_friend_requests_to ON friend_requests(to_user_id);
     CREATE INDEX IF NOT EXISTS idx_friend_requests_from ON friend_requests(from_user_id);
+    CREATE INDEX IF NOT EXISTS idx_friend_requests_to_status ON friend_requests(to_user_id, status);
+    CREATE INDEX IF NOT EXISTS idx_friend_requests_from_to ON friend_requests(from_user_id, to_user_id);
   `);
 } catch (_) {}
 
@@ -91,6 +101,7 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_reset_tokens_user ON password_reset_tokens(user_id);
   CREATE INDEX IF NOT EXISTS idx_reset_tokens_expires ON password_reset_tokens(expires_at);
+  CREATE INDEX IF NOT EXISTS idx_reset_tokens_user_expires ON password_reset_tokens(user_id, expires_at);
 `);
 
 db.exec(`
@@ -111,6 +122,8 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
   CREATE INDEX IF NOT EXISTS idx_poll_votes_poll ON poll_votes(poll_id);
+  CREATE INDEX IF NOT EXISTS idx_poll_votes_user ON poll_votes(user_id);
+  CREATE INDEX IF NOT EXISTS idx_poll_votes_poll_user ON poll_votes(poll_id, user_id);
 `);
 
 // Групповые чаты
@@ -133,6 +146,8 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
   CREATE INDEX IF NOT EXISTS idx_group_members_user ON group_members(user_id);
+  CREATE INDEX IF NOT EXISTS idx_group_members_group ON group_members(group_id);
+  CREATE INDEX IF NOT EXISTS idx_group_members_group_user ON group_members(group_id, user_id);
   CREATE TABLE IF NOT EXISTS group_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id INTEGER NOT NULL,
@@ -155,6 +170,8 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_group_messages_group ON group_messages(group_id);
   CREATE INDEX IF NOT EXISTS idx_group_messages_created ON group_messages(created_at);
+  CREATE INDEX IF NOT EXISTS idx_group_messages_group_created ON group_messages(group_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_group_messages_sender ON group_messages(sender_id);
   CREATE TABLE IF NOT EXISTS group_read (
     group_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
@@ -181,6 +198,8 @@ db.exec(`
     FOREIGN KEY (user_id) REFERENCES users(id)
   );
   CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll ON group_poll_votes(group_poll_id);
+  CREATE INDEX IF NOT EXISTS idx_group_poll_votes_user ON group_poll_votes(user_id);
+  CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll_user ON group_poll_votes(group_poll_id, user_id);
 `);
 
 // Реакции на сообщения (личные и групповые)
@@ -195,6 +214,7 @@ try {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
     CREATE INDEX IF NOT EXISTS idx_message_reactions_message ON message_reactions(message_id);
+    CREATE INDEX IF NOT EXISTS idx_message_reactions_user ON message_reactions(user_id);
   `);
 } catch (_) {}
 try {
@@ -208,6 +228,7 @@ try {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
     CREATE INDEX IF NOT EXISTS idx_group_message_reactions_msg ON group_message_reactions(group_message_id);
+    CREATE INDEX IF NOT EXISTS idx_group_message_reactions_user ON group_message_reactions(user_id);
   `);
 } catch (_) {}
 
