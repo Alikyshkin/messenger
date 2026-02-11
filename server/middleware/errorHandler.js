@@ -167,6 +167,8 @@ export function errorHandler(err, req, res, next) {
  * Middleware для обработки 404 ошибок
  */
 export function notFoundHandler(req, res, next) {
+  // Логируем 404 ошибки для отладки
+  log.warn({ method: req.method, path: req.path, url: req.url }, '404 - Route not found');
   res.status(404).json({
     error: 'Маршрут не найден',
     path: req.url,
