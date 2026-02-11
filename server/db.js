@@ -42,6 +42,13 @@ db.exec(`
     FOREIGN KEY (sender_id) REFERENCES users(id),
     FOREIGN KEY (receiver_id) REFERENCES users(id)
   );
+  
+  -- Полнотекстовый поиск для сообщений
+  CREATE VIRTUAL TABLE IF NOT EXISTS messages_fts USING fts5(
+    content,
+    content='messages',
+    content_rowid='id'
+  );
 
   CREATE INDEX IF NOT EXISTS idx_messages_sender ON messages(sender_id);
   CREATE INDEX IF NOT EXISTS idx_messages_receiver ON messages(receiver_id);
@@ -168,6 +175,13 @@ db.exec(`
     FOREIGN KEY (sender_id) REFERENCES users(id),
     FOREIGN KEY (reply_to_id) REFERENCES group_messages(id)
   );
+  
+  -- Полнотекстовый поиск для групповых сообщений
+  CREATE VIRTUAL TABLE IF NOT EXISTS group_messages_fts USING fts5(
+    content,
+    content='group_messages',
+    content_rowid='id'
+  );
   CREATE INDEX IF NOT EXISTS idx_group_messages_group ON group_messages(group_id);
   CREATE INDEX IF NOT EXISTS idx_group_messages_created ON group_messages(created_at);
   CREATE INDEX IF NOT EXISTS idx_group_messages_group_created ON group_messages(group_id, created_at DESC);
@@ -230,6 +244,12 @@ try {
     CREATE INDEX IF NOT EXISTS idx_group_message_reactions_msg ON group_message_reactions(group_message_id);
     CREATE INDEX IF NOT EXISTS idx_group_message_reactions_user ON group_message_reactions(user_id);
   `);
+} catch (_) {}
+
+// Инициализация FTS индексов для существующих данных
+try {
+  const { initFTSIndexes } = await import('./utils/ftsSync.js');
+  initFTSIndexes();
 } catch (_) {}
 
 export default db;

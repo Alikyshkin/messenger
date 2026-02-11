@@ -231,6 +231,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     ).run(msgId, questionText, JSON.stringify(options), data.multiple ? 1 : 0);
     const pollId = pollResult.lastInsertRowid;
     db.prepare('UPDATE messages SET poll_id = ? WHERE id = ?').run(pollId, msgId);
+    syncMessagesFTS(msgId);
     const row = db.prepare(
       'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id FROM messages WHERE id = ?'
     ).get(msgId);
@@ -302,9 +303,11 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     const result = db.prepare(
       `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name) VALUES (?, ?, ?, ?, ?, 'text', ?, ?, ?, ?, ?, ?, ?)`
     ).run(me, rid, contentToStore, null, null, attachmentKind, attachmentDurationSec, attachmentEncrypted, replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
+    const msgId = result.lastInsertRowid;
+    syncMessagesFTS(msgId);
     const row = db.prepare(
       'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
-    ).get(result.lastInsertRowid);
+    ).get(msgId);
     const payload = buildPayload(row);
     notifyNewMessage(payload);
     return res.status(201).json(payload);
@@ -339,9 +342,11 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     const result = db.prepare(
       `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name) VALUES (?, ?, ?, ?, ?, 'text', ?, ?, ?, ?, ?, ?, ?)`
     ).run(me, rid, contentToStore, attachmentPath, attachmentFilename, attachmentKind, attachmentDurationSec, attachmentEncrypted, i === 0 && !Number.isNaN(replyToId) ? replyToId : null, isFwd ? 1 : 0, fwdFromId, fwdFromName);
+    const msgId = result.lastInsertRowid;
+    syncMessagesFTS(msgId);
     const row = db.prepare(
       'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
-    ).get(result.lastInsertRowid);
+    ).get(msgId);
     const payload = buildPayload(row);
     notifyNewMessage(payload);
     payloads.push(payload);

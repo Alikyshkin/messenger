@@ -511,6 +511,7 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
       'INSERT INTO group_polls (group_message_id, question, options, multiple) VALUES (?, ?, ?, ?)',
     ).run(msgId, questionText, JSON.stringify(options), data.multiple ? 1 : 0);
     const pollId = pollResult.lastInsertRowid;
+    syncGroupMessagesFTS(msgId);
     const row = db.prepare(
       'SELECT id, group_id, sender_id, content, created_at, message_type FROM group_messages WHERE id = ?',
     ).get(msgId);
@@ -560,6 +561,7 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
        VALUES (?, ?, ?, NULL, NULL, 'text', 'file', NULL, 0, ?, ?, ?, ?)`,
     ).run(groupId, me, text, replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
     const msgId = ins.lastInsertRowid;
+    syncGroupMessagesFTS(msgId);
     const row = db.prepare(
       'SELECT id, group_id, sender_id, content, created_at, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM group_messages WHERE id = ?',
     ).get(msgId);
@@ -645,6 +647,7 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
       fwdFromName,
     );
     const msgId = ins.lastInsertRowid;
+    syncGroupMessagesFTS(msgId);
     const row = db.prepare(
       'SELECT id, group_id, sender_id, content, created_at, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM group_messages WHERE id = ?',
     ).get(msgId);

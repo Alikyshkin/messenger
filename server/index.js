@@ -21,6 +21,7 @@ import usersRoutes from './routes/users.js';
 import chatsRoutes from './routes/chats.js';
 import groupsRoutes from './routes/groups.js';
 import pollsRoutes from './routes/polls.js';
+import searchRoutes from './routes/search.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const uploadsDir = join(__dirname, 'uploads');
@@ -84,6 +85,7 @@ app.use('/chats', chatsRoutes);
 app.use('/groups', groupsRoutes);
 app.use('/users', usersRoutes);
 app.use('/polls', pollsRoutes);
+app.use('/search', searchRoutes);
 
 // Health checks
 app.get('/health', (req, res) => {
