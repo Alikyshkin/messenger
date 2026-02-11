@@ -1,5 +1,6 @@
 import admin from 'firebase-admin';
 import { log } from './logger.js';
+import { retry } from './retry.js';
 
 let fcmEnabled = false;
 let messaging = null;
@@ -86,7 +87,15 @@ export async function sendToDevice(token, notification, data = {}) {
       },
     };
     
-    const response = await messaging.send(message);
+    const response = await retry(
+      () => messaging.send(message),
+      {
+        maxAttempts: 3,
+        initialDelay: 1000,
+        retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
+      }
+    );
+    
     log.info({ token, messageId: response }, 'Push-уведомление отправлено');
     
     return { success: true, messageId: response };
@@ -153,10 +162,17 @@ export async function sendToDevices(tokens, notification, data = {}) {
       },
     };
     
-    const response = await messaging.sendEachForMulticast({
-      tokens: uniqueTokens,
-      ...message,
-    });
+    const response = await retry(
+      () => messaging.sendEachForMulticast({
+        tokens: uniqueTokens,
+        ...message,
+      }),
+      {
+        maxAttempts: 3,
+        initialDelay: 1000,
+        retryableErrors: ['ECONNRESET', 'ETIMEDOUT', 'ENOTFOUND'],
+      }
+    );
     
     log.info({
       total: uniqueTokens.length,
