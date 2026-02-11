@@ -13,7 +13,7 @@ class LocalDb {
   static Database? _db;
   static bool _failed = false;
   static const _dbName = 'messenger_local.db';
-  static const _version = 5;
+  static const _version = 6;
 
   static Future<Database?> _getDb() async {
     if (_db != null) {
@@ -76,6 +76,12 @@ class LocalDb {
             created_at TEXT NOT NULL
           )
         ''');
+          await db.execute('''
+          CREATE TABLE hidden_chats (
+            peer_id INTEGER PRIMARY KEY,
+            hidden_at TEXT NOT NULL
+          )
+        ''');
         },
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) {
@@ -134,6 +140,16 @@ class LocalDb {
               await db.execute(
                 'ALTER TABLE chats ADD COLUMN unread_count INTEGER DEFAULT 0',
               );
+            } catch (_) {}
+          }
+          if (oldVersion < 6) {
+            try {
+              await db.execute('''
+                CREATE TABLE hidden_chats (
+                  peer_id INTEGER PRIMARY KEY,
+                  hidden_at TEXT NOT NULL
+                )
+              ''');
             } catch (_) {}
           }
         },
@@ -231,6 +247,15 @@ class LocalDb {
     if (db == null) {
       return;
     }
+    // Помечаем чат как скрытый, чтобы он не возвращался при загрузке
+    await db.insert(
+      'hidden_chats',
+      {
+        'peer_id': peerId,
+        'hidden_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
     await db.delete('chats', where: 'peer_id = ?', whereArgs: [peerId]);
     await db.delete(
       'messages',
@@ -238,6 +263,21 @@ class LocalDb {
       whereArgs: [peerId, peerId],
     );
     await db.delete('outbox', where: 'peer_id = ?', whereArgs: [peerId]);
+  }
+
+  /// Проверить, скрыт ли чат
+  static Future<bool> isChatHidden(int peerId) async {
+    final db = await _getDb();
+    if (db == null) {
+      return false;
+    }
+    final result = await db.query(
+      'hidden_chats',
+      where: 'peer_id = ?',
+      whereArgs: [peerId],
+      limit: 1,
+    );
+    return result.isNotEmpty;
   }
 
   /// Удалить групповой чат из локальной БД

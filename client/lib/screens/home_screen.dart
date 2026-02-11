@@ -130,18 +130,31 @@ class _HomeScreenState extends State<HomeScreen>
       final api = Api(auth.token);
       final list = await api.getChats();
       if (!mounted) return;
+      
+      // Фильтруем скрытые чаты
+      final filteredList = <ChatPreview>[];
       for (final chat in list) {
-        if (chat.peer != null) await LocalDb.upsertChat(chat);
+        if (chat.peer != null) {
+          final isHidden = await LocalDb.isChatHidden(chat.peer!.id);
+          if (!isHidden) {
+            await LocalDb.upsertChat(chat);
+            filteredList.add(chat);
+          }
+        } else if (chat.group != null) {
+          // Групповые чаты не скрываем пока
+          filteredList.add(chat);
+        }
       }
+      
       if (!mounted) return;
       // Подсчитываем общее количество непрочитанных сообщений
-      final totalUnread = list.fold<int>(
+      final totalUnread = filteredList.fold<int>(
         0,
         (sum, chat) => sum + chat.unreadCount,
       );
 
       setState(() {
-        _chats = list;
+        _chats = filteredList;
         _loading = false;
         _totalUnreadCount = totalUnread;
       });
