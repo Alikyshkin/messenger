@@ -306,6 +306,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   }
   next();
 }), validate(sendMessageSchema), asyncHandler(async (req, res) => {
+  log.info({ path: req.path, method: req.method }, 'POST /messages route handler - after validation');
   const data = req.validated;
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
   const rid = data.receiver_id;

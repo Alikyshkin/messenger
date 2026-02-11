@@ -47,6 +47,9 @@ if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
 if (!existsSync(publicDir)) mkdirSync(publicDir, { recursive: true });
 
 const app = express();
+// Включаем trust proxy для работы за reverse proxy (Docker, nginx и т.д.)
+// Это нужно для правильной работы rate limiting и определения IP адресов
+app.set('trust proxy', true);
 const server = createServer(app);
 
 // Security headers (должен быть первым middleware)
@@ -171,13 +174,6 @@ app.use('/uploads', express.static(uploadsDir));
 // (применяется автоматически через middleware в routes)
 
 // API маршруты (должны быть ДО статических файлов, чтобы не перехватывались)
-// Добавляем логирование для отладки
-app.use('/messages', (req, res, next) => {
-  if (req.method === 'POST') {
-    log.info({ path: req.path, method: req.method, url: req.url, headers: req.headers }, 'POST /messages request received');
-  }
-  next();
-});
 app.use('/auth', authRoutes);
 app.use('/contacts', contactsRoutes);
 app.use('/messages', messagesRoutes);
