@@ -12,6 +12,7 @@ import { decryptIfLegacy } from '../cipher.js';
 import { messageLimiter, uploadLimiter } from '../middleware/rateLimit.js';
 import { sanitizeText } from '../middleware/sanitize.js';
 import { validate, sendMessageSchema, validateParams, peerIdParamSchema, messageIdParamSchema, addReactionSchema } from '../middleware/validation.js';
+import { validateFile } from '../middleware/fileValidation.js';
 
 const ALLOWED_EMOJIS = new Set(['👍', '👎', '❤️', '🔥', '😂', '😮', '😢']);
 function getMessageReactions(messageId) {
@@ -283,6 +284,15 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     const file = files[i];
     let attachmentPath = file.filename;
     const fullPath = path.join(uploadsDir, file.filename);
+    
+    // Проверка файла на безопасность
+    const fileValidation = await validateFile(fullPath);
+    if (!fileValidation.valid) {
+      // Удаляем небезопасный файл
+      try { fs.unlinkSync(fullPath); } catch (_) {}
+      return res.status(400).json({ error: fileValidation.error || 'Файл не прошёл проверку безопасности' });
+    }
+    
     try {
       const stat = fs.statSync(fullPath);
       if (stat.size >= MIN_SIZE_TO_COMPRESS) {

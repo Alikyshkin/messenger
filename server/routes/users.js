@@ -4,9 +4,11 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import { mkdirSync, existsSync, unlinkSync } from 'fs';
+import fs from 'fs';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
 import { validate, updateUserSchema, validateParams, idParamSchema } from '../middleware/validation.js';
+import { validateFile } from '../middleware/fileValidation.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const avatarsDir = path.join(__dirname, '../uploads/avatars');
@@ -120,10 +122,26 @@ router.patch('/me', validate(updateUserSchema), (req, res) => {
   res.json(userToJson(user, getBaseUrl(req), { includeEmail: true, includePhone: true }));
 });
 
-router.post('/me/avatar', avatarUpload.single('avatar'), (req, res) => {
+router.post('/me/avatar', avatarUpload.single('avatar'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Файл не выбран' });
   const me = req.user.userId;
   const avatarPath = req.file.filename;
+  const fullPath = path.join(avatarsDir, avatarPath);
+  
+  // Проверка файла аватара на безопасность
+  const fileValidation = await validateFile(fullPath, 2 * 1024 * 1024); // 2MB для аватара
+  if (!fileValidation.valid) {
+    // Удаляем небезопасный файл
+    try { fs.unlinkSync(fullPath); } catch (_) {}
+    return res.status(400).json({ error: fileValidation.error || 'Файл не прошёл проверку безопасности' });
+  }
+  
+  // Проверяем, что это изображение
+  if (!fileValidation.mime || !fileValidation.mime.startsWith('image/')) {
+    try { fs.unlinkSync(fullPath); } catch (_) {}
+    return res.status(400).json({ error: 'Аватар должен быть изображением' });
+  }
+  
   db.prepare('UPDATE users SET avatar_path = ? WHERE id = ?').run(avatarPath, me);
   const user = db.prepare('SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email, birthday, phone FROM users WHERE id = ?').get(me);
   user.friends_count = db.prepare('SELECT COUNT(*) as n FROM contacts WHERE user_id = ?').get(me)?.n ?? 0;

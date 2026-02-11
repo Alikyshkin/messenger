@@ -13,6 +13,7 @@ import { decryptIfLegacy } from '../cipher.js';
 import { messageLimiter, uploadLimiter } from '../middleware/rateLimit.js';
 import { sanitizeText } from '../middleware/sanitize.js';
 import { validate, createGroupSchema, updateGroupSchema, addGroupMemberSchema, sendGroupMessageSchema, validateParams, idParamSchema, addReactionSchema, voteGroupPollSchema, messageIdParamSchema, readGroupSchema, groupIdAndPollIdParamSchema } from '../middleware/validation.js';
+import { validateFile } from '../middleware/fileValidation.js';
 
 const ALLOWED_EMOJIS = new Set(['👍', '👎', '❤️', '🔥', '😂', '😮', '😢']);
 function getGroupMessageReactions(groupMessageId) {
@@ -137,7 +138,7 @@ router.post('/', (req, res, next) => {
     });
   }
   next();
-}, validate(createGroupSchema), (req, res) => {
+}, validate(createGroupSchema), async (req, res) => {
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
   const { name, member_ids: memberIds } = req.validated;
@@ -147,6 +148,23 @@ router.post('/', (req, res, next) => {
   if (!Array.isArray(memberIds)) memberIds = [];
   memberIds = [...new Set(memberIds.map((id) => parseInt(id, 10)).filter((id) => !Number.isNaN(id) && id !== me))];
   const avatarPath = req.file?.filename ?? null;
+  
+  // Проверка файла аватара на безопасность
+  if (avatarPath) {
+    const fullPath = path.join(groupAvatarsDir, avatarPath);
+    const fileValidation = await validateFile(fullPath, 2 * 1024 * 1024); // 2MB для аватара
+    if (!fileValidation.valid) {
+      // Удаляем небезопасный файл
+      try { fs.unlinkSync(fullPath); } catch (_) {}
+      return res.status(400).json({ error: fileValidation.error || 'Файл не прошёл проверку безопасности' });
+    }
+    
+    // Проверяем, что это изображение
+    if (!fileValidation.mime || !fileValidation.mime.startsWith('image/')) {
+      try { fs.unlinkSync(fullPath); } catch (_) {}
+      return res.status(400).json({ error: 'Аватар должен быть изображением' });
+    }
+  }
 
   const insertGroup = db.prepare(
     'INSERT INTO groups (name, avatar_path, created_by_user_id) VALUES (?, ?, ?)',
@@ -215,7 +233,7 @@ router.patch('/:id', validateParams(idParamSchema), (req, res, next) => {
     });
   }
   next();
-}, validate(updateGroupSchema), (req, res) => {
+}, validate(updateGroupSchema), async (req, res) => {
   const id = req.validatedParams.id;
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
@@ -229,6 +247,22 @@ router.patch('/:id', validateParams(idParamSchema), (req, res, next) => {
     group.name = name;
   }
   if (avatarPath) {
+    const fullPath = path.join(groupAvatarsDir, avatarPath);
+    
+    // Проверка файла аватара на безопасность
+    const fileValidation = await validateFile(fullPath, 2 * 1024 * 1024); // 2MB для аватара
+    if (!fileValidation.valid) {
+      // Удаляем небезопасный файл
+      try { fs.unlinkSync(fullPath); } catch (_) {}
+      return res.status(400).json({ error: fileValidation.error || 'Файл не прошёл проверку безопасности' });
+    }
+    
+    // Проверяем, что это изображение
+    if (!fileValidation.mime || !fileValidation.mime.startsWith('image/')) {
+      try { fs.unlinkSync(fullPath); } catch (_) {}
+      return res.status(400).json({ error: 'Аватар должен быть изображением' });
+    }
+    
     if (group.avatar_path) {
       const oldPath = path.join(groupAvatarsDir, group.avatar_path);
       if (existsSync(oldPath)) try { unlinkSync(oldPath); } catch (_) {}
@@ -529,6 +563,15 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
     const file = files[i];
     let attachmentPath = file.filename;
     const fullPath = path.join(uploadsDir, file.filename);
+    
+    // Проверка файла на безопасность
+    const fileValidation = await validateFile(fullPath);
+    if (!fileValidation.valid) {
+      // Удаляем небезопасный файл
+      try { fs.unlinkSync(fullPath); } catch (_) {}
+      return res.status(400).json({ error: fileValidation.error || 'Файл не прошёл проверку безопасности' });
+    }
+    
     try {
       const stat = fs.statSync(fullPath);
       if (stat.size >= MIN_SIZE_TO_COMPRESS) {
