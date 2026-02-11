@@ -18,6 +18,7 @@ import '../widgets/offline_indicator.dart';
 import '../widgets/app_update_banner.dart';
 import '../widgets/user_avatar.dart';
 import '../services/app_update_service.dart';
+import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -177,114 +178,169 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       child: Scaffold(
             appBar: AppBar(
               title: Text(context.tr('chats')),
-              actions: [
-                IconButton(
-                  icon: Stack(
-                    children: [
-                      const Icon(Icons.edit_outlined),
-                      if (_totalUnreadCount > 0)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 16,
-                              minHeight: 16,
-                            ),
-                            child: Text(
-                              _totalUnreadCount > 99 ? '99+' : '$_totalUnreadCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  tooltip: context.tr('new_chat'),
-                  onPressed: () {
-                    context.push('/start-chat').then((_) {
-                      _load();
-                      _loadFriendRequests();
-                    });
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.group_add_outlined),
-                  tooltip: context.tr('new_group'),
-                  onPressed: () {
-                    context.push('/create-group').then((_) {
-                      _load();
-                      _loadFriendRequests();
-                    });
-                  },
-                ),
-                IconButton(
-                  icon: Stack(
-                    children: [
-                      const Icon(Icons.group_outlined),
-                      if (_friendRequests.isNotEmpty)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 16,
-                              minHeight: 16,
-                            ),
-                            child: Text(
-                              _friendRequests.length > 99 ? '99+' : '${_friendRequests.length}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                  tooltip: context.tr('contacts'),
-                  onPressed: () {
-                    context.push('/contacts').then((_) {
-                      _loadFriendRequests();
-                    });
-                  },
-                ),
-                Consumer<AuthService>(
-                  builder: (context, auth, _) {
-                    final user = auth.user;
-                    return IconButton(
-                      icon: user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
-                          ? UserAvatar(
-                              user: user,
-                              radius: 16,
-                            )
-                          : const Icon(Icons.account_circle_outlined),
-                      tooltip: context.tr('my_profile'),
-                      onPressed: () {
-                        context.push('/profile');
-                      },
-                    );
-                  },
-                ),
-              ],
             ),
-            body: Column(
+            body: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Левая навигация: профиль, чаты, друзья, новый чат, внизу выход
+                Container(
+                  width: 72,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                    border: Border(
+                      right: BorderSide(
+                        color: Theme.of(context).dividerColor,
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      Consumer<AuthService>(
+                        builder: (context, auth, _) {
+                          final user = auth.user;
+                          return IconButton(
+                            icon: user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
+                                ? UserAvatar(user: user, radius: 20)
+                                : const Icon(Icons.account_circle_outlined, size: 28),
+                            tooltip: context.tr('my_profile'),
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ProfileScreen(),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            const Icon(Icons.chat_outlined, size: 28),
+                            if (_totalUnreadCount > 0)
+                              Positioned(
+                                right: -4,
+                                top: -4,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    _totalUnreadCount > 99 ? '99+' : '$_totalUnreadCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        tooltip: context.tr('chats'),
+                        onPressed: () {
+                          // Уже на экране чатов
+                        },
+                      ),
+                      IconButton(
+                        icon: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            const Icon(Icons.people_outline, size: 28),
+                            if (_friendRequests.isNotEmpty)
+                              Positioned(
+                                right: -4,
+                                top: -4,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    _friendRequests.length > 99 ? '99+' : '${_friendRequests.length}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        tooltip: context.tr('contacts'),
+                        onPressed: () {
+                          context.push('/contacts').then((_) {
+                            _loadFriendRequests();
+                          });
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 28),
+                        tooltip: context.tr('new_chat'),
+                        onPressed: () {
+                          context.push('/start-chat').then((_) {
+                            _load();
+                            _loadFriendRequests();
+                          });
+                        },
+                      ),
+                      const Spacer(),
+                      Consumer<AppUpdateService>(
+                        builder: (context, updateService, _) {
+                          final version = updateService.currentVersion ?? '1.0.0';
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Text(
+                              'v$version',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          );
+                        },
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.logout, size: 28),
+                        tooltip: context.tr('logout'),
+                        onPressed: () async {
+                          final ok = await showDialog<bool>(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: Text(context.tr('logout_confirm')),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: Text(context.tr('cancel')),
+                                ),
+                                FilledButton(
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  child: Text(context.tr('logout')),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (ok == true && mounted) {
+                            await context.read<AuthService>().logout();
+                            if (!mounted) return;
+                            context.go('/login');
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
               children: [
                 const AppUpdateBanner(),
                 Expanded(
@@ -422,6 +478,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                               },
                             ),
                   ),
+                ),
+              ],
+            ),
                 ),
               ],
             ),
