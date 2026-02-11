@@ -43,6 +43,7 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final _text = TextEditingController();
   final _scroll = ScrollController();
+  final _focusNode = FocusNode();
   final AudioRecorder _audioRecorder = AudioRecorder();
   List<Message> _messages = [];
   bool _loading = true;
@@ -239,6 +240,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _wsUnsub?.call();
     _text.dispose();
     _scroll.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -314,6 +316,9 @@ class _ChatScreenState extends State<ChatScreen> {
         _loading = false;
       });
       _scrollToBottom(force: true); // При загрузке всегда прокручиваем вниз
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
+      });
     } catch (e) {
       if (!mounted) {
         return;
@@ -324,6 +329,9 @@ class _ChatScreenState extends State<ChatScreen> {
         if (_messages.isEmpty) {
           _messages = cached;
         }
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _focusNode.requestFocus();
       });
     }
   }
@@ -679,6 +687,7 @@ class _ChatScreenState extends State<ChatScreen> {
           _sending = false;
         });
         _scrollToBottom();
+        _focusNode.requestFocus();
       } catch (e) {
         if (!mounted) {
           return;
@@ -713,6 +722,7 @@ class _ChatScreenState extends State<ChatScreen> {
             _sending = false;
           });
           _scrollToBottom();
+          _focusNode.requestFocus();
         } else if (pending is PendingVoice) {
           final msg = await api.sendVoiceMessage(
             widget.peer.id,
@@ -731,6 +741,7 @@ class _ChatScreenState extends State<ChatScreen> {
             _sending = false;
           });
           _scrollToBottom();
+          _focusNode.requestFocus();
         }
       } catch (e) {
         if (!mounted) {
@@ -796,6 +807,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _sending = false;
       });
       _scrollToBottom();
+      _focusNode.requestFocus();
     } catch (e) {
       if (!mounted) {
         return;
@@ -1925,6 +1937,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 Expanded(
                   child: TextField(
                     controller: _text,
+                    focusNode: _focusNode,
+                    autofocus: true,
                     decoration: const InputDecoration(
                       hintText: 'Сообщение',
                       border: OutlineInputBorder(),
