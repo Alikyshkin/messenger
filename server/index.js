@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { mkdirSync, existsSync, statSync } from 'fs';
@@ -97,12 +98,16 @@ app.use(compression({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // Для CSRF токенов в формах
 
+// Cookie parser для CSRF защиты (требуется для работы csurf)
+app.use(cookieParser());
+
 // CSRF Protection применяется только к API маршрутам, исключая статические файлы и SPA маршруты
 // Статические файлы и корневой путь не требуют CSRF защиты
 app.use((req, res, next) => {
   const path = req.path;
   
   // Пропускаем статические файлы, корневой путь и другие не-API маршруты
+  // ВАЖНО: проверяем путь ДО применения CSRF middleware
   if (
     path.startsWith('/uploads/') ||
     path.startsWith('/api-docs') ||
