@@ -16,7 +16,6 @@ import '../widgets/skeleton.dart';
 import '../widgets/offline_indicator.dart';
 import '../widgets/app_update_banner.dart';
 import '../services/app_update_service.dart';
-import '../screens/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -32,45 +31,50 @@ class _HomeScreenState extends State<HomeScreen> {
   StreamSubscription? _newMessageSub;
   StreamSubscription<Message>? _newMessagePayloadSub;
 
+  bool _initialized = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final ws = context.read<WsService>();
-      ws.connect(context.read<AuthService>().token);
-      
-      // Проверяем обновления при возврате на главный экран
-      try {
-        context.read<AppUpdateService>().checkForUpdates();
-      } catch (_) {
-        // Игнорируем ошибки проверки обновлений
-      }
-      
-      _load();
-      _newMessageSub = ws.onNewMessage.listen((_) {
-        if (!mounted) return;
+    if (!_initialized) {
+      _initialized = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ws = context.read<WsService>();
+        ws.connect(context.read<AuthService>().token);
+        
+        // Проверяем обновления при возврате на главный экран
+        try {
+          context.read<AppUpdateService>().checkForUpdates();
+        } catch (_) {
+          // Игнорируем ошибки проверки обновлений
+        }
+        
         _load();
+        _newMessageSub = ws.onNewMessage.listen((_) {
+          if (!mounted) return;
+          _load();
+        });
+        _newMessagePayloadSub = ws.onNewMessageWithPayload.listen((msg) {
+          if (!mounted || isPageVisible) return;
+          AppSoundService.instance.playNotification();
+          requestNotificationPermission();
+          final from = msg.isGroupMessage
+              ? 'Группа'
+              : (msg.senderDisplayName ?? 'Сообщение');
+          final preview = msg.content.isEmpty
+              ? (msg.hasAttachment ? 'Вложение' : '—')
+              : (msg.content.length > 50 ? '${msg.content.substring(0, 50)}…' : msg.content);
+          showPageNotification(
+            title: 'Новое сообщение',
+            body: '$from: $preview',
+          );
+        });
       });
-      _newMessagePayloadSub = ws.onNewMessageWithPayload.listen((msg) {
-        if (!mounted || isPageVisible) return;
-        AppSoundService.instance.playNotification();
-        requestNotificationPermission();
-        final from = msg.isGroupMessage
-            ? 'Группа'
-            : (msg.senderDisplayName ?? 'Сообщение');
-        final preview = msg.content.isEmpty
-            ? (msg.hasAttachment ? 'Вложение' : '—')
-            : (msg.content.length > 50 ? '${msg.content.substring(0, 50)}…' : msg.content);
-        showPageNotification(
-          title: 'Новое сообщение',
-          body: '$from: $preview',
-        );
+      Connectivity().onConnectivityChanged.listen((_) {
+        if (!mounted) return;
+        _flushOutbox();
       });
-    });
-    Connectivity().onConnectivityChanged.listen((_) {
-      if (!mounted) return;
-      _flushOutbox();
-    });
+    }
   }
 
   @override
@@ -139,6 +143,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
     return OfflineIndicator(
       child: Scaffold(
             appBar: AppBar(
@@ -168,19 +173,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 IconButton(
                   icon: const Icon(Icons.account_circle_outlined),
                   tooltip: context.tr('my_profile'),
-                  onPressed: () async {
-                    try {
-                      await context.push('/profile');
-                    } catch (e) {
-                      // Если не удалось перейти через go_router, пробуем через Navigator
-                      if (context.mounted) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => const ProfileScreen(),
-                          ),
-                        );
-                      }
-                    }
+                  onPressed: () {
+                    // Используем go_router для навигации
+                    context.push('/profile');
                   },
                 ),
               ],

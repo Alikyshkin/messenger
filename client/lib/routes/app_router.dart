@@ -62,6 +62,13 @@ GoRouter createAppRouter(AuthService authService) {
         builder: (context, state) => const ForgotPasswordScreen(),
       ),
       GoRoute(
+        path: '/profile',
+        pageBuilder: (context, state) => MaterialPage<void>(
+          key: state.pageKey,
+          child: const ProfileScreen(),
+        ),
+      ),
+      GoRoute(
         path: '/',
         builder: (context, state) {
           final auth = Provider.of<AuthService>(context, listen: false);
@@ -136,10 +143,6 @@ GoRouter createAppRouter(AuthService authService) {
                 },
               );
             },
-          ),
-          GoRoute(
-            path: 'profile',
-            builder: (context, state) => const ProfileScreen(),
           ),
           GoRoute(
             path: 'contacts',

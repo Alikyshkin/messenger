@@ -37,12 +37,19 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  bool _userRefreshed = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AuthService>().refreshUser();
-    });
+    if (!_userRefreshed) {
+      _userRefreshed = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<AuthService>().refreshUser();
+        }
+      });
+    }
   }
 
   @override
