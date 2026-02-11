@@ -116,20 +116,164 @@ function applyMigration(db, migration) {
             if (hasMessageId && !hasGroupMessageId) {
               // Старая структура, исправляем
               log.warn('Таблица group_polls имеет старую структуру, исправляем');
-              db.exec(`
-                CREATE TABLE group_polls_temp (
-                  id INTEGER PRIMARY KEY AUTOINCREMENT,
-                  group_message_id INTEGER NOT NULL UNIQUE,
-                  question TEXT NOT NULL,
-                  options TEXT NOT NULL,
-                  multiple INTEGER DEFAULT 0,
-                  FOREIGN KEY (group_message_id) REFERENCES group_messages(id) ON DELETE CASCADE
-                );
-                INSERT INTO group_polls_temp (id, group_message_id, question, options, multiple)
-                SELECT id, message_id, question, options, COALESCE(multiple, 0) FROM group_polls;
-                DROP TABLE group_polls;
-                ALTER TABLE group_polls_temp RENAME TO group_polls;
-              `);
+              try {
+                // Проверяем, есть ли колонка multiple
+                const hasMultiple = groupPollsInfo.some(col => col.name === 'multiple');
+                
+                // Проверяем данные перед копированием
+                const rowCount = db.prepare('SELECT COUNT(*) as count FROM group_polls').get();
+                log.info(`Найдено ${rowCount.count} записей в таблице group_polls для миграции`);
+                
+                // Проверяем на дубликаты message_id
+                const duplicates = db.prepare(`
+                  SELECT message_id, COUNT(*) as cnt 
+                  FROM group_polls 
+                  WHERE message_id IS NOT NULL 
+                  GROUP BY message_id 
+                  HAVING cnt > 1
+                `).all();
+                
+                if (duplicates.length > 0) {
+                  log.warn(`Найдено ${duplicates.length} дубликатов message_id в group_polls, оставляем только первую запись для каждого`);
+                  // Удаляем дубликаты, оставляя только первую запись
+                  db.exec(`
+                    DELETE FROM group_polls 
+                    WHERE id NOT IN (
+                      SELECT MIN(id) 
+                      FROM group_polls 
+                      GROUP BY message_id
+                    )
+                  `);
+                }
+                
+                // Проверяем, существует ли таблица group_messages
+                const groupMessagesExists = db.prepare(`
+                  SELECT name FROM sqlite_master 
+                  WHERE type='table' AND name='group_messages'
+                `).get();
+                
+                if (!groupMessagesExists) {
+                  log.warn('Таблица group_messages не существует, создаем group_polls без внешнего ключа');
+                  db.exec(`
+                    CREATE TABLE group_polls_temp (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      group_message_id INTEGER NOT NULL UNIQUE,
+                      question TEXT NOT NULL,
+                      options TEXT NOT NULL,
+                      multiple INTEGER DEFAULT 0
+                    );
+                  `);
+                } else {
+                  // Создаем временную таблицу с внешним ключом
+                  db.exec(`
+                    CREATE TABLE group_polls_temp (
+                      id INTEGER PRIMARY KEY AUTOINCREMENT,
+                      group_message_id INTEGER NOT NULL UNIQUE,
+                      question TEXT NOT NULL,
+                      options TEXT NOT NULL,
+                      multiple INTEGER DEFAULT 0,
+                      FOREIGN KEY (group_message_id) REFERENCES group_messages(id) ON DELETE CASCADE
+                    );
+                  `);
+                }
+                
+                // Копируем данные с учетом наличия колонки multiple
+                // Исключаем записи с NULL message_id и используем DISTINCT для избежания дубликатов
+                log.info('Копируем данные из старой таблицы group_polls');
+                try {
+                  if (hasMultiple) {
+                    db.exec(`
+                      INSERT INTO group_polls_temp (id, group_message_id, question, options, multiple)
+                      SELECT DISTINCT id, message_id, question, options, COALESCE(multiple, 0) 
+                      FROM group_polls 
+                      WHERE message_id IS NOT NULL;
+                    `);
+                  } else {
+                    db.exec(`
+                      INSERT INTO group_polls_temp (id, group_message_id, question, options, multiple)
+                      SELECT DISTINCT id, message_id, question, options, 0 
+                      FROM group_polls 
+                      WHERE message_id IS NOT NULL;
+                    `);
+                  }
+                  log.info('Данные успешно скопированы');
+                } catch (insertError) {
+                  log.error({ 
+                    error: insertError, 
+                    message: insertError.message,
+                    code: insertError.code 
+                  }, 'Ошибка при копировании данных из group_polls');
+                  // Пытаемся вставить без UNIQUE ограничения, если есть дубликаты
+                  db.exec('DROP TABLE group_polls_temp');
+                  if (!groupMessagesExists) {
+                    db.exec(`
+                      CREATE TABLE group_polls_temp (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        group_message_id INTEGER NOT NULL,
+                        question TEXT NOT NULL,
+                        options TEXT NOT NULL,
+                        multiple INTEGER DEFAULT 0
+                      );
+                    `);
+                  } else {
+                    db.exec(`
+                      CREATE TABLE group_polls_temp (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        group_message_id INTEGER NOT NULL,
+                        question TEXT NOT NULL,
+                        options TEXT NOT NULL,
+                        multiple INTEGER DEFAULT 0,
+                        FOREIGN KEY (group_message_id) REFERENCES group_messages(id) ON DELETE CASCADE
+                      );
+                    `);
+                  }
+                  // Вставляем только уникальные записи
+                  if (hasMultiple) {
+                    db.exec(`
+                      INSERT INTO group_polls_temp (id, group_message_id, question, options, multiple)
+                      SELECT MIN(id), message_id, question, options, COALESCE(multiple, 0) 
+                      FROM group_polls 
+                      WHERE message_id IS NOT NULL
+                      GROUP BY message_id;
+                    `);
+                  } else {
+                    db.exec(`
+                      INSERT INTO group_polls_temp (id, group_message_id, question, options, multiple)
+                      SELECT MIN(id), message_id, question, options, 0 
+                      FROM group_polls 
+                      WHERE message_id IS NOT NULL
+                      GROUP BY message_id;
+                    `);
+                  }
+                  log.warn('Данные скопированы без UNIQUE ограничения из-за дубликатов');
+                }
+                
+                // Удаляем старую таблицу и переименовываем новую
+                log.info('Удаляем старую таблицу и переименовываем новую');
+                db.exec(`
+                  DROP TABLE group_polls;
+                  ALTER TABLE group_polls_temp RENAME TO group_polls;
+                `);
+                
+                // Добавляем UNIQUE ограничение, если его нет
+                try {
+                  db.exec(`
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_group_polls_message_id ON group_polls(group_message_id);
+                  `);
+                } catch (idxError) {
+                  log.warn({ error: idxError }, 'Не удалось создать UNIQUE индекс на group_message_id');
+                }
+                
+                log.info('Таблица group_polls успешно исправлена');
+              } catch (fixError) {
+                log.error({ 
+                  error: fixError, 
+                  message: fixError.message,
+                  code: fixError.code,
+                  stack: fixError.stack 
+                }, 'Ошибка при исправлении таблицы group_polls');
+                throw fixError;
+              }
             }
           }
           
@@ -141,23 +285,38 @@ function applyMigration(db, migration) {
             if (hasPollId && !hasGroupPollId) {
               // Старая структура, исправляем
               log.warn('Таблица group_poll_votes имеет старую структуру, исправляем');
-              db.exec(`
-                CREATE TABLE group_poll_votes_temp (
-                  group_poll_id INTEGER NOT NULL,
-                  user_id INTEGER NOT NULL,
-                  option_index INTEGER NOT NULL,
-                  PRIMARY KEY (group_poll_id, user_id, option_index),
-                  FOREIGN KEY (group_poll_id) REFERENCES group_polls(id) ON DELETE CASCADE,
-                  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                );
-                INSERT INTO group_poll_votes_temp (group_poll_id, user_id, option_index)
-                SELECT poll_id, user_id, option_index FROM group_poll_votes;
-                DROP TABLE group_poll_votes;
-                ALTER TABLE group_poll_votes_temp RENAME TO group_poll_votes;
-                CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll ON group_poll_votes(group_poll_id);
-                CREATE INDEX IF NOT EXISTS idx_group_poll_votes_user ON group_poll_votes(user_id);
-                CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll_user ON group_poll_votes(group_poll_id, user_id);
-              `);
+              try {
+                db.exec(`
+                  CREATE TABLE group_poll_votes_temp (
+                    group_poll_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    option_index INTEGER NOT NULL,
+                    PRIMARY KEY (group_poll_id, user_id, option_index),
+                    FOREIGN KEY (group_poll_id) REFERENCES group_polls(id) ON DELETE CASCADE,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                  );
+                `);
+                
+                // Копируем данные из старой таблицы
+                db.exec(`
+                  INSERT INTO group_poll_votes_temp (group_poll_id, user_id, option_index)
+                  SELECT poll_id, user_id, option_index FROM group_poll_votes;
+                `);
+                
+                // Удаляем старую таблицу и переименовываем новую
+                db.exec(`
+                  DROP TABLE group_poll_votes;
+                  ALTER TABLE group_poll_votes_temp RENAME TO group_poll_votes;
+                  CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll ON group_poll_votes(group_poll_id);
+                  CREATE INDEX IF NOT EXISTS idx_group_poll_votes_user ON group_poll_votes(user_id);
+                  CREATE INDEX IF NOT EXISTS idx_group_poll_votes_poll_user ON group_poll_votes(group_poll_id, user_id);
+                `);
+                
+                log.info('Таблица group_poll_votes успешно исправлена');
+              } catch (fixError) {
+                log.error({ error: fixError, message: fixError.message }, 'Ошибка при исправлении таблицы group_poll_votes');
+                throw fixError;
+              }
             } else if (hasGroupPollId) {
               // Правильная структура, просто создаем индексы если их нет
               db.exec(`
@@ -172,7 +331,12 @@ function applyMigration(db, migration) {
         db.prepare('INSERT INTO schema_migrations (version, name) VALUES (?, ?)')
           .run(migration.version, migration.name);
       } catch (error) {
-        log.error({ error }, 'Ошибка при применении миграции 007');
+        log.error({ 
+          error, 
+          message: error.message, 
+          code: error.code,
+          stack: error.stack 
+        }, 'Ошибка при применении миграции 007');
         throw error;
       }
     });
