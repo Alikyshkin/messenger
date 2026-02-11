@@ -10,6 +10,7 @@ import '../services/api.dart';
 import '../utils/app_page_route.dart';
 import '../utils/page_visibility.dart';
 import '../screens/call_screen.dart';
+import '../screens/group_call_screen.dart';
 
 /// Слушает входящие звонки (offer) и открывает экран звонка. Проигрывает рингтон,
 /// при неактивной вкладке показывает браузерное уведомление и пытается перевести фокус.
