@@ -1,34 +1,47 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
+import { validate, addContactSchema, validateParams, idParamSchema } from '../middleware/validation.js';
+import { validatePagination, createPaginationMeta } from '../middleware/pagination.js';
+import { get, set, del, CacheKeys } from '../utils/cache.js';
+import config from '../config/index.js';
 
 const router = Router();
 router.use(authMiddleware);
 
-router.get('/', (req, res) => {
+router.get('/', validatePagination, async (req, res) => {
+  const { limit = 50, offset = 0 } = req.pagination;
+  const userId = req.user.userId;
+  
+  const total = db.prepare('SELECT COUNT(*) as cnt FROM contacts WHERE user_id = ?').get(userId)?.cnt || 0;
+  
   const rows = db.prepare(`
-    SELECT u.id, u.username, u.display_name
+    SELECT u.id, u.username, u.display_name, u.is_online, u.last_seen
     FROM contacts c
     JOIN users u ON u.id = c.contact_id
     WHERE c.user_id = ?
     ORDER BY u.display_name, u.username
-  `).all(req.user.userId);
-  res.json(rows.map(r => ({
-    id: r.id,
-    username: r.username,
-    display_name: r.display_name || r.username,
-  })));
+    LIMIT ? OFFSET ?
+  `).all(userId, limit, offset);
+  
+  res.json({
+    data: rows.map(r => ({
+      id: r.id,
+      username: r.username,
+      display_name: r.display_name || r.username,
+      is_online: !!(r.is_online),
+      last_seen: r.last_seen || null,
+    })),
+    pagination: createPaginationMeta(total, limit, offset),
+  });
 });
 
 // Отправить заявку в друзья (друг появляется в списке только после одобрения)
-router.post('/', (req, res) => {
-  const { username } = req.body;
-  if (!username?.trim()) {
-    return res.status(400).json({ error: 'Укажите имя пользователя' });
-  }
+router.post('/', validate(addContactSchema), async (req, res) => {
+  const { username } = req.validated;
   const contact = db.prepare(
     'SELECT id, username, display_name FROM users WHERE username = ?'
-  ).get(username.trim().toLowerCase());
+  ).get(username.toLowerCase());
   if (!contact) {
     return res.status(404).json({ error: 'Пользователь не найден' });
   }
@@ -92,9 +105,8 @@ router.get('/requests/incoming', (req, res) => {
 });
 
 // Одобрить заявку: добавляем друг друга в contacts
-router.post('/requests/:id/accept', (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'Некорректный id' });
+router.post('/requests/:id/accept', validateParams(idParamSchema), (req, res) => {
+  const id = req.validatedParams.id;
   const row = db.prepare(
     "SELECT from_user_id, to_user_id FROM friend_requests WHERE id = ? AND to_user_id = ? AND status = 'pending'"
   ).get(id, req.user.userId);
@@ -113,9 +125,8 @@ router.post('/requests/:id/accept', (req, res) => {
 });
 
 // Отклонить заявку
-router.post('/requests/:id/reject', (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'Некорректный id' });
+router.post('/requests/:id/reject', validateParams(idParamSchema), (req, res) => {
+  const id = req.validatedParams.id;
   const result = db.prepare(
     "UPDATE friend_requests SET status = 'rejected' WHERE id = ? AND to_user_id = ? AND status = 'pending'"
   ).run(id, req.user.userId);
@@ -125,11 +136,8 @@ router.post('/requests/:id/reject', (req, res) => {
   res.status(204).send();
 });
 
-router.delete('/:id', (req, res) => {
-  const contactId = parseInt(req.params.id, 10);
-  if (Number.isNaN(contactId)) {
-    return res.status(400).json({ error: 'Некорректный id' });
-  }
+router.delete('/:id', validateParams(idParamSchema), (req, res) => {
+  const contactId = req.validatedParams.id;
   const result = db.prepare(
     'DELETE FROM contacts WHERE user_id = ? AND contact_id = ?'
   ).run(req.user.userId, contactId);

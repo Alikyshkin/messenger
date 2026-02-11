@@ -1,7 +1,8 @@
 import jwt from 'jsonwebtoken';
+import config from './config/index.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'messenger-dev-secret-change-in-production';
-const JWT_EXPIRES = '7d';
+const JWT_SECRET = config.jwt.secret;
+const JWT_EXPIRES = config.jwt.expiresIn;
 
 export function signToken(userId, username) {
   return jwt.sign(

@@ -12,6 +12,9 @@ class AppSoundService {
   bool _ringtonePlaying = false;
   bool get isRingtonePlaying => _ringtonePlaying;
 
+  bool _inCall = false;
+  void setInCall(bool value) => _inCall = value;
+
   Future<void> _initPlayers() async {
     try {
       await _ringtonePlayer.setLoopMode(LoopMode.one);
@@ -49,7 +52,9 @@ class AppSoundService {
   }
 
   /// Один раз проигрывает звук уведомления о новом сообщении.
+  /// Не проигрывается во время активного звонка, чтобы не было писка в ухе.
   Future<void> playNotification() async {
+    if (_inCall) return;
     await _initPlayers();
     try {
       await _notificationPlayer.setAsset(

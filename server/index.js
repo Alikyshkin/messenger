@@ -1,13 +1,19 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
-import { mkdirSync, existsSync } from 'fs';
+import { mkdirSync, existsSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { verifyToken } from './auth.js';
 import { clients, broadcastToUser } from './realtime.js';
+import db from './db.js';
+import { apiLimiter } from './middleware/rateLimit.js';
+import { log } from './utils/logger.js';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import config from './config/index.js';
 
 import authRoutes from './routes/auth.js';
 import contactsRoutes from './routes/contacts.js';
@@ -16,6 +22,20 @@ import usersRoutes from './routes/users.js';
 import chatsRoutes from './routes/chats.js';
 import groupsRoutes from './routes/groups.js';
 import pollsRoutes from './routes/polls.js';
+import searchRoutes from './routes/search.js';
+import exportRoutes from './routes/export.js';
+import pushRoutes from './routes/push.js';
+import gdprRoutes from './routes/gdpr.js';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './utils/swagger.js';
+import { metricsMiddleware, getMetrics, metrics } from './utils/metrics.js';
+import { initCache } from './utils/cache.js';
+import { initFCM } from './utils/pushNotifications.js';
+import { securityHeaders } from './middleware/security.js';
+import { csrfProtect, csrfTokenRoute } from './middleware/csrf.js';
+import { auditMiddleware } from './utils/auditLog.js';
+import { getAllCircuitBreakerStates } from './utils/circuitBreaker.js';
+import { apiVersioning, validateApiVersion } from './middleware/apiVersioning.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const uploadsDir = join(__dirname, 'uploads');
@@ -26,8 +46,56 @@ if (!existsSync(publicDir)) mkdirSync(publicDir, { recursive: true });
 const app = express();
 const server = createServer(app);
 
-app.use(cors());
+// Security headers (должен быть первым middleware)
+app.use(securityHeaders());
+
+// CORS настройка
+app.use(cors({
+  origin: (origin, callback) => {
+    // Разрешаем запросы без origin (например, мобильные приложения, Postman)
+    if (!origin) return callback(null, true);
+    
+    if (config.cors.origins.includes(origin) || config.nodeEnv === 'development') {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+  maxAge: 86400, // 24 часа
+}));
+
+// Сжатие ответов (gzip/brotli)
+app.use(compression({
+  filter: (req, res) => {
+    // Сжимаем только если клиент поддерживает сжатие
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    // Используем стандартный фильтр compression
+    return compression.filter(req, res);
+  },
+  level: 6, // Уровень сжатия (1-9, по умолчанию 6)
+  threshold: 1024, // Минимальный размер для сжатия (1KB)
+}));
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // Для CSRF токенов в формах
+
+// CSRF Protection (только для запросов без Bearer токена)
+app.use(csrfProtect());
+
+// Endpoint для получения CSRF токена (для веб-форм)
+app.get('/csrf-token', csrfTokenRoute);
+
+// API Versioning (должен быть до routes)
+app.use('/api', apiVersioning);
+app.use('/api', validateApiVersion);
+
+app.use('/api', apiLimiter); // Общий лимит для всех API запросов
 // Явно указываем UTF-8 для всех JSON-ответов API (корректное отображение кириллицы).
 app.use((req, res, next) => {
   const originalJson = res.json.bind(res);
@@ -39,6 +107,9 @@ app.use((req, res, next) => {
 });
 app.use('/uploads', express.static(uploadsDir));
 
+// Audit logging должен быть после auth middleware, но до routes
+// (применяется автоматически через middleware в routes)
+
 app.use('/auth', authRoutes);
 app.use('/contacts', contactsRoutes);
 app.use('/messages', messagesRoutes);
@@ -46,8 +117,129 @@ app.use('/chats', chatsRoutes);
 app.use('/groups', groupsRoutes);
 app.use('/users', usersRoutes);
 app.use('/polls', pollsRoutes);
+app.use('/search', searchRoutes);
+app.use('/export', exportRoutes);
+app.use('/push', pushRoutes);
+app.use('/gdpr', gdprRoutes);
 
-app.get('/health', (req, res) => res.json({ ok: true }));
+// Swagger UI для документации API
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Messenger API Documentation',
+}));
+
+// JSON схема для Swagger
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// Prometheus метрики endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', register.contentType);
+    const metrics = await getMetrics();
+    res.end(metrics);
+  } catch (error) {
+    log.error({ error }, 'Ошибка при получении метрик');
+    res.status(500).end();
+  }
+});
+
+// Health checks
+app.get('/health', (req, res) => {
+  const circuitBreakers = getAllCircuitBreakerStates();
+  
+  // Проверяем состояние circuit breakers
+  const openCircuits = Object.entries(circuitBreakers)
+    .filter(([_, state]) => state.state === 'OPEN')
+    .map(([name, _]) => name);
+  
+  if (openCircuits.length > 0) {
+    return res.status(503).json({
+      status: 'degraded',
+      message: 'Some services are unavailable',
+      openCircuits,
+      circuitBreakers,
+    });
+  }
+  
+  res.json({
+    status: 'ok',
+    circuitBreakers,
+  });
+  
+  // Старая логика health check
+  try {
+  try {
+    // Проверка базы данных
+    const dbCheck = db.prepare('SELECT 1').get();
+    if (!dbCheck) {
+      return res.status(503).json({
+        status: 'unhealthy',
+        database: 'unavailable',
+      });
+    }
+
+    // Проверка дискового пространства (упрощённая)
+    const fs = require('fs');
+    const stats = fs.statSync(process.env.MESSENGER_DB_PATH || join(__dirname, 'messenger.db'));
+    const dbSize = stats.size;
+
+    // Проверка памяти (упрощённая)
+    const memUsage = process.memoryUsage();
+    const memUsageMB = {
+      rss: Math.round(memUsage.rss / 1024 / 1024),
+      heapTotal: Math.round(memUsage.heapTotal / 1024 / 1024),
+      heapUsed: Math.round(memUsage.heapUsed / 1024 / 1024),
+      external: Math.round(memUsage.external / 1024 / 1024),
+    };
+
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: Math.round(process.uptime()),
+      database: {
+        status: 'connected',
+        size: dbSize,
+      },
+      memory: memUsageMB,
+      version: process.env.npm_package_version || '1.0.0',
+    });
+  } catch (error) {
+    log.error('Health check failed', error);
+    res.status(503).json({
+      status: 'unhealthy',
+      error: process.env.NODE_ENV === 'production' ? 'Service unavailable' : error.message,
+    });
+  }
+});
+
+// Readiness check (для Kubernetes/Docker)
+app.get('/ready', (req, res) => {
+  try {
+    // Проверка базы данных
+    const dbCheck = db.prepare('SELECT 1').get();
+    if (!dbCheck) {
+      return res.status(503).json({ ready: false, reason: 'database' });
+    }
+    res.json({ ready: true });
+  } catch (error) {
+    log.error('Readiness check failed', error);
+    res.status(503).json({ ready: false, reason: 'database' });
+  }
+});
+
+// Liveness check (для Kubernetes/Docker)
+app.get('/live', (req, res) => {
+  res.json({ alive: true });
+});
+
+// Обработка 404 ошибок (должен быть после всех маршрутов)
+app.use(notFoundHandler);
+
+// Централизованный обработчик ошибок (должен быть последним)
+app.use(errorHandler);
 
 // Веб-клиент (Flutter build) — отдаём по корню; без долгого кэша, чтобы после пуша сразу видеть изменения
 app.use(express.static(publicDir, {
@@ -129,6 +321,8 @@ app.get('/reset-password', (req, res) => {
 const wss = new WebSocketServer({ server, path: '/ws' });
 
 wss.on('connection', (ws, req) => {
+  // Обновляем метрику подключений WebSocket
+  metrics.websocket.connections.inc();
   const url = new URL(req.url || '', `http://${req.headers.host}`);
   const token = url.searchParams.get('token');
   const payload = token ? verifyToken(token) : null;
@@ -140,6 +334,18 @@ wss.on('connection', (ws, req) => {
   if (!clients.has(userId)) clients.set(userId, new Set());
   clients.get(userId).add(ws);
   ws.userId = userId;
+  
+  // Обновляем статус пользователя на онлайн
+  db.prepare('UPDATE users SET is_online = 1 WHERE id = ?').run(userId);
+  // Уведомляем контакты об изменении статуса
+  const contacts = db.prepare('SELECT contact_id FROM contacts WHERE user_id = ?').all(userId).map(r => r.contact_id);
+  contacts.forEach(contactId => {
+    broadcastToUser(contactId, {
+      type: 'user_status',
+      user_id: userId,
+      is_online: true,
+    });
+  });
 
   ws.on('message', (raw) => {
     try {
@@ -148,7 +354,7 @@ wss.on('connection', (ws, req) => {
         const toId = Number(data.toUserId);
         const set = clients.get(toId);
         const n = set ? set.size : 0;
-        console.log(`[ws] call_signal from ${userId} to ${toId} (${n} connection(s))`);
+        log.ws('call_signal', { fromUserId: userId, toUserId: toId, connections: n });
         broadcastToUser(toId, {
           type: 'call_signal',
           fromUserId: userId,
@@ -160,20 +366,56 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
+    // Обновляем метрику подключений WebSocket
+    metrics.websocket.connections.dec();
     const set = clients.get(userId);
     if (set) {
       set.delete(ws);
-      if (set.size === 0) clients.delete(userId);
+      if (set.size === 0) {
+        clients.delete(userId);
+        // Обновляем статус пользователя на офлайн
+        db.prepare('UPDATE users SET is_online = 0, last_seen = datetime(\'now\') WHERE id = ?').run(userId);
+        // Уведомляем контакты об изменении статуса
+        const contacts = db.prepare('SELECT contact_id FROM contacts WHERE user_id = ?').all(userId).map(r => r.contact_id);
+        contacts.forEach(contactId => {
+          broadcastToUser(contactId, {
+            type: 'user_status',
+            user_id: userId,
+            is_online: false,
+            last_seen: new Date().toISOString(),
+          });
+        });
+      }
     }
   });
 
-  ws.on('error', () => ws.close());
+  ws.on('error', (error) => {
+    log.error('WebSocket error', error, { userId });
+    ws.close();
+  });
 });
 
-const PORT = process.env.PORT || 3000;
-if (process.env.NODE_ENV !== 'test') {
-  server.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+// Middleware для логирования HTTP запросов
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const responseTime = Date.now() - start;
+    log.http(req, res, responseTime);
+  });
+  next();
+});
+
+if (config.nodeEnv !== 'test') {
+  // Инициализация кэша
+initCache();
+
+// Инициализация FCM для push-уведомлений
+initFCM().catch(err => {
+  log.error({ error: err }, 'Ошибка инициализации FCM');
+});
+
+server.listen(config.port, () => {
+    log.info(`Server running at http://localhost:${config.port}`, { port: config.port, env: config.nodeEnv });
   });
 }
 

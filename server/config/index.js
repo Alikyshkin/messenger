@@ -1,0 +1,63 @@
+/**
+ * Централизованная конфигурация приложения
+ */
+
+import 'dotenv/config';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import * as constants from './constants.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+export const config = {
+  // Сервер
+  port: parseInt(process.env.PORT || '3000', 10),
+  nodeEnv: process.env.NODE_ENV || 'development',
+  
+  // База данных
+  db: {
+    path: process.env.MESSENGER_DB_PATH || join(__dirname, '../messenger.db'),
+  },
+  
+  // JWT
+  jwt: {
+    secret: process.env.JWT_SECRET || constants.JWT_CONFIG.DEFAULT_SECRET,
+    expiresIn: constants.JWT_CONFIG.EXPIRES_IN,
+  },
+  
+  // CORS
+  cors: {
+    origins: process.env.CORS_ORIGINS 
+      ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+      : ['http://localhost:3000', 'http://localhost:8080', 'http://127.0.0.1:3000', 'http://127.0.0.1:8080'],
+  },
+  
+  // Логирование
+  logging: {
+    level: process.env.LOG_LEVEL || (process.env.NODE_ENV === 'production' ? 'info' : 'debug'),
+  },
+  
+  // SMTP (для отправки писем)
+  smtp: {
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+    from: process.env.MAIL_FROM,
+  },
+  
+  // Приложение
+  app: {
+    baseUrl: process.env.APP_BASE_URL || 'http://localhost:3000',
+  },
+  
+  // Шифрование (для старых сообщений)
+  encryption: {
+    key: process.env.ENCRYPTION_KEY,
+  },
+  
+  // Константы
+  constants,
+};
+
+export default config;

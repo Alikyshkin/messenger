@@ -9,8 +9,13 @@ import db from '../db.js';
 import { authMiddleware } from '../auth.js';
 import { notifyNewMessage, notifyReaction } from '../realtime.js';
 import { decryptIfLegacy } from '../cipher.js';
+import { messageLimiter, uploadLimiter } from '../middleware/rateLimit.js';
+import { sanitizeText } from '../middleware/sanitize.js';
+import { validate, sendMessageSchema, validateParams, peerIdParamSchema, messageIdParamSchema, addReactionSchema } from '../middleware/validation.js';
+import { validateFile } from '../middleware/fileValidation.js';
 
-const ALLOWED_EMOJIS = new Set(['👍', '👎', '❤️', '🔥', '😂', '😮', '😢']);
+import { ALLOWED_REACTION_EMOJIS } from '../config/constants.js';
+const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getMessageReactions(messageId) {
   const rows = db.prepare('SELECT user_id, emoji FROM message_reactions WHERE message_id = ?').all(messageId);
   const byEmoji = {};
@@ -24,7 +29,6 @@ function getMessageReactions(messageId) {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, '../uploads');
-const MIN_SIZE_TO_COMPRESS = 100 * 1024; // 100 KB — мелкие не трогаем
 
 const storage = multer.diskStorage({
   destination: uploadsDir,
@@ -36,11 +40,12 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB
+  limits: { fileSize: FILE_LIMITS.MAX_FILE_SIZE },
   fileFilter: (req, file, cb) => {
     const ext = (path.extname(file.originalname) || '').toLowerCase();
-    const blocked = ['.exe', '.bat', '.cmd', '.sh', '.dll', '.so', '.dylib'];
-    if (blocked.some(b => ext === b)) return cb(new Error('Тип файла не разрешён'));
+    if (ALLOWED_FILE_TYPES.BLOCKED.some(b => ext === b)) {
+      return cb(new Error('Тип файла не разрешён'));
+    }
     cb(null, true);
   },
 });
@@ -54,9 +59,8 @@ function getBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
-router.patch('/:peerId/read', (req, res) => {
-  const peerId = parseInt(req.params.peerId, 10);
-  if (Number.isNaN(peerId)) return res.status(400).json({ error: 'Некорректный id чата' });
+router.patch('/:peerId/read', validateParams(peerIdParamSchema), (req, res) => {
+  const peerId = req.validatedParams.peerId;
   const me = req.user.userId;
   db.prepare(
     'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE receiver_id = ? AND sender_id = ? AND read_at IS NULL'
@@ -64,11 +68,9 @@ router.patch('/:peerId/read', (req, res) => {
   res.status(204).send();
 });
 
-router.post('/:messageId/reaction', (req, res) => {
-  const messageId = parseInt(req.params.messageId, 10);
-  const emoji = typeof req.body?.emoji === 'string' ? req.body.emoji.trim() : '';
-  if (Number.isNaN(messageId) || messageId < 1) return res.status(400).json({ error: 'Некорректный id сообщения' });
-  if (!ALLOWED_EMOJIS.has(emoji)) return res.status(400).json({ error: 'Недопустимая реакция' });
+router.post('/:messageId/reaction', validateParams(messageIdParamSchema), validate(addReactionSchema), (req, res) => {
+  const messageId = req.validatedParams.messageId;
+  const { emoji } = req.validated;
   const me = req.user.userId;
   const row = db.prepare('SELECT id, sender_id, receiver_id FROM messages WHERE id = ?').get(messageId);
   if (!row) return res.status(404).json({ error: 'Сообщение не найдено' });
@@ -88,11 +90,57 @@ router.post('/:messageId/reaction', (req, res) => {
   res.json({ reactions });
 });
 
-router.get('/:peerId', (req, res) => {
-  const peerId = parseInt(req.params.peerId, 10);
-  if (Number.isNaN(peerId)) {
-    return res.status(400).json({ error: 'Некорректный id чата' });
-  }
+/**
+ * @swagger
+ * /messages/{peerId}:
+ *   get:
+ *     summary: Получить сообщения с пользователем
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: peerId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID собеседника
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 100
+ *           maximum: 200
+ *         description: Количество сообщений
+ *       - in: query
+ *         name: before
+ *         schema:
+ *           type: integer
+ *         description: ID сообщения для пагинации (получить сообщения до этого ID)
+ *     responses:
+ *       200:
+ *         description: Список сообщений
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Message'
+ *                 pagination:
+ *                   type: object
+ *                   properties:
+ *                     total:
+ *                       type: integer
+ *                     limit:
+ *                       type: integer
+ *                     hasMore:
+ *                       type: boolean
+ */
+router.get('/:peerId', validateParams(peerIdParamSchema), (req, res) => {
+  const peerId = req.validatedParams.peerId;
   const limit = Math.min(parseInt(req.query.limit, 10) || 100, 200);
   const before = req.query.before ? parseInt(req.query.before, 10) : null;
   const me = req.user.userId;
@@ -164,44 +212,124 @@ router.get('/:peerId', (req, res) => {
     msg.reactions = getMessageReactions(r.id);
     return msg;
   });
-  res.json(list);
+  
+  // Подсчитываем общее количество сообщений для пагинации
+  const totalQuery = `
+    SELECT COUNT(*) as cnt
+    FROM messages
+    WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+  `;
+  const totalParams = [me, peerId, peerId, me];
+  if (before && !Number.isNaN(before)) {
+    // Если есть before, считаем только сообщения до этого ID
+    const total = db.prepare(totalQuery + ' AND id < ?').get(...totalParams, before)?.cnt || 0;
+    res.json({
+      data: list,
+      pagination: {
+        limit,
+        before,
+        hasMore: list.length === limit,
+        total,
+      },
+    });
+  } else {
+    const total = db.prepare(totalQuery).get(...totalParams)?.cnt || 0;
+    res.json({
+      data: list,
+      pagination: {
+        limit,
+        hasMore: list.length === limit,
+        total,
+      },
+    });
+  }
 });
 
-router.post('/', (req, res, next) => {
+/**
+ * @swagger
+ * /messages:
+ *   post:
+ *     summary: Отправить сообщение
+ *     tags: [Messages]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - receiver_id
+ *             properties:
+ *               receiver_id:
+ *                 type: integer
+ *               content:
+ *                 type: string
+ *                 maxLength: 10000
+ *               type:
+ *                 type: string
+ *                 enum: [text, poll]
+ *               reply_to_id:
+ *                 type: integer
+ *                 nullable: true
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               receiver_id:
+ *                 type: integer
+ *               content:
+ *                 type: string
+ *               file:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     responses:
+ *       201:
+ *         description: Сообщение отправлено
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Message'
+ */
+router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   if (req.get('Content-Type')?.startsWith('multipart/form-data')) {
-    return upload.array('file', 20)(req, res, (err) => {
+    return upload.array('file', FILE_LIMITS.MAX_FILES_PER_MESSAGE)(req, res, (err) => {
       if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки файла' });
       next();
     });
   }
   next();
-}, (req, res) => {
-  const { receiver_id, content, type, question, options: optArr, multiple, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name } = req.body;
-  const rid = parseInt(receiver_id, 10);
-  const isPoll = type === 'poll' && question && Array.isArray(optArr) && optArr.length >= 2;
-  const text = (content ?? '').trim();
+}, validate(sendMessageSchema), (req, res) => {
+  const data = req.validated;
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
-  if (Number.isNaN(rid)) return res.status(400).json({ error: 'receiver_id обязателен' });
+  const rid = data.receiver_id;
+  const isPoll = data.type === 'poll' && data.question && Array.isArray(data.options) && data.options.length >= 2;
+  const text = data.content ? sanitizeText(data.content) : '';
   if (!isPoll && !text && files.length === 0) return res.status(400).json({ error: 'content или файл обязательны' });
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
-  const replyToId = reply_to_id != null ? parseInt(reply_to_id, 10) : null;
-  const isFwd = is_forwarded === true || is_forwarded === 'true';
-  const fwdFromId = forward_from_sender_id != null ? parseInt(forward_from_sender_id, 10) : null;
-  const fwdFromName = typeof forward_from_display_name === 'string' ? forward_from_display_name.trim().slice(0, 128) : null;
+  const replyToId = data.reply_to_id || null;
+  const isFwd = data.is_forwarded || false;
+  const fwdFromId = data.forward_from_sender_id || null;
+  const fwdFromName = data.forward_from_display_name ? sanitizeText(data.forward_from_display_name).slice(0, 128) : null;
 
   if (isPoll) {
-    const options = optArr.slice(0, 10).map(o => String(o).trim()).filter(Boolean);
+    const options = data.options.slice(0, 10).map(o => sanitizeText(String(o))).filter(Boolean);
     if (options.length < 2) return res.status(400).json({ error: 'Минимум 2 варианта ответа' });
+    const questionText = sanitizeText(data.question);
     const result = db.prepare(
       `INSERT INTO messages (sender_id, receiver_id, content, message_type, attachment_path, attachment_filename) VALUES (?, ?, ?, 'poll', NULL, NULL)`
-    ).run(me, rid, question);
+    ).run(me, rid, questionText);
     const msgId = result.lastInsertRowid;
     const pollResult = db.prepare(
       'INSERT INTO polls (message_id, question, options, multiple) VALUES (?, ?, ?, ?)'
-    ).run(msgId, question, JSON.stringify(options), multiple ? 1 : 0);
+    ).run(msgId, questionText, JSON.stringify(options), data.multiple ? 1 : 0);
     const pollId = pollResult.lastInsertRowid;
     db.prepare('UPDATE messages SET poll_id = ? WHERE id = ?').run(pollId, msgId);
+    syncMessagesFTS(msgId);
     const row = db.prepare(
       'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id FROM messages WHERE id = ?'
     ).get(msgId);
@@ -209,7 +337,7 @@ router.post('/', (req, res, next) => {
       id: row.id,
       sender_id: row.sender_id,
       receiver_id: row.receiver_id,
-      content: question,
+      content: questionText,
       created_at: row.created_at,
       read_at: row.read_at,
       is_mine: true,
@@ -272,10 +400,12 @@ router.post('/', (req, res, next) => {
     const contentToStore = text || '';
     const result = db.prepare(
       `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name) VALUES (?, ?, ?, ?, ?, 'text', ?, ?, ?, ?, ?, ?, ?)`
-    ).run(me, rid, contentToStore, null, null, attachmentKind, attachmentDurationSec, attachmentEncrypted, Number.isNaN(replyToId) ? null : replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
+    ).run(me, rid, contentToStore, null, null, attachmentKind, attachmentDurationSec, attachmentEncrypted, replyToId, isFwd ? 1 : 0, fwdFromId, fwdFromName);
+    const msgId = result.lastInsertRowid;
+    syncMessagesFTS(msgId);
     const row = db.prepare(
       'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
-    ).get(result.lastInsertRowid);
+    ).get(msgId);
     const payload = buildPayload(row);
     notifyNewMessage(payload);
     return res.status(201).json(payload);
@@ -286,9 +416,18 @@ router.post('/', (req, res, next) => {
     const file = files[i];
     let attachmentPath = file.filename;
     const fullPath = path.join(uploadsDir, file.filename);
+    
+    // Проверка файла на безопасность
+    const fileValidation = await validateFile(fullPath);
+    if (!fileValidation.valid) {
+      // Удаляем небезопасный файл
+      try { fs.unlinkSync(fullPath); } catch (_) {}
+      return res.status(400).json({ error: fileValidation.error || 'Файл не прошёл проверку безопасности' });
+    }
+    
     try {
       const stat = fs.statSync(fullPath);
-      if (stat.size >= MIN_SIZE_TO_COMPRESS) {
+      if (stat.size >= FILE_LIMITS.MIN_SIZE_TO_COMPRESS) {
         const data = fs.readFileSync(fullPath);
         const compressed = zlib.gzipSync(data);
         fs.writeFileSync(fullPath + '.gz', compressed);
@@ -301,9 +440,11 @@ router.post('/', (req, res, next) => {
     const result = db.prepare(
       `INSERT INTO messages (sender_id, receiver_id, content, attachment_path, attachment_filename, message_type, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name) VALUES (?, ?, ?, ?, ?, 'text', ?, ?, ?, ?, ?, ?, ?)`
     ).run(me, rid, contentToStore, attachmentPath, attachmentFilename, attachmentKind, attachmentDurationSec, attachmentEncrypted, i === 0 && !Number.isNaN(replyToId) ? replyToId : null, isFwd ? 1 : 0, fwdFromId, fwdFromName);
+    const msgId = result.lastInsertRowid;
+    syncMessagesFTS(msgId);
     const row = db.prepare(
       'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
-    ).get(result.lastInsertRowid);
+    ).get(msgId);
     const payload = buildPayload(row);
     notifyNewMessage(payload);
     payloads.push(payload);
@@ -311,5 +452,45 @@ router.post('/', (req, res, next) => {
   if (payloads.length === 1) return res.status(201).json(payloads[0]);
   return res.status(201).json({ messages: payloads });
 });
+
+// Удаление сообщения (для всех участников)
+router.delete('/:messageId', validateParams(messageIdParamSchema), asyncHandler(async (req, res) => {
+  const messageId = req.validatedParams.messageId;
+  const me = req.user.userId;
+  
+  // Проверяем, что сообщение существует и принадлежит пользователю
+  const message = db.prepare('SELECT id, sender_id, receiver_id FROM messages WHERE id = ?').get(messageId);
+  if (!message) {
+    return res.status(404).json({ error: 'Сообщение не найдено' });
+  }
+  
+  // Проверяем, что пользователь является отправителем или получателем
+  if (message.sender_id !== me && message.receiver_id !== me) {
+    return res.status(403).json({ error: 'Нет доступа к сообщению' });
+  }
+  
+  // Удаляем сообщение из БД
+  db.prepare('DELETE FROM messages WHERE id = ?').run(messageId);
+  
+  // Удаляем связанные данные (реакции, опросы)
+  db.prepare('DELETE FROM message_reactions WHERE message_id = ?').run(messageId);
+  const poll = db.prepare('SELECT id FROM polls WHERE message_id = ?').get(messageId);
+  if (poll) {
+    db.prepare('DELETE FROM poll_votes WHERE poll_id = ?').run(poll.id);
+    db.prepare('DELETE FROM polls WHERE id = ?').run(poll.id);
+  }
+  
+  // Удаляем из FTS индекса
+  try {
+    db.prepare('DELETE FROM messages_fts WHERE rowid = ?').run(messageId);
+  } catch (_) {}
+  
+  // Уведомляем другого участника чата об удалении
+  const otherUserId = message.sender_id === me ? message.receiver_id : message.sender_id;
+  const { notifyMessageDeleted } = await import('../realtime.js');
+  notifyMessageDeleted(otherUserId, messageId);
+  
+  res.status(204).send();
+}));
 
 export default router;

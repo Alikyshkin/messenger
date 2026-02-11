@@ -4,8 +4,14 @@ import path from 'path';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import { mkdirSync, existsSync, unlinkSync } from 'fs';
+import fs from 'fs';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
+import { validate, updateUserSchema, validateParams, idParamSchema } from '../middleware/validation.js';
+import { validateFile } from '../middleware/fileValidation.js';
+import { FILE_LIMITS, ALLOWED_FILE_TYPES, SEARCH_CONFIG } from '../config/constants.js';
+import { get, set, del, CacheKeys } from '../utils/cache.js';
+import config from '../config/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const avatarsDir = path.join(__dirname, '../uploads/avatars');
@@ -20,10 +26,10 @@ const avatarUpload = multer({
       cb(null, randomUUID() + safe);
     },
   }),
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: FILE_LIMITS.MAX_AVATAR_SIZE },
   fileFilter: (req, file, cb) => {
     const ext = (path.extname(file.originalname) || '').toLowerCase();
-    if (!['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) {
+    if (!ALLOWED_FILE_TYPES.IMAGES.includes(ext)) {
       return cb(new Error('Только изображения (jpg, png, gif, webp)'));
     }
     cb(null, true);
@@ -51,68 +57,86 @@ function userToJson(user, baseUrl, options = {}) {
     email: options.includeEmail ? (user.email ?? null) : undefined,
     birthday: user.birthday ?? null,
     phone: options.includePhone ? (user.phone ?? null) : undefined,
+    is_online: user.is_online !== undefined ? !!(user.is_online) : undefined,
+    last_seen: user.last_seen || null,
   };
   if (user.friends_count !== undefined) j.friends_count = user.friends_count;
   if (j.email === undefined) delete j.email;
   if (j.phone === undefined) delete j.phone;
+  if (j.is_online === undefined) delete j.is_online;
   return j;
 }
 
-router.get('/me', (req, res) => {
+/**
+ * @swagger
+ * /users/me:
+ *   get:
+ *     summary: Получить информацию о текущем пользователе
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Информация о пользователе
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/User'
+ */
+router.get('/me', async (req, res) => {
+  const userId = req.user.userId;
+  
+  // Пытаемся получить из кэша
+  const cacheKey = CacheKeys.user(userId);
+  const cached = await get(cacheKey);
+  if (cached) {
+    return res.json(cached);
+  }
+  
   const user = db.prepare(
-    'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email, birthday, phone FROM users WHERE id = ?'
+    'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email, birthday, phone, is_online, last_seen FROM users WHERE id = ?'
   ).get(req.user.userId);
   if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
   const count = db.prepare('SELECT COUNT(*) as n FROM contacts WHERE user_id = ?').get(req.user.userId);
   user.friends_count = count?.n ?? 0;
-  res.json(userToJson(user, getBaseUrl(req), { includeEmail: true, includePhone: true }));
+  const json = userToJson(user, getBaseUrl(req), { includeEmail: true, includePhone: true });
+  json.is_online = !!(user.is_online);
+  json.last_seen = user.last_seen || null;
+  res.json(json);
 });
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-const BIRTHDAY_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-router.patch('/me', (req, res) => {
-  const { display_name, username, bio, email, birthday } = req.body;
+router.patch('/me', validate(updateUserSchema), (req, res) => {
+  const data = req.validated;
   const me = req.user.userId;
   const updates = [];
   const params = [];
-  if (typeof display_name === 'string') {
+  if (data.display_name !== undefined) {
     updates.push('display_name = ?');
-    params.push(display_name.trim() || null);
+    params.push(data.display_name || null);
   }
-  if (typeof username === 'string') {
-    const u = username.trim().toLowerCase();
-    if (u.length < 3) return res.status(400).json({ error: 'Имя пользователя минимум 3 символа' });
+  if (data.username !== undefined) {
     updates.push('username = ?');
-    params.push(u);
+    params.push(data.username.toLowerCase());
   }
-  if (typeof bio === 'string') {
+  if (data.bio !== undefined) {
     updates.push('bio = ?');
-    params.push(bio.trim().slice(0, 256) || null);
+    params.push(data.bio || null);
   }
-  if (req.body.email !== undefined) {
-    const em = typeof email === 'string' ? email.trim().toLowerCase() : null;
-    if (em && !EMAIL_RE.test(em)) return res.status(400).json({ error: 'Некорректный email' });
+  if (data.email !== undefined) {
     updates.push('email = ?');
-    params.push(em || null);
+    params.push(data.email || null);
   }
-  if (req.body.birthday !== undefined) {
-    const bd = typeof birthday === 'string' ? birthday.trim() || null : null;
-    if (bd != null && !BIRTHDAY_RE.test(bd)) return res.status(400).json({ error: 'День рождения в формате ГГГГ-ММ-ДД' });
+  if (data.birthday !== undefined) {
     updates.push('birthday = ?');
-    params.push(bd);
+    params.push(data.birthday || null);
   }
-  if (req.body.phone !== undefined) {
-    const ph = typeof req.body.phone === 'string' ? req.body.phone.replace(/\D/g, '').trim() || null : null;
-    if (ph != null && ph.length < 10) return res.status(400).json({ error: 'Некорректный номер телефона' });
+  if (data.phone !== undefined) {
     updates.push('phone = ?');
-    params.push(ph);
+    params.push(data.phone || null);
   }
-  if (req.body.public_key !== undefined) {
-    const pk = typeof req.body.public_key === 'string' ? req.body.public_key.trim() : null;
+  if (data.public_key !== undefined) {
     updates.push('public_key = ?');
-    params.push(pk && pk.length <= 500 ? pk : null);
+    params.push(data.public_key || null);
   }
   const sel = 'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email, birthday, phone FROM users WHERE id = ?';
   if (updates.length === 0) {
@@ -132,10 +156,26 @@ router.patch('/me', (req, res) => {
   res.json(userToJson(user, getBaseUrl(req), { includeEmail: true, includePhone: true }));
 });
 
-router.post('/me/avatar', avatarUpload.single('avatar'), (req, res) => {
+router.post('/me/avatar', avatarUpload.single('avatar'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Файл не выбран' });
   const me = req.user.userId;
   const avatarPath = req.file.filename;
+  const fullPath = path.join(avatarsDir, avatarPath);
+  
+  // Проверка файла аватара на безопасность
+    const fileValidation = await validateFile(fullPath, FILE_LIMITS.MAX_AVATAR_SIZE);
+  if (!fileValidation.valid) {
+    // Удаляем небезопасный файл
+    try { fs.unlinkSync(fullPath); } catch (_) {}
+    return res.status(400).json({ error: fileValidation.error || 'Файл не прошёл проверку безопасности' });
+  }
+  
+  // Проверяем, что это изображение
+  if (!fileValidation.mime || !fileValidation.mime.startsWith('image/')) {
+    try { fs.unlinkSync(fullPath); } catch (_) {}
+    return res.status(400).json({ error: 'Аватар должен быть изображением' });
+  }
+  
   db.prepare('UPDATE users SET avatar_path = ? WHERE id = ?').run(avatarPath, me);
   const user = db.prepare('SELECT id, username, display_name, bio, avatar_path, created_at, public_key, email, birthday, phone FROM users WHERE id = ?').get(me);
   user.friends_count = db.prepare('SELECT COUNT(*) as n FROM contacts WHERE user_id = ?').get(me)?.n ?? 0;
@@ -199,28 +239,30 @@ router.post('/find-by-phones', (req, res) => {
 
 router.get('/search', (req, res) => {
   const q = (req.query.q || '').trim();
-  if (q.length < 2) return res.json([]);
+  if (q.length < SEARCH_CONFIG.MIN_QUERY_LENGTH) return res.json([]);
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
   const rows = db.prepare(`
     SELECT id, username, display_name, bio, avatar_path, public_key, birthday FROM users
     WHERE id != ? AND (username LIKE ? OR display_name LIKE ?)
-    LIMIT 20
-  `).all(me, `%${q}%`, `%${q}%`);
+    LIMIT ?
+  `).all(me, `%${q}%`, `%${q}%`, SEARCH_CONFIG.MAX_RESULTS);
   res.json(rows.map(r => userToJson(r, baseUrl)));
 });
 
 /** Публичный профиль: только то, что могут видеть все (без email). Количество друзей — только число, не список. */
-router.get('/:id', (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) return res.status(400).json({ error: 'Некорректный id' });
+router.get('/:id', validateParams(idParamSchema), (req, res) => {
+  const id = req.validatedParams.id;
   const user = db.prepare(
-    'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, birthday FROM users WHERE id = ?'
+    'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, birthday, is_online, last_seen FROM users WHERE id = ?'
   ).get(id);
   if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
   const count = db.prepare('SELECT COUNT(*) as n FROM contacts WHERE user_id = ?').get(id);
   user.friends_count = count?.n ?? 0;
-  res.json(userToJson(user, getBaseUrl(req)));
+  const json = userToJson(user, getBaseUrl(req));
+  json.is_online = !!(user.is_online);
+  json.last_seen = user.last_seen || null;
+  res.json(json);
 });
 
 export default router;
