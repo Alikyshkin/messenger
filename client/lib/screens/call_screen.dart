@@ -333,6 +333,7 @@ class _CallScreenState extends State<CallScreen> {
 
   void _handleSignal(CallSignal s) async {
     if (s.signal == 'hangup' || s.signal == 'reject') {
+      // Сообщение о пропущенном звонке создается автоматически на сервере
       if (mounted) _endCall();
       return;
     }
@@ -492,6 +493,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _rejectCall() {
+    // Сообщение о пропущенном звонке создается автоматически на сервере при отправке сигнала reject
     _ws!.sendCallSignal(widget.peer.id, 'reject');
     _endCall();
   }
@@ -500,6 +502,7 @@ class _CallScreenState extends State<CallScreen> {
     _ws!.sendCallSignal(widget.peer.id, 'hangup');
     _endCall();
   }
+
 
   Future<void> _endCall() async {
     AppSoundService.instance.stopRingtone();
@@ -514,6 +517,7 @@ class _CallScreenState extends State<CallScreen> {
     _pc = null;
     _localStream = null;
     _remoteStream = null;
+    // Сообщение о пропущенном звонке создается автоматически на сервере при отправке сигнала reject
     if (mounted) {
       setState(() => _state = 'ended');
       Navigator.of(context).pop();
@@ -585,8 +589,8 @@ class _CallScreenState extends State<CallScreen> {
           children: [
             _buildVideoLayout(),
             _buildOverlayTitle(),
-            // Показываем превью локального видео только когда есть удаленное видео (чтобы не дублировать)
-            if (_state == 'connected' && _renderersInitialized && _remoteStream != null) _buildLocalPreview(isControlsVisible),
+            // Показываем превью локального видео только когда есть удаленное видео и НЕ в режиме "рядом" (чтобы не дублировать)
+            if (_state == 'connected' && _renderersInitialized && _remoteStream != null && _layout != CallLayout.sideBySide) _buildLocalPreview(isControlsVisible),
             if (_state == 'ringing') _buildIncomingControls(),
             if (isControlsVisible) ...[
               _buildLayoutSwitcher(),
