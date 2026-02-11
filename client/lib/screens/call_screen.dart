@@ -560,14 +560,17 @@ class _CallScreenState extends State<CallScreen> {
       // Получаем медиа только если еще не получили
       if (_localStream == null) {
         await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
-        _applyInitialMute();
       }
       
       _pc = await createPeerConnection(WebRTCConstants.iceServers, {});
       _setupPeerConnection();
+      // Добавляем треки в PeerConnection перед применением mute
       for (var track in _localStream!.getTracks()) {
+        print('Adding track to PeerConnection (accept): ${track.kind}, enabled: ${track.enabled}');
         await _pc!.addTrack(track, _localStream!);
       }
+      // Применяем mute после добавления треков
+      _applyInitialMute();
       var desc = RTCSessionDescription(
         offerPayload['sdp'] as String,
         offerPayload['type'] as String,
