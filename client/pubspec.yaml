@@ -53,6 +53,7 @@ dependencies:
   connectivity_plus: ^6.0.5
   archive: ^4.0.7
   flutter_contacts: ^1.1.9
+  go_router: ^14.2.0
 
 dev_dependencies:
   flutter_test:

@@ -8,10 +8,7 @@ import 'services/locale_service.dart';
 import 'services/theme_service.dart';
 import 'services/ws_service.dart';
 import 'services/call_minimized_service.dart';
-import 'screens/login_screen.dart';
-import 'screens/home_screen.dart';
-import 'widgets/ws_call_listener.dart';
-import 'widgets/minimized_call_overlay.dart';
+import 'routes/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -218,10 +215,13 @@ class MessengerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => WsService()),
         ChangeNotifierProvider(create: (_) => CallMinimizedService()),
       ],
-      child: Consumer2<ThemeService, LocaleService>(
-        builder: (context, themeService, localeService, _) {
-          final locale = localeService.locale ?? const Locale('ru');
-          return MaterialApp(
+      child: Consumer<AuthService>(
+        builder: (context, authService, _) {
+          return Consumer2<ThemeService, LocaleService>(
+            builder: (context, themeService, localeService, _) {
+              final locale = localeService.locale ?? const Locale('ru');
+              final router = createAppRouter(authService);
+              return MaterialApp.router(
             title: 'Мессенджер',
             debugShowCheckedModeBanner: false,
             locale: locale,
@@ -234,109 +234,11 @@ class MessengerApp extends StatelessWidget {
             theme: _buildLightTheme(),
             darkTheme: _buildDarkTheme(),
             themeMode: themeService.themeMode,
-            initialRoute: '/',
-            routes: {
-              '/': (context) {
-                final auth = context.watch<AuthService>();
-                if (!auth.loaded) {
-                  return const _AppLoadingScreen();
-                }
-                return auth.isLoggedIn
-                    ? MinimizedCallOverlay(
-                        child: const WsCallListener(child: HomeScreen()),
-                      )
-                    : const LoginScreen();
-              },
-              '/login': (context) => const LoginScreen(),
+                routerConfig: router,
+              );
             },
           );
         },
-      ),
-    );
-  }
-}
-
-/// Красивый экран загрузки вместо белого — в одном стиле с загрузкой в index.html.
-class _AppLoadingScreen extends StatelessWidget {
-  const _AppLoadingScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final primary = theme.colorScheme.primary;
-    final surface = theme.scaffoldBackgroundColor;
-    return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isDark
-                ? [
-                    surface,
-                    theme.colorScheme.surfaceContainerHighest,
-                  ]
-                : [
-                    AppColors.lightScaffoldBackground,
-                    AppColors.lightSurfaceContainerHighest,
-                  ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      primary,
-                      primary.withValues(alpha: 0.85),
-                    ],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: primary.withValues(alpha: 0.35),
-                      blurRadius: 24,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  Icons.chat_bubble_outline_rounded,
-                  size: 44,
-                  color: theme.colorScheme.onPrimary,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Мессенджер',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              const SizedBox(height: 28),
-              SizedBox(
-                width: 40,
-                height: 40,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(primary),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

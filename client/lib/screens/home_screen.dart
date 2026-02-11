@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:go_router/go_router.dart';
 import '../database/local_db.dart';
 import '../l10n/app_localizations.dart';
 import '../models/chat.dart';
@@ -10,16 +11,9 @@ import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../services/ws_service.dart';
 import '../services/app_sound_service.dart';
-import '../utils/app_page_route.dart';
 import '../utils/page_visibility.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/offline_indicator.dart';
-import 'chat_screen.dart';
-import 'contacts_screen.dart';
-import 'create_group_screen.dart';
-import 'group_chat_screen.dart';
-import 'profile_screen.dart';
-import 'start_chat_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -143,36 +137,28 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.edit_outlined),
                   tooltip: context.tr('new_chat'),
                   onPressed: () {
-                    Navigator.of(context).push(
-                      AppPageRoute(builder: (_) => const StartChatScreen()),
-                    ).then((_) => _load());
+                    context.push('/start-chat').then((_) => _load());
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.group_add_outlined),
                   tooltip: context.tr('new_group'),
                   onPressed: () {
-                    Navigator.of(context).push(
-                      AppPageRoute(builder: (_) => const CreateGroupScreen()),
-                    ).then((_) => _load());
+                    context.push('/create-group').then((_) => _load());
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.group_outlined),
                   tooltip: context.tr('contacts'),
                   onPressed: () {
-                    Navigator.of(context).push(
-                      AppPageRoute(builder: (_) => const ContactsScreen()),
-                    );
+                    context.push('/contacts');
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.account_circle_outlined),
                   tooltip: context.tr('my_profile'),
                   onPressed: () {
-                    Navigator.of(context).push(
-                      AppPageRoute(builder: (_) => const ProfileScreen()),
-                    );
+                    context.push('/profile');
                   },
                 ),
               ],
@@ -300,13 +286,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         : null,
                                     onTap: () async {
                                       if (isGroup) {
-                                        await Navigator.of(context).push(
-                                          AppPageRoute(builder: (_) => GroupChatScreen(group: c.group!)),
-                                        );
+                                        await context.push('/group/${c.group!.id}');
                                       } else {
-                                        await Navigator.of(context).push(
-                                          AppPageRoute(builder: (_) => ChatScreen(peer: c.peer!)),
-                                        );
+                                        await context.push('/chat/${c.peer!.id}');
                                       }
                                       _load();
                                     },

@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/api.dart';
-import '../utils/app_page_route.dart';
-import 'forgot_password_screen.dart';
-import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -40,7 +38,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _password.text,
       );
       if (!mounted) return;
-      Navigator.of(context).pushReplacementNamed('/');
+      context.go('/');
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
@@ -148,17 +146,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             onPressed: _loading
                                 ? null
                                 : () {
-                                    Navigator.of(context).push(
-                                      AppPageRoute(builder: (_) => const ForgotPasswordScreen()),
-                                    );
+                                    context.push('/forgot-password');
                                   },
                             child: Text(context.tr('forgot_password')),
                           ),
                           TextButton(
                             onPressed: () {
-                              Navigator.of(context).push(
-                                AppPageRoute(builder: (_) => const RegisterScreen()),
-                              );
+                              context.push('/register');
                             },
                             child: Text(context.tr('no_account_register')),
                           ),
