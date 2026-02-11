@@ -12,10 +12,10 @@ export function securityHeaders() {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"], // Для Swagger UI
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Для Swagger UI
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.gstatic.com"], // Для Flutter CanvasKit и Swagger UI
         imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'", "data:"],
+        connectSrc: ["'self'", "https://www.gstatic.com", "https://fonts.gstatic.com"], // Для Flutter CanvasKit и Google Fonts
+        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"], // Для Google Fonts
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
         frameSrc: ["'none'"],
