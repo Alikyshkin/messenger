@@ -52,7 +52,27 @@ jobs:
         key: ${{ secrets.DEPLOY_SSH_KEY }}
         script: |
           cd /opt/messenger
-          docker-compose pull
-          docker-compose up -d
-          docker-compose exec -T messenger-server npm run migrate || true
-          docker-compose restart messenger-server || true
+          # Останавливаем PM2 процесс, если он запущен (миграция с PM2 на Docker)
+          if command -v pm2 &> /dev/null; then
+            pm2 stop messenger 2>/dev/null || true
+            pm2 delete messenger 2>/dev/null || true
+            echo "Stopped PM2 process (if it was running)"
+          fi
+          # Проверяем, что docker-compose.yml существует и использует образ из Docker Hub
+          if [ ! -f docker-compose.yml ]; then
+            echo "Error: docker-compose.yml not found in /opt/messenger"
+            echo "Please create docker-compose.yml on the server (see docs/server-docker-setup.md)"
+            exit 1
+          fi
+          # Используем docker compose (новая версия) или docker-compose (старая)
+          if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+            docker compose pull
+            docker compose up -d
+            docker compose exec -T messenger-server npm run migrate || true
+            docker compose restart messenger-server || true
+          else
+            docker-compose pull
+            docker-compose up -d
+            docker-compose exec -T messenger-server npm run migrate || true
+            docker-compose restart messenger-server || true
+          fi
