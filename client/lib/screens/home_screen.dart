@@ -374,9 +374,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                               final user = auth.user;
                               final isActive = _currentView == _NavigationItem.profile;
                               return IconButton(
-                                icon: (user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty)
+                                icon: (user?.avatarUrl != null && user.avatarUrl!.isNotEmpty)
                                     ? UserAvatar(
-                                        user: user!,
+                                        user: user,
                                         radius: AppSizes.avatarSM,
                                       )
                                     : Icon(
