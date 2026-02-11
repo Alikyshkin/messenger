@@ -838,7 +838,16 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (!participant.hasAudio)
+                          if (participant.state == 'connecting')
+                            const SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.blue,
+                              ),
+                            )
+                          else if (!participant.hasAudio)
                             const Icon(
                               Icons.mic_off,
                               color: Colors.red,
@@ -856,6 +865,29 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
                       ),
                     ),
                   ),
+                  // Индикатор состояния подключения
+                  if (participant.state == 'connecting')
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade700,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'Подключение...',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),

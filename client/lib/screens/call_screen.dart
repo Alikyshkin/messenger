@@ -57,6 +57,7 @@ class _CallScreenState extends State<CallScreen> {
   String _state = 'init'; // init | calling | ringing | connected | ended
   String? _error;
   final List<Map<String, dynamic>> _pendingCandidates = [];
+  bool _offerReceived = false; // Флаг для защиты от дублирующих offer
 
   /// Видео и микрофон включены по умолчанию для видеозвонка.
   /// Для голосового звонка камера выключена.
@@ -112,8 +113,13 @@ class _CallScreenState extends State<CallScreen> {
     setState(() => _state = 'calling');
     try {
       await _renderersFuture;
-      await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
-      _applyInitialMute();
+      
+      // Получаем медиа только если еще не получили
+      if (_localStream == null) {
+        await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
+        _applyInitialMute();
+      }
+      
       _pc = await createPeerConnection(_iceServers, {});
       _setupPeerConnection();
       for (var track in _localStream!.getTracks()) {
@@ -128,11 +134,15 @@ class _CallScreenState extends State<CallScreen> {
         'sdp': offer.sdp,
         'type': offer.type,
       }, widget.isVideoCall);
+      
+      // Устанавливаем флаг подключения после отправки offer
+      setState(() => _isConnecting = true);
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _state = 'ended';
         _error = _mediaErrorMessage(e);
+        _isConnecting = false;
       });
     }
   }
@@ -405,10 +415,24 @@ class _CallScreenState extends State<CallScreen> {
         return;
       }
       if (_state == 'ringing') return;
+      
+      // Защита от дублирующих offer
+      if (_offerReceived && _pc != null) {
+        print('Duplicate offer received, ignoring');
+        return;
+      }
+      _offerReceived = true;
+      
       try {
+        setState(() => _isConnecting = true);
         await _renderersFuture;
-        await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
-        _applyInitialMute();
+        
+        // Получаем медиа только если еще не получили
+        if (_localStream == null) {
+          await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
+          _applyInitialMute();
+        }
+        
         _pc = await createPeerConnection(_iceServers, {});
         _setupPeerConnection();
         print('Adding local tracks (handle offer): ${_localStream!.getTracks().length}');
@@ -445,7 +469,10 @@ class _CallScreenState extends State<CallScreen> {
         }, widget.isVideoCall);
         if (mounted) {
           AppSoundService.instance.stopRingtone();
-          setState(() => _state = 'connected');
+          setState(() {
+            _state = 'connected';
+            _isConnecting = false;
+          });
         }
       } catch (e) {
         if (mounted) {
@@ -453,6 +480,7 @@ class _CallScreenState extends State<CallScreen> {
           setState(() {
             _state = 'ended';
             _error = _mediaErrorMessage(e);
+            _isConnecting = false;
           });
         }
       }
@@ -460,27 +488,41 @@ class _CallScreenState extends State<CallScreen> {
     }
     if (s.signal == 'answer' && s.payload != null) {
       if (_pc == null) return;
-      var desc = RTCSessionDescription(
-        s.payload!['sdp'] as String,
-        s.payload!['type'] as String,
-      );
-      await _pc!.setRemoteDescription(desc);
-      // Обрабатываем отложенные ICE кандидаты
-      for (var c in _pendingCandidates) {
-        try {
-          await _pc!.addCandidate(RTCIceCandidate(
-            c['candidate'] as String,
-            c['sdpMid'] as String?,
-            c['sdpMLineIndex'] as int?,
-          ));
-        } catch (e) {
-          print('Error adding pending candidate: $e');
+      try {
+        var desc = RTCSessionDescription(
+          s.payload!['sdp'] as String,
+          s.payload!['type'] as String,
+        );
+        await _pc!.setRemoteDescription(desc);
+        // Обрабатываем отложенные ICE кандидаты
+        for (var c in _pendingCandidates) {
+          try {
+            await _pc!.addCandidate(RTCIceCandidate(
+              c['candidate'] as String,
+              c['sdpMid'] as String?,
+              c['sdpMLineIndex'] as int?,
+            ));
+          } catch (e) {
+            print('Error adding pending candidate: $e');
+          }
         }
-      }
-      _pendingCandidates.clear();
-      if (mounted) {
-        AppSoundService.instance.stopRingtone();
-        setState(() => _state = 'connected');
+        _pendingCandidates.clear();
+        if (mounted) {
+          AppSoundService.instance.stopRingtone();
+          setState(() {
+            _state = 'connected';
+            _isConnecting = true; // Начинаем процесс подключения после получения answer
+          });
+        }
+      } catch (e) {
+        print('Error handling answer signal: $e');
+        if (mounted) {
+          setState(() {
+            _state = 'ended';
+            _error = 'Ошибка при установке соединения';
+            _isConnecting = false;
+          });
+        }
       }
       return;
     }
@@ -502,11 +544,19 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _acceptCall() async {
     final offerPayload = widget.initialSignal?.payload;
     if (offerPayload == null) return;
-    setState(() => _state = 'init');
+    setState(() {
+      _state = 'init';
+      _isConnecting = true;
+    });
     try {
       await _renderersFuture;
-      await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
-      _applyInitialMute();
+      
+      // Получаем медиа только если еще не получили
+      if (_localStream == null) {
+        await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
+        _applyInitialMute();
+      }
+      
       _pc = await createPeerConnection(_iceServers, {});
       _setupPeerConnection();
       for (var track in _localStream!.getTracks()) {
@@ -532,16 +582,19 @@ class _CallScreenState extends State<CallScreen> {
       _pendingCandidates.clear();
       var answer = await _pc!.createAnswer({
         'offerToReceiveAudio': true,
-        'offerToReceiveVideo': true,
+        'offerToReceiveVideo': widget.isVideoCall,
       });
       await _pc!.setLocalDescription(answer);
       _ws!.sendCallSignal(widget.peer.id, 'answer', {
         'sdp': answer.sdp,
         'type': answer.type,
-      });
+      }, widget.isVideoCall);
       if (mounted) {
         AppSoundService.instance.stopRingtone();
-        setState(() => _state = 'connected');
+        setState(() {
+          _state = 'connected';
+          _isConnecting = true; // Начинаем процесс подключения
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -549,6 +602,7 @@ class _CallScreenState extends State<CallScreen> {
         setState(() {
           _state = 'ended';
           _error = _mediaErrorMessage(e);
+          _isConnecting = false;
         });
       }
     }
@@ -715,14 +769,47 @@ class _CallScreenState extends State<CallScreen> {
                 style: TextStyle(color: Colors.white70, fontSize: 16),
               )
             else if (_state == 'calling')
-              const Text(
-                'Вызов...',
-                style: TextStyle(color: Colors.white70, fontSize: 16),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Вызов...',
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                ],
               )
             else if (_state == 'ringing')
               const Text(
                 'Входящий звонок',
                 style: TextStyle(color: Colors.white70, fontSize: 16),
+              )
+            else if (_state == 'connected' && !showRemote)
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Подключение...',
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                ],
               ),
           ],
         ),
@@ -734,6 +821,8 @@ class _CallScreenState extends State<CallScreen> {
     final showRemote = _state == 'connected' && _remoteStream != null;
     // Локальное видео показываем только если есть удаленное (чтобы не дублировать в двух окнах)
     final showLocal = _state == 'connected' && _localStream != null && showRemote;
+    final isConnecting = _state == 'connected' && _isConnecting && !showRemote;
+    
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -752,6 +841,24 @@ class _CallScreenState extends State<CallScreen> {
           RTCVideoView(
             _screenRenderer,
             objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+          )
+        else if (isConnecting)
+          // Показываем индикатор подключения когда звонок connected но еще нет remoteStream
+          Container(
+            color: const Color(0xFF1A1A1A),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(color: Colors.orange),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Подключение...',
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
           )
         else
           Container(color: const Color(0xFF1A1A1A)),
