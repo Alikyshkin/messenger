@@ -93,21 +93,6 @@ app.use(csrfProtect());
 // Endpoint для получения CSRF токена (для веб-форм)
 app.get('/csrf-token', csrfTokenRoute);
 
-// Корневой путь - информация о сервере
-app.get('/', (req, res) => {
-  res.json({
-    name: 'Messenger API',
-    version: '1.0.0',
-    status: 'running',
-    endpoints: {
-      docs: '/api-docs',
-      health: '/health',
-      metrics: '/metrics',
-      api: '/api',
-    },
-  });
-});
-
 app.use('/api', apiLimiter); // Общий лимит для всех API запросов
 
 // API Versioning (должен быть до routes, но после rate limiting)
@@ -247,13 +232,8 @@ app.get('/live', (req, res) => {
   res.json({ alive: true });
 });
 
-// Обработка 404 ошибок (должен быть после всех маршрутов)
-app.use(notFoundHandler);
-
-// Централизованный обработчик ошибок (должен быть последним)
-app.use(errorHandler);
-
-// Веб-клиент (Flutter build) — отдаём по корню; без долгого кэша, чтобы после пуша сразу видеть изменения
+// Веб-клиент (Flutter build) — отдаём статические файлы и fallback для SPA роутинга
+// Без долгого кэша, чтобы после пуша сразу видеть изменения
 app.use(express.static(publicDir, {
   setHeaders: (res, path) => {
     const p = path.toLowerCase();
@@ -261,15 +241,8 @@ app.use(express.static(publicDir, {
       res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
   },
 }));
-app.get(/^\/(?!auth|contacts|messages|users|polls|uploads|health|reset-password|ws)/, (req, res) => {
-  const index = join(publicDir, 'index.html');
-  if (existsSync(index)) {
-    res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
-    return res.sendFile(index);
-  }
-  res.status(404).send('Web client not deployed. Push to main to deploy, or run locally: flutter run -d chrome --dart-define=API_BASE_URL=http://THIS_SERVER:3000');
-});
 
+// Обработчик для сброса пароля (должен быть до SPA fallback)
 app.get('/reset-password', (req, res) => {
   const token = req.query.token || '';
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -329,6 +302,22 @@ app.get('/reset-password', (req, res) => {
 </html>
   `);
 });
+
+// Fallback для SPA роутинга - отдаём index.html для всех путей, кроме API
+app.get(/^\/(?!auth|contacts|messages|users|polls|uploads|health|reset-password|ws|api|api-docs|metrics|csrf-token|live|ready)/, (req, res) => {
+  const index = join(publicDir, 'index.html');
+  if (existsSync(index)) {
+    res.setHeader('Cache-Control', 'no-cache, max-age=0, must-revalidate');
+    return res.sendFile(index);
+  }
+  res.status(404).send('Web client not deployed. Push to main to deploy, or run locally: flutter run -d chrome --dart-define=API_BASE_URL=http://THIS_SERVER:3000');
+});
+
+// Обработка 404 ошибок (должен быть после всех маршрутов)
+app.use(notFoundHandler);
+
+// Централизованный обработчик ошибок (должен быть последним)
+app.use(errorHandler);
 
 const wss = new WebSocketServer({ server, path: '/ws' });
 

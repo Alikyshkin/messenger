@@ -13,6 +13,18 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Set up Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.x'
+        channel: 'stable'
+    
+    - name: Build Flutter web app
+      working-directory: ./client
+      run: |
+        flutter pub get
+        flutter build web --release
+    
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
     
@@ -42,6 +54,29 @@ jobs:
           ${{ secrets.DOCKER_USERNAME }}/messenger-server:${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+    
+    - name: Deploy Flutter web app to server
+      if: github.event_name != 'pull_request'
+      uses: appleboy/ssh-action@v1
+      with:
+        host: ${{ secrets.DEPLOY_HOST }}
+        username: ${{ secrets.DEPLOY_USER }}
+        key: ${{ secrets.DEPLOY_SSH_KEY }}
+        script: |
+          mkdir -p /opt/messenger/public
+          cd /opt/messenger/public
+          # Удаляем старые файлы перед копированием новых
+          rm -rf *
+    - name: Copy Flutter web app files
+      if: github.event_name != 'pull_request'
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.DEPLOY_HOST }}
+        username: ${{ secrets.DEPLOY_USER }}
+        key: ${{ secrets.DEPLOY_SSH_KEY }}
+        source: "client/build/web/*"
+        target: "/opt/messenger/public/"
+        strip_components: 3
     
     - name: Deploy to server
       if: github.event_name != 'pull_request'
