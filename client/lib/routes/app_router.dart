@@ -46,6 +46,11 @@ GoRouter createAppRouter(AuthService authService) {
         return '/';
       }
       
+      // Разрешаем навигацию на /profile для авторизованных пользователей
+      if (isLoggedIn && state.matchedLocation == '/profile') {
+        return null;
+      }
+      
       return null; // Разрешаем навигацию
     },
     routes: [

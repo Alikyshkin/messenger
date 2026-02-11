@@ -7,6 +7,7 @@ import '../database/local_db.dart';
 import '../l10n/app_localizations.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
+import '../models/friend_request.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../services/ws_service.dart';
@@ -15,6 +16,7 @@ import '../utils/page_visibility.dart';
 import '../widgets/skeleton.dart';
 import '../widgets/offline_indicator.dart';
 import '../widgets/app_update_banner.dart';
+import '../widgets/user_avatar.dart';
 import '../services/app_update_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -30,6 +32,8 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   String? _error;
   StreamSubscription? _newMessageSub;
   StreamSubscription<Message>? _newMessagePayloadSub;
+  List<FriendRequest> _friendRequests = [];
+  int _totalUnreadCount = 0;
 
   bool _initialized = false;
 
@@ -53,9 +57,11 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         }
         
         _load();
+        _loadFriendRequests();
         _newMessageSub = ws.onNewMessage.listen((_) {
           if (!mounted) return;
           _load();
+          _loadFriendRequests();
         });
         _newMessagePayloadSub = ws.onNewMessageWithPayload.listen((msg) {
           if (!mounted || isPageVisible) return;
@@ -107,9 +113,13 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         if (chat.peer != null) await LocalDb.upsertChat(chat);
       }
       if (!mounted) return;
+      // Подсчитываем общее количество непрочитанных сообщений
+      final totalUnread = list.fold<int>(0, (sum, chat) => sum + chat.unreadCount);
+      
       setState(() {
         _chats = list;
         _loading = false;
+        _totalUnreadCount = totalUnread;
       });
       _flushOutbox();
     } catch (e) {
@@ -139,6 +149,22 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     if (items.isNotEmpty && mounted) _load();
   }
 
+  Future<void> _loadFriendRequests() async {
+    final auth = context.read<AuthService>();
+    if (!auth.isLoggedIn) return;
+    try {
+      final api = Api(auth.token);
+      final requests = await api.getFriendRequestsIncoming();
+      if (mounted) {
+        setState(() {
+          _friendRequests = requests;
+        });
+      }
+    } catch (_) {
+      // Игнорируем ошибки загрузки заявок
+    }
+  }
+
   String _previewContent(BuildContext context, String content) {
     if (content.startsWith('e2ee:')) return context.tr('message');
     return content;
@@ -153,32 +179,107 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               title: Text(context.tr('chats')),
               actions: [
                 IconButton(
-                  icon: const Icon(Icons.edit_outlined),
+                  icon: Stack(
+                    children: [
+                      const Icon(Icons.edit_outlined),
+                      if (_totalUnreadCount > 0)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              _totalUnreadCount > 99 ? '99+' : '$_totalUnreadCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                   tooltip: context.tr('new_chat'),
                   onPressed: () {
-                    context.push('/start-chat').then((_) => _load());
+                    context.push('/start-chat').then((_) {
+                      _load();
+                      _loadFriendRequests();
+                    });
                   },
                 ),
                 IconButton(
                   icon: const Icon(Icons.group_add_outlined),
                   tooltip: context.tr('new_group'),
                   onPressed: () {
-                    context.push('/create-group').then((_) => _load());
+                    context.push('/create-group').then((_) {
+                      _load();
+                      _loadFriendRequests();
+                    });
                   },
                 ),
                 IconButton(
-                  icon: const Icon(Icons.group_outlined),
+                  icon: Stack(
+                    children: [
+                      const Icon(Icons.group_outlined),
+                      if (_friendRequests.isNotEmpty)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              _friendRequests.length > 99 ? '99+' : '${_friendRequests.length}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                   tooltip: context.tr('contacts'),
                   onPressed: () {
-                    context.push('/contacts');
+                    context.push('/contacts').then((_) {
+                      _loadFriendRequests();
+                    });
                   },
                 ),
-                IconButton(
-                  icon: const Icon(Icons.account_circle_outlined),
-                  tooltip: context.tr('my_profile'),
-                  onPressed: () {
-                    // Используем go_router для навигации
-                    context.push('/profile');
+                Consumer<AuthService>(
+                  builder: (context, auth, _) {
+                    final user = auth.user;
+                    return IconButton(
+                      icon: user?.avatarUrl != null && user!.avatarUrl!.isNotEmpty
+                          ? UserAvatar(
+                              user: user,
+                              radius: 16,
+                            )
+                          : const Icon(Icons.account_circle_outlined),
+                      tooltip: context.tr('my_profile'),
+                      onPressed: () {
+                        context.push('/profile');
+                      },
+                    );
                   },
                 ),
               ],
