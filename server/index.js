@@ -31,6 +31,7 @@ import { metricsMiddleware, getMetrics, metrics } from './utils/metrics.js';
 import { initCache } from './utils/cache.js';
 import { initFCM } from './utils/pushNotifications.js';
 import { securityHeaders } from './middleware/security.js';
+import { csrfProtect, csrfTokenRoute } from './middleware/csrf.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const uploadsDir = join(__dirname, 'uploads');
@@ -78,6 +79,14 @@ app.use(compression({
 }));
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true })); // Для CSRF токенов в формах
+
+// CSRF Protection (только для запросов без Bearer токена)
+app.use(csrfProtect());
+
+// Endpoint для получения CSRF токена (для веб-форм)
+app.get('/csrf-token', csrfTokenRoute);
+
 app.use('/api', apiLimiter); // Общий лимит для всех API запросов
 // Явно указываем UTF-8 для всех JSON-ответов API (корректное отображение кириллицы).
 app.use((req, res, next) => {
