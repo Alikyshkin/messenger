@@ -53,7 +53,7 @@ class _CallScreenState extends State<CallScreen> {
   final RTCVideoRenderer _screenRenderer = RTCVideoRenderer();
   bool _renderersInitialized = false;
   late Future<void> _renderersFuture;
-  String _state = 'init'; // init | calling | ringing | connected | ended
+  String _state = 'init'; // init | calling | ringing | connected | ended | peer_disconnected
   String? _error;
   final List<Map<String, dynamic>> _pendingCandidates = [];
   bool _offerReceived = false; // Флаг для защиты от дублирующих offer
@@ -386,8 +386,25 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _handleSignal(CallSignal s) async {
-    if (s.signal == 'hangup' || s.signal == 'reject') {
-      // Сообщение о пропущенном звонке создается автоматически на сервере
+    if (s.signal == 'hangup') {
+      // При получении hangup не завершаем звонок полностью, а переводим в состояние ожидания переподключения
+      // Пользователь может остаться в звонке и дождаться переподключения собеседника
+      if (mounted) {
+        setState(() {
+          _state = 'peer_disconnected';
+          _remoteStream = null;
+          _remoteRenderer.srcObject = null;
+        });
+        // Закрываем PeerConnection, но не завершаем звонок полностью
+        await _pc?.close();
+        _pc = null;
+        _offerReceived = false;
+        _isConnecting = false;
+      }
+      return;
+    }
+    if (s.signal == 'reject') {
+      // При reject завершаем звонок полностью (собеседник отклонил)
       if (mounted) _endCall();
       return;
     }
@@ -397,6 +414,11 @@ class _CallScreenState extends State<CallScreen> {
         return;
       }
       if (_state == 'ringing') return;
+      // Если пришел offer в состоянии peer_disconnected, это переподключение - обрабатываем
+      if (_state == 'peer_disconnected') {
+        // Сбрасываем флаг для обработки нового offer
+        _offerReceived = false;
+      }
       
       // Защита от дублирующих offer
       if (_offerReceived && _pc != null) {
@@ -681,7 +703,7 @@ class _CallScreenState extends State<CallScreen> {
     }
 
     final myName = context.read<AuthService>().user?.displayName ?? 'Я';
-    final isControlsVisible = _state == 'calling' || _state == 'connected';
+    final isControlsVisible = _state == 'calling' || _state == 'connected' || _state == 'peer_disconnected';
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
@@ -812,13 +834,13 @@ class _CallScreenState extends State<CallScreen> {
   Widget _buildSpeakerLayout() {
     final showRemote = _state == 'connected' && _remoteStream != null;
     // Показываем локальное видео когда:
-    // 1. Есть локальный поток и (звонок calling/connected) И нет удаленного потока ИЛИ
+    // 1. Есть локальный поток и (звонок calling/connected/peer_disconnected) И нет удаленного потока ИЛИ
     // 2. Есть локальный поток и есть удаленный поток (для режима докладчика локальное показывается отдельно)
     final showLocal = _localStream != null && 
-                      ((_state == 'calling' || _state == 'connected') && !showRemote || 
+                      ((_state == 'calling' || _state == 'connected' || _state == 'peer_disconnected') && !showRemote || 
                        (_state == 'connected' && showRemote && _layout == CallLayout.speaker));
     final isConnecting = _state == 'connected' && _isConnecting && !showRemote;
-    final isWaiting = _state == 'calling' || (_state == 'connected' && !showRemote && !isConnecting);
+    final isWaiting = _state == 'calling' || (_state == 'connected' && !showRemote && !isConnecting) || _state == 'peer_disconnected';
     
     return Stack(
       fit: StackFit.expand,
@@ -871,6 +893,11 @@ class _CallScreenState extends State<CallScreen> {
                             'Ожидание подключения...',
                             style: TextStyle(color: Colors.white70, fontSize: 14),
                           )
+                        else if (_state == 'peer_disconnected')
+                          const Text(
+                            'Собеседник отключился. Ожидание переподключения...',
+                            style: TextStyle(color: Colors.white70, fontSize: 14),
+                          )
                         else
                           const Text(
                             'Подключение...',
@@ -917,7 +944,7 @@ class _CallScreenState extends State<CallScreen> {
     final showRemote = _state == 'connected' && _remoteStream != null;
     final showLocal = _localStream != null || _screenShareEnabled;
     final isConnecting = _state == 'connected' && _isConnecting && !showRemote;
-    final isWaiting = _state == 'calling' || (_state == 'connected' && !showRemote && !isConnecting);
+    final isWaiting = _state == 'calling' || (_state == 'connected' && !showRemote && !isConnecting) || _state == 'peer_disconnected';
     
     return Row(
       children: [
@@ -981,7 +1008,11 @@ class _CallScreenState extends State<CallScreen> {
                           Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
-                              _state == 'calling' ? 'Ожидание...' : 'Подключение...',
+                              _state == 'calling' 
+                                  ? 'Ожидание...' 
+                                  : _state == 'peer_disconnected'
+                                      ? 'Отключен'
+                                      : 'Подключение...',
                               style: const TextStyle(color: Colors.white54, fontSize: 12),
                             ),
                           ),
@@ -1018,7 +1049,9 @@ class _CallScreenState extends State<CallScreen> {
                           ? widget.isVideoCall ? 'Входящий видеозвонок' : 'Входящий звонок'
                           : _state == 'connected'
                               ? widget.isVideoCall ? 'Видеозвонок' : 'Голосовой звонок'
-                              : '...',
+                              : _state == 'peer_disconnected'
+                                  ? 'Ожидание переподключения...'
+                                  : '...',
                   style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
