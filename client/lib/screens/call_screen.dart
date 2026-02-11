@@ -691,8 +691,14 @@ class _CallScreenState extends State<CallScreen> {
           children: [
             _buildVideoLayout(),
             if (widget.isVideoCall) _buildOverlayTitle(),
-            // Показываем превью локального видео только для видеозвонков, когда есть удаленное видео и НЕ в режиме "рядом"
-            if (widget.isVideoCall && _state == 'connected' && _renderersInitialized && _remoteStream != null && _layout != CallLayout.sideBySide) _buildLocalPreview(isControlsVisible),
+            // Показываем превью локального видео только для видеозвонков в режиме докладчика или обычном режиме когда есть удаленное видео
+            // НЕ показываем в режиме "рядом" (там локальное видео уже в основном layout)
+            if (widget.isVideoCall && 
+                _state == 'connected' && 
+                _renderersInitialized && 
+                _remoteStream != null && 
+                _layout != CallLayout.sideBySide &&
+                _localStream != null) _buildLocalPreview(isControlsVisible),
             if (_state == 'ringing') _buildIncomingControls(),
             if (isControlsVisible) ...[
               if (widget.isVideoCall) _buildLayoutSwitcher(),
@@ -805,31 +811,85 @@ class _CallScreenState extends State<CallScreen> {
 
   Widget _buildSpeakerLayout() {
     final showRemote = _state == 'connected' && _remoteStream != null;
-    // Локальное видео показываем только если есть удаленное (чтобы не дублировать в двух окнах)
-    final showLocal = _state == 'connected' && _localStream != null && showRemote;
+    // Показываем локальное видео когда:
+    // 1. Есть локальный поток и (звонок calling/connected) И нет удаленного потока ИЛИ
+    // 2. Есть локальный поток и есть удаленный поток (для режима докладчика локальное показывается отдельно)
+    final showLocal = _localStream != null && 
+                      ((_state == 'calling' || _state == 'connected') && !showRemote || 
+                       (_state == 'connected' && showRemote && _layout == CallLayout.speaker));
     final isConnecting = _state == 'connected' && _isConnecting && !showRemote;
+    final isWaiting = _state == 'calling' || (_state == 'connected' && !showRemote && !isConnecting);
     
     return Stack(
       fit: StackFit.expand,
       children: [
+        // Удаленное видео (приоритет 1)
         if (showRemote)
           RTCVideoView(
             _remoteRenderer,
             objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
           )
+        // Локальное видео (приоритет 2) - показываем когда calling или connected без remote
         else if (showLocal && !_screenShareEnabled)
-          RTCVideoView(
-            _localRenderer,
-            mirror: _isFrontCamera, // Зеркалим только переднюю камеру
-            objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+          Stack(
+            fit: StackFit.expand,
+            children: [
+              RTCVideoView(
+                _localRenderer,
+                mirror: _isFrontCamera, // Зеркалим только переднюю камеру
+                objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
+              ),
+              // Показываем оверлей с информацией о втором участнике когда ожидаем подключения
+              if (isWaiting)
+                Container(
+                  color: Colors.black54,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.blue.shade700,
+                          backgroundImage: widget.peer.avatarUrl != null && widget.peer.avatarUrl!.isNotEmpty
+                              ? NetworkImage(widget.peer.avatarUrl!)
+                              : null,
+                          child: widget.peer.avatarUrl == null || widget.peer.avatarUrl!.isEmpty
+                              ? Text(
+                                  widget.peer.displayName.isNotEmpty ? widget.peer.displayName[0].toUpperCase() : '?',
+                                  style: const TextStyle(color: Colors.white, fontSize: 32),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          widget.peer.displayName,
+                          style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 8),
+                        if (_state == 'calling')
+                          const Text(
+                            'Ожидание подключения...',
+                            style: TextStyle(color: Colors.white70, fontSize: 14),
+                          )
+                        else
+                          const Text(
+                            'Подключение...',
+                            style: TextStyle(color: Colors.white70, fontSize: 14),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           )
+        // Демонстрация экрана
         else if (_state == 'connected' && _screenShareEnabled)
           RTCVideoView(
             _screenRenderer,
             objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
           )
+        // Индикатор подключения
         else if (isConnecting)
-          // Показываем индикатор подключения когда звонок connected но еще нет remoteStream
           Container(
             color: const Color(0xFF1A1A1A),
             child: Center(
@@ -846,6 +906,7 @@ class _CallScreenState extends State<CallScreen> {
               ),
             ),
           )
+        // Пустой экран
         else
           Container(color: const Color(0xFF1A1A1A)),
       ],
@@ -856,6 +917,7 @@ class _CallScreenState extends State<CallScreen> {
     final showRemote = _state == 'connected' && _remoteStream != null;
     final showLocal = _localStream != null || _screenShareEnabled;
     final isConnecting = _state == 'connected' && _isConnecting && !showRemote;
+    final isWaiting = _state == 'calling' || (_state == 'connected' && !showRemote && !isConnecting);
     
     return Row(
       children: [
@@ -893,7 +955,39 @@ class _CallScreenState extends State<CallScreen> {
                           ],
                         ),
                       )
-                    : Center(child: Text(widget.peer.displayName, style: const TextStyle(color: Colors.white70))),
+                : Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.blue.shade700,
+                          backgroundImage: widget.peer.avatarUrl != null && widget.peer.avatarUrl!.isNotEmpty
+                              ? NetworkImage(widget.peer.avatarUrl!)
+                              : null,
+                          child: widget.peer.avatarUrl == null || widget.peer.avatarUrl!.isEmpty
+                              ? Text(
+                                  widget.peer.displayName.isNotEmpty ? widget.peer.displayName[0].toUpperCase() : '?',
+                                  style: const TextStyle(color: Colors.white, fontSize: 20),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.peer.displayName,
+                          style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        ),
+                        if (isWaiting)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              _state == 'calling' ? 'Ожидание...' : 'Подключение...',
+                              style: const TextStyle(color: Colors.white54, fontSize: 12),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
           ),
         ),
       ],

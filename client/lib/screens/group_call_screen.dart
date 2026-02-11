@@ -157,6 +157,15 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
         _applyInitialMute();
       }
       
+      // Инициализируем локальный renderer сразу, чтобы показать свое видео
+      if (!_localRendererInitialized) {
+        await _localRenderer.initialize();
+        _localRendererInitialized = true;
+        if (_localStream != null) {
+          _localRenderer.srcObject = _localStream;
+        }
+      }
+      
       // Инициализируем renderers для всех участников
       for (final participant in _participants.values) {
         if (!participant.rendererInitialized) {
@@ -645,16 +654,17 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // Видео сетка участников - показываем даже если есть подключающиеся
+            // Видео сетка участников - показываем локальное видео сразу при calling/connected
             if (_state == 'connected' || _state == 'calling')
-              if (connectedParticipants.isNotEmpty || connectingParticipants.isNotEmpty || _localRendererInitialized)
+              if (_localRendererInitialized && _localStream != null)
+                // Показываем сетку с локальным видео, даже если еще нет подключенных участников
+                _buildVideoGrid(connectedParticipants, connectingParticipants)
+              else if (connectedParticipants.isNotEmpty || connectingParticipants.isNotEmpty)
                 _buildVideoGrid(connectedParticipants, connectingParticipants)
               else
                 _buildCallingView()
             else if (_state == 'ringing')
               _buildRingingView()
-            else if (_state == 'calling')
-              _buildCallingView()
             else
               _buildWaitingView(),
 
