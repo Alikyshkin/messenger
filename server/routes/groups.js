@@ -484,7 +484,7 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
     });
   }
   next();
-}, validate(sendGroupMessageSchema), (req, res) => {
+}, validate(sendGroupMessageSchema), async (req, res) => {
   const groupId = req.validatedParams.id;
   const me = req.user.userId;
   if (!isMember(me, groupId)) return res.status(404).json({ error: 'Группа не найдена' });
