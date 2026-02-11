@@ -285,10 +285,15 @@ try {
   `);
 } catch (_) {}
 
-// Инициализация FTS индексов для существующих данных
-try {
-  const { initFTSIndexes } = await import('./utils/ftsSync.js');
-  initFTSIndexes();
-} catch (_) {}
-
 export default db;
+
+// Инициализация FTS индексов для существующих данных (отложенная, чтобы избежать циклической зависимости)
+// Вызывается асинхронно после экспорта db
+setImmediate(async () => {
+  try {
+    const { initFTSIndexes } = await import('./utils/ftsSync.js');
+    initFTSIndexes();
+  } catch (error) {
+    log.warn({ error }, 'Не удалось инициализировать FTS индексы');
+  }
+});
