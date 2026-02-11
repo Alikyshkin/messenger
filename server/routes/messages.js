@@ -14,7 +14,7 @@ import { sanitizeText } from '../middleware/sanitize.js';
 import { validate, sendMessageSchema, validateParams, peerIdParamSchema, messageIdParamSchema, addReactionSchema } from '../middleware/validation.js';
 import { validateFile } from '../middleware/fileValidation.js';
 
-import { ALLOWED_REACTION_EMOJIS } from '../config/constants.js';
+import { ALLOWED_REACTION_EMOJIS, FILE_LIMITS, ALLOWED_FILE_TYPES } from '../config/constants.js';
 const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getMessageReactions(messageId) {
   const rows = db.prepare('SELECT user_id, emoji FROM message_reactions WHERE message_id = ?').all(messageId);
