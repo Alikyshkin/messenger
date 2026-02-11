@@ -32,6 +32,7 @@ import { initCache } from './utils/cache.js';
 import { initFCM } from './utils/pushNotifications.js';
 import { securityHeaders } from './middleware/security.js';
 import { csrfProtect, csrfTokenRoute } from './middleware/csrf.js';
+import { auditMiddleware } from './utils/auditLog.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const uploadsDir = join(__dirname, 'uploads');

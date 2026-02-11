@@ -9,6 +9,7 @@ import { validate, registerSchema, loginSchema, forgotPasswordSchema, resetPassw
 import { log } from '../utils/logger.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { checkAccountLockout, recordFailedAttempt, resetFailedAttempts, isAccountLocked } from '../utils/accountLockout.js';
+import { auditLog, AUDIT_EVENTS } from '../utils/auditLog.js';
 
 const router = Router();
 
