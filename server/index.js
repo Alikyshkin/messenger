@@ -68,11 +68,22 @@ app.use(cors({
     // Разрешаем запросы без origin (например, мобильные приложения, Postman)
     if (!origin) return callback(null, true);
     
-    if (config.cors.origins.includes(origin) || config.nodeEnv === 'development') {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    // В development разрешаем все origins
+    if (config.nodeEnv === 'development') {
+      return callback(null, true);
     }
+    
+    // В production разрешаем явно указанные origins или HTTPS домены (для Flutter web)
+    if (config.cors.origins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Разрешаем HTTPS origins в production (для Flutter web приложений)
+    if (config.nodeEnv === 'production' && origin.startsWith('https://')) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
