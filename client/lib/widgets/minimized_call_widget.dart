@@ -177,6 +177,10 @@ class MinimizedCallWidget extends StatelessWidget {
     service.expandCall();
 
     // Навигация к экрану звонка
+    // Примечание: при минимизации экран закрывается, поэтому создается новый экран
+    // Это означает, что состояние звонка (PeerConnection, потоки) теряется
+    // Для полного решения проблемы нужно использовать Overlay или другой механизм
+    // который не закрывает экран при минимизации
     if (service.isGroupCall && service.group != null) {
       Navigator.of(context).push(
         AppPageRoute(

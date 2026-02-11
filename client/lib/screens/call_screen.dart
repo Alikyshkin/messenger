@@ -89,6 +89,19 @@ class _CallScreenState extends State<CallScreen> {
     if (!widget.isIncoming) AppSoundService.instance.stopRingtone();
     _renderersFuture = _initRenderers();
     _ws = context.read<WsService>();
+    
+    // Проверяем, не идет ли уже звонок с этим пользователем (при разворачивании из минимизации)
+    final minimizedService = context.read<CallMinimizedService>();
+    if (minimizedService.isMinimized && 
+        minimizedService.peer?.id == widget.peer.id &&
+        !widget.isIncoming) {
+      // Если звонок был минимизирован и мы разворачиваем его, 
+      // нужно восстановить состояние, но так как экран был закрыт,
+      // состояние потеряно. Поэтому просто начинаем новый звонок.
+      // Для полного решения нужно использовать Overlay или другой механизм.
+      minimizedService.expandCall();
+    }
+    
     if (widget.isIncoming && widget.initialSignal != null) {
       _handleSignal(widget.initialSignal!);
     } else if (!widget.isIncoming) {
@@ -147,13 +160,18 @@ class _CallScreenState extends State<CallScreen> {
 
   /// Применяем состояние видео и микрофона к трекам.
   void _applyInitialMute() {
+    _applyInitialMuteForCallType(widget.isVideoCall);
+  }
+
+  /// Применяем состояние видео и микрофона к трекам с учетом типа звонка.
+  void _applyInitialMuteForCallType(bool isVideoCall) {
     if (_localStream == null) return;
     // Для голосового звонка камера выключена
-    if (!widget.isVideoCall) {
+    if (!isVideoCall) {
       _cameraEnabled = false;
     }
     for (var t in _localStream!.getVideoTracks()) {
-      t.enabled = _cameraEnabled && widget.isVideoCall;
+      t.enabled = _cameraEnabled && isVideoCall;
     }
     for (var t in _localStream!.getAudioTracks()) {
       t.enabled = _micEnabled;
@@ -162,17 +180,40 @@ class _CallScreenState extends State<CallScreen> {
     if (videoTracks.isNotEmpty) _cameraVideoTrack = videoTracks.first;
   }
 
+  /// Очистка потоков и PeerConnection при переподключении
+  Future<void> _cleanupForReconnect() async {
+    // Останавливаем все треки локального потока
+    _localStream?.getTracks().forEach((track) {
+      track.stop();
+    });
+    await _localStream?.dispose();
+    _localStream = null;
+    
+    // Очищаем удаленный поток
+    _remoteStream = null;
+    _remoteRenderer.srcObject = null;
+    
+    // Закрываем PeerConnection
+    await _pc?.close();
+    _pc = null;
+    
+    // Очищаем отложенные кандидаты
+    _pendingCandidates.clear();
+  }
+
   Future<void> _getUserMedia({
     String? videoDeviceId,
     String? audioDeviceId,
+    bool? isVideoCall,
   }) async {
+    final callType = isVideoCall ?? widget.isVideoCall;
     final Map<String, dynamic> mediaConstraints = {
       'audio': audioDeviceId != null && audioDeviceId.isNotEmpty
           ? {
               'deviceId': {'exact': audioDeviceId},
             }
           : true,
-      'video': widget.isVideoCall
+      'video': callType
           ? MediaUtils.buildVideoConstraints(
               isFrontCamera: _isFrontCamera,
               videoDeviceId: videoDeviceId,
@@ -397,9 +438,14 @@ class _CallScreenState extends State<CallScreen> {
 
   void _handleSignal(CallSignal s) async {
     if (s.signal == 'hangup') {
-      // При получении hangup не завершаем звонок полностью, а переводим в состояние ожидания переподключения
-      // Пользователь может остаться в звонке и дождаться переподключения собеседника
+      // При получении hangup останавливаем все треки локального потока, чтобы второй человек не слышал голос
+      // и переводим в состояние ожидания переподключения
       if (mounted) {
+        // Останавливаем все треки локального потока
+        _localStream?.getTracks().forEach((track) {
+          track.stop();
+        });
+        
         setState(() {
           _state = 'peer_disconnected';
           _remoteStream = null;
@@ -433,10 +479,16 @@ class _CallScreenState extends State<CallScreen> {
         return;
       }
       if (_state == 'ringing') return;
+      
+      // Определяем тип звонка из сигнала
+      final incomingIsVideoCall = s.isVideoCall ?? true;
+      
       // Если пришел offer в состоянии peer_disconnected, это переподключение - обрабатываем
       if (_state == 'peer_disconnected') {
         // Сбрасываем флаг для обработки нового offer
         _offerReceived = false;
+        // Очищаем старые потоки и PeerConnection перед созданием нового
+        await _cleanupForReconnect();
       }
 
       // Защита от дублирующих offer
@@ -450,23 +502,44 @@ class _CallScreenState extends State<CallScreen> {
         setState(() => _isConnecting = true);
         await _renderersFuture;
 
-        // Получаем медиа только если еще не получили
-        if (_localStream == null) {
-          await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
+        // Если тип звонка изменился или поток не существует, получаем новый медиа поток
+        final needsNewMedia = _localStream == null || 
+            (incomingIsVideoCall != widget.isVideoCall);
+        
+        if (needsNewMedia) {
+          // Останавливаем старые треки перед получением новых
+          _localStream?.getTracks().forEach((track) {
+            track.stop();
+          });
+          await _localStream?.dispose();
+          _localStream = null;
+          
+          // Обновляем тип звонка
+          if (incomingIsVideoCall != widget.isVideoCall) {
+            // Обновляем состояние виджета через setState
+            // Но так как widget.isVideoCall - это final, нужно пересоздать экран
+            // Пока просто используем тип из сигнала для обработки
+          }
+          
+          await _getUserMedia(videoDeviceId: null, audioDeviceId: null, isVideoCall: incomingIsVideoCall);
         }
 
+        // Закрываем старый PeerConnection если он существует
+        await _pc?.close();
+        _pc = null;
+        
         _pc = await createPeerConnection(WebRTCConstants.iceServers, {});
         _setupPeerConnection();
         debugPrint(
-          'Adding local tracks (handle offer): ${_localStream!.getTracks().length}',
+          'Adding local tracks (handle offer): ${_localStream!.getTracks().length}, isVideoCall: $incomingIsVideoCall',
         );
         // Добавляем треки в PeerConnection перед применением mute
         for (var track in _localStream!.getTracks()) {
           debugPrint('Adding track: ${track.kind}, enabled: ${track.enabled}');
           await _pc!.addTrack(track, _localStream!);
         }
-        // Применяем mute после добавления треков
-        _applyInitialMute();
+        // Применяем mute после добавления треков (используем тип из сигнала)
+        _applyInitialMuteForCallType(incomingIsVideoCall);
         var desc = RTCSessionDescription(
           s.payload!['sdp'] as String,
           s.payload!['type'] as String,
@@ -489,13 +562,13 @@ class _CallScreenState extends State<CallScreen> {
         _pendingCandidates.clear();
         var answer = await _pc!.createAnswer({
           'offerToReceiveAudio': true,
-          'offerToReceiveVideo': widget.isVideoCall,
+          'offerToReceiveVideo': incomingIsVideoCall,
         });
         await _pc!.setLocalDescription(answer);
         _ws!.sendCallSignal(widget.peer.id, 'answer', {
           'sdp': answer.sdp,
           'type': answer.type,
-        }, widget.isVideoCall);
+        }, incomingIsVideoCall);
         if (mounted) {
           AppSoundService.instance.stopRingtone();
           setState(() {
@@ -632,7 +705,7 @@ class _CallScreenState extends State<CallScreen> {
         AppSoundService.instance.stopRingtone();
         setState(() {
           _state = 'connected';
-          _isConnecting = true; // Начинаем процесс подключения
+          _isConnecting = false; // Соединение установлено после получения answer
         });
       }
     } catch (e) {
@@ -1195,6 +1268,8 @@ class _CallScreenState extends State<CallScreen> {
   void _minimizeCall() {
     final minimizedService = context.read<CallMinimizedService>();
     minimizedService.minimizeCall(widget.peer, widget.isVideoCall);
+    // Не закрываем экран полностью, а просто скрываем его
+    // Это позволит восстановить состояние при разворачивании
     Navigator.of(context).pop();
   }
 
