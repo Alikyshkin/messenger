@@ -14,7 +14,8 @@ import { sanitizeText } from '../middleware/sanitize.js';
 import { validate, sendMessageSchema, validateParams, peerIdParamSchema, messageIdParamSchema, addReactionSchema } from '../middleware/validation.js';
 import { validateFile } from '../middleware/fileValidation.js';
 
-const ALLOWED_EMOJIS = new Set(['👍', '👎', '❤️', '🔥', '😂', '😮', '😢']);
+import { ALLOWED_REACTION_EMOJIS } from '../config/constants.js';
+const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getMessageReactions(messageId) {
   const rows = db.prepare('SELECT user_id, emoji FROM message_reactions WHERE message_id = ?').all(messageId);
   const byEmoji = {};
@@ -28,7 +29,6 @@ function getMessageReactions(messageId) {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, '../uploads');
-const MIN_SIZE_TO_COMPRESS = 100 * 1024; // 100 KB — мелкие не трогаем
 
 const storage = multer.diskStorage({
   destination: uploadsDir,
@@ -40,11 +40,12 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB
+  limits: { fileSize: FILE_LIMITS.MAX_FILE_SIZE },
   fileFilter: (req, file, cb) => {
     const ext = (path.extname(file.originalname) || '').toLowerCase();
-    const blocked = ['.exe', '.bat', '.cmd', '.sh', '.dll', '.so', '.dylib'];
-    if (blocked.some(b => ext === b)) return cb(new Error('Тип файла не разрешён'));
+    if (ALLOWED_FILE_TYPES.BLOCKED.some(b => ext === b)) {
+      return cb(new Error('Тип файла не разрешён'));
+    }
     cb(null, true);
   },
 });
@@ -197,7 +198,7 @@ router.get('/:peerId', validateParams(peerIdParamSchema), (req, res) => {
 
 router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   if (req.get('Content-Type')?.startsWith('multipart/form-data')) {
-    return upload.array('file', 20)(req, res, (err) => {
+    return upload.array('file', FILE_LIMITS.MAX_FILES_PER_MESSAGE)(req, res, (err) => {
       if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки файла' });
       next();
     });
@@ -325,7 +326,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     
     try {
       const stat = fs.statSync(fullPath);
-      if (stat.size >= MIN_SIZE_TO_COMPRESS) {
+      if (stat.size >= FILE_LIMITS.MIN_SIZE_TO_COMPRESS) {
         const data = fs.readFileSync(fullPath);
         const compressed = zlib.gzipSync(data);
         fs.writeFileSync(fullPath + '.gz', compressed);

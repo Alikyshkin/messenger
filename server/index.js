@@ -12,6 +12,7 @@ import { clients, broadcastToUser } from './realtime.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { log } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
+import config from './config/index.js';
 
 import authRoutes from './routes/auth.js';
 import contactsRoutes from './routes/contacts.js';
@@ -31,16 +32,12 @@ const app = express();
 const server = createServer(app);
 
 // CORS настройка
-const allowedOrigins = process.env.CORS_ORIGINS 
-  ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
-  : ['http://localhost:3000', 'http://localhost:8080', 'http://127.0.0.1:3000', 'http://127.0.0.1:8080'];
-
 app.use(cors({
   origin: (origin, callback) => {
     // Разрешаем запросы без origin (например, мобильные приложения, Postman)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'development') {
+    if (config.cors.origins.includes(origin) || config.nodeEnv === 'development') {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -294,10 +291,9 @@ app.use((req, res, next) => {
   next();
 });
 
-const PORT = process.env.PORT || 3000;
-if (process.env.NODE_ENV !== 'test') {
-  server.listen(PORT, () => {
-    log.info(`Server running at http://localhost:${PORT}`, { port: PORT, env: process.env.NODE_ENV });
+if (config.nodeEnv !== 'test') {
+  server.listen(config.port, () => {
+    log.info(`Server running at http://localhost:${config.port}`, { port: config.port, env: config.nodeEnv });
   });
 }
 

@@ -15,7 +15,7 @@ import { sanitizeText } from '../middleware/sanitize.js';
 import { validate, createGroupSchema, updateGroupSchema, addGroupMemberSchema, sendGroupMessageSchema, validateParams, idParamSchema, addReactionSchema, voteGroupPollSchema, messageIdParamSchema, readGroupSchema, groupIdAndPollIdParamSchema } from '../middleware/validation.js';
 import { validateFile } from '../middleware/fileValidation.js';
 
-const ALLOWED_EMOJIS = new Set(['👍', '👎', '❤️', '🔥', '😂', '😮', '😢']);
+const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getGroupMessageReactions(groupMessageId) {
   const rows = db.prepare('SELECT user_id, emoji FROM group_message_reactions WHERE group_message_id = ?').all(groupMessageId);
   const byEmoji = {};
@@ -30,7 +30,6 @@ function getGroupMessageReactions(groupMessageId) {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, '../uploads');
 const groupAvatarsDir = path.join(uploadsDir, 'group_avatars');
-const MIN_SIZE_TO_COMPRESS = 100 * 1024;
 
 if (!existsSync(groupAvatarsDir)) mkdirSync(groupAvatarsDir, { recursive: true });
 
@@ -43,10 +42,10 @@ const groupAvatarUpload = multer({
       cb(null, randomUUID() + safe);
     },
   }),
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: FILE_LIMITS.MAX_AVATAR_SIZE },
   fileFilter: (req, file, cb) => {
     const ext = (path.extname(file.originalname) || '').toLowerCase();
-    if (!['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) {
+    if (!ALLOWED_FILE_TYPES.IMAGES.includes(ext)) {
       return cb(new Error('Только изображения (jpg, png, gif, webp)'));
     }
     cb(null, true);
@@ -62,11 +61,12 @@ const fileUpload = multer({
       cb(null, randomUUID() + safe);
     },
   }),
-  limits: { fileSize: 100 * 1024 * 1024 },
+  limits: { fileSize: FILE_LIMITS.MAX_FILE_SIZE },
   fileFilter: (req, file, cb) => {
     const ext = (path.extname(file.originalname) || '').toLowerCase();
-    const blocked = ['.exe', '.bat', '.cmd', '.sh', '.dll', '.so', '.dylib'];
-    if (blocked.some(b => ext === b)) return cb(new Error('Тип файла не разрешён'));
+    if (ALLOWED_FILE_TYPES.BLOCKED.some(b => ext === b)) {
+      return cb(new Error('Тип файла не разрешён'));
+    }
     cb(null, true);
   },
 });
@@ -478,7 +478,7 @@ router.patch('/:id/read', validateParams(idParamSchema), validate(readGroupSchem
 // Отправить сообщение в группу (текст, файл/несколько файлов, опрос)
 router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uploadLimiter, (req, res, next) => {
   if (req.get('Content-Type')?.startsWith('multipart/form-data')) {
-    return fileUpload.array('file', 20)(req, res, (err) => {
+    return fileUpload.array('file', FILE_LIMITS.MAX_FILES_PER_MESSAGE)(req, res, (err) => {
       if (err) return res.status(400).json({ error: err.message || 'Ошибка загрузки файла' });
       next();
     });
@@ -613,7 +613,7 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
     
     try {
       const stat = fs.statSync(fullPath);
-      if (stat.size >= MIN_SIZE_TO_COMPRESS) {
+      if (stat.size >= FILE_LIMITS.MIN_SIZE_TO_COMPRESS) {
         const data = fs.readFileSync(fullPath);
         const compressed = zlib.gzipSync(data);
         fs.writeFileSync(fullPath + '.gz', compressed);

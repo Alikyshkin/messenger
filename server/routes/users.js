@@ -9,6 +9,7 @@ import db from '../db.js';
 import { authMiddleware } from '../auth.js';
 import { validate, updateUserSchema, validateParams, idParamSchema } from '../middleware/validation.js';
 import { validateFile } from '../middleware/fileValidation.js';
+import { FILE_LIMITS, ALLOWED_FILE_TYPES, SEARCH_CONFIG } from '../config/constants.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const avatarsDir = path.join(__dirname, '../uploads/avatars');
@@ -23,10 +24,10 @@ const avatarUpload = multer({
       cb(null, randomUUID() + safe);
     },
   }),
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: FILE_LIMITS.MAX_AVATAR_SIZE },
   fileFilter: (req, file, cb) => {
     const ext = (path.extname(file.originalname) || '').toLowerCase();
-    if (!['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext)) {
+    if (!ALLOWED_FILE_TYPES.IMAGES.includes(ext)) {
       return cb(new Error('Только изображения (jpg, png, gif, webp)'));
     }
     cb(null, true);
@@ -129,7 +130,7 @@ router.post('/me/avatar', avatarUpload.single('avatar'), async (req, res) => {
   const fullPath = path.join(avatarsDir, avatarPath);
   
   // Проверка файла аватара на безопасность
-  const fileValidation = await validateFile(fullPath, 2 * 1024 * 1024); // 2MB для аватара
+    const fileValidation = await validateFile(fullPath, FILE_LIMITS.MAX_AVATAR_SIZE);
   if (!fileValidation.valid) {
     // Удаляем небезопасный файл
     try { fs.unlinkSync(fullPath); } catch (_) {}
@@ -205,14 +206,14 @@ router.post('/find-by-phones', (req, res) => {
 
 router.get('/search', (req, res) => {
   const q = (req.query.q || '').trim();
-  if (q.length < 2) return res.json([]);
+  if (q.length < SEARCH_CONFIG.MIN_QUERY_LENGTH) return res.json([]);
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
   const rows = db.prepare(`
     SELECT id, username, display_name, bio, avatar_path, public_key, birthday FROM users
     WHERE id != ? AND (username LIKE ? OR display_name LIKE ?)
-    LIMIT 20
-  `).all(me, `%${q}%`, `%${q}%`);
+    LIMIT ?
+  `).all(me, `%${q}%`, `%${q}%`, SEARCH_CONFIG.MAX_RESULTS);
   res.json(rows.map(r => userToJson(r, baseUrl)));
 });
 

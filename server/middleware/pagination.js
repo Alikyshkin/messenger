@@ -1,10 +1,11 @@
 import Joi from 'joi';
+import { PAGINATION } from '../config/constants.js';
 
 /**
  * Валидация параметров пагинации
  */
 export const paginationSchema = Joi.object({
-  limit: Joi.number().integer().min(1).max(200).default(50),
+  limit: Joi.number().integer().min(PAGINATION.MIN_LIMIT).max(PAGINATION.MAX_LIMIT).default(PAGINATION.DEFAULT_LIMIT),
   offset: Joi.number().integer().min(0).default(0),
   before: Joi.number().integer().positive().optional(),
   after: Joi.number().integer().positive().optional(),

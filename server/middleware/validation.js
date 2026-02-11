@@ -1,4 +1,5 @@
 import Joi from 'joi';
+import { VALIDATION_LIMITS, ALLOWED_REACTION_EMOJIS } from '../config/constants.js';
 
 // Middleware для валидации запросов
 export const validate = (schema) => {
@@ -20,19 +21,19 @@ export const validate = (schema) => {
 
 // Схемы валидации для аутентификации
 export const registerSchema = Joi.object({
-  username: Joi.string().trim().min(3).max(50).required()
+  username: Joi.string().trim().min(VALIDATION_LIMITS.USERNAME_MIN_LENGTH).max(VALIDATION_LIMITS.USERNAME_MAX_LENGTH).required()
     .pattern(/^[a-z0-9_]+$/)
     .messages({
       'string.pattern.base': 'Имя пользователя может содержать только строчные буквы, цифры и подчёркивание',
-      'string.min': 'Имя пользователя минимум 3 символа',
-      'string.max': 'Имя пользователя максимум 50 символов',
+      'string.min': `Имя пользователя минимум ${VALIDATION_LIMITS.USERNAME_MIN_LENGTH} символа`,
+      'string.max': `Имя пользователя максимум ${VALIDATION_LIMITS.USERNAME_MAX_LENGTH} символов`,
     }),
-  password: Joi.string().min(6).max(128).required()
+  password: Joi.string().min(VALIDATION_LIMITS.PASSWORD_MIN_LENGTH).max(VALIDATION_LIMITS.PASSWORD_MAX_LENGTH).required()
     .messages({
-      'string.min': 'Пароль минимум 6 символов',
-      'string.max': 'Пароль максимум 128 символов',
+      'string.min': `Пароль минимум ${VALIDATION_LIMITS.PASSWORD_MIN_LENGTH} символов`,
+      'string.max': `Пароль максимум ${VALIDATION_LIMITS.PASSWORD_MAX_LENGTH} символов`,
     }),
-  displayName: Joi.string().trim().max(100).allow('').optional(),
+  displayName: Joi.string().trim().max(VALIDATION_LIMITS.DISPLAY_NAME_MAX_LENGTH).allow('').optional(),
   email: Joi.string().email().trim().lowercase().max(255).optional().allow('', null),
 });
 
@@ -50,31 +51,31 @@ export const forgotPasswordSchema = Joi.object({
 
 export const resetPasswordSchema = Joi.object({
   token: Joi.string().required(),
-  newPassword: Joi.string().min(6).max(128).required()
+  newPassword: Joi.string().min(VALIDATION_LIMITS.PASSWORD_MIN_LENGTH).max(VALIDATION_LIMITS.PASSWORD_MAX_LENGTH).required()
     .messages({
-      'string.min': 'Пароль минимум 6 символов',
-      'string.max': 'Пароль максимум 128 символов',
+      'string.min': `Пароль минимум ${VALIDATION_LIMITS.PASSWORD_MIN_LENGTH} символов`,
+      'string.max': `Пароль максимум ${VALIDATION_LIMITS.PASSWORD_MAX_LENGTH} символов`,
     }),
 });
 
 export const changePasswordSchema = Joi.object({
   currentPassword: Joi.string().required(),
-  newPassword: Joi.string().min(6).max(128).required()
+  newPassword: Joi.string().min(VALIDATION_LIMITS.PASSWORD_MIN_LENGTH).max(VALIDATION_LIMITS.PASSWORD_MAX_LENGTH).required()
     .messages({
-      'string.min': 'Пароль минимум 6 символов',
-      'string.max': 'Пароль максимум 128 символов',
+      'string.min': `Пароль минимум ${VALIDATION_LIMITS.PASSWORD_MIN_LENGTH} символов`,
+      'string.max': `Пароль максимум ${VALIDATION_LIMITS.PASSWORD_MAX_LENGTH} символов`,
     }),
 });
 
 // Схемы для пользователей
 export const updateUserSchema = Joi.object({
-  display_name: Joi.string().trim().max(100).allow('').optional(),
-  username: Joi.string().trim().min(3).max(50).optional()
+  display_name: Joi.string().trim().max(VALIDATION_LIMITS.DISPLAY_NAME_MAX_LENGTH).allow('').optional(),
+  username: Joi.string().trim().min(VALIDATION_LIMITS.USERNAME_MIN_LENGTH).max(VALIDATION_LIMITS.USERNAME_MAX_LENGTH).optional()
     .pattern(/^[a-z0-9_]+$/)
     .messages({
       'string.pattern.base': 'Имя пользователя может содержать только строчные буквы, цифры и подчёркивание',
     }),
-  bio: Joi.string().trim().max(256).allow('').optional(),
+  bio: Joi.string().trim().max(VALIDATION_LIMITS.BIO_MAX_LENGTH).allow('').optional(),
   email: Joi.string().email().trim().lowercase().max(255).allow('', null).optional(),
   birthday: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional().allow('', null)
     .messages({
@@ -90,16 +91,16 @@ export const updateUserSchema = Joi.object({
 // Схемы для сообщений
 export const sendMessageSchema = Joi.object({
   receiver_id: Joi.number().integer().positive().required(),
-  content: Joi.string().trim().max(10000).allow('').optional(),
+  content: Joi.string().trim().max(VALIDATION_LIMITS.MESSAGE_MAX_LENGTH).allow('').optional(),
   type: Joi.string().valid('text', 'poll').optional(),
   question: Joi.when('type', {
     is: 'poll',
-    then: Joi.string().trim().min(1).max(500).required(),
+    then: Joi.string().trim().min(1).max(VALIDATION_LIMITS.POLL_QUESTION_MAX_LENGTH).required(),
     otherwise: Joi.optional(),
   }),
   options: Joi.when('type', {
     is: 'poll',
-    then: Joi.array().items(Joi.string().trim().max(200)).min(2).max(10).required(),
+    then: Joi.array().items(Joi.string().trim().max(VALIDATION_LIMITS.POLL_OPTION_MAX_LENGTH)).min(VALIDATION_LIMITS.POLL_MIN_OPTIONS).max(VALIDATION_LIMITS.POLL_MAX_OPTIONS).required(),
     otherwise: Joi.optional(),
   }),
   multiple: Joi.when('type', {
@@ -129,39 +130,39 @@ export const sendMessageSchema = Joi.object({
 
 // Схемы для контактов
 export const addContactSchema = Joi.object({
-  username: Joi.string().trim().min(3).max(50).required(),
+  username: Joi.string().trim().min(VALIDATION_LIMITS.USERNAME_MIN_LENGTH).max(VALIDATION_LIMITS.USERNAME_MAX_LENGTH).required(),
 });
 
 // Схемы для групп
 export const createGroupSchema = Joi.object({
-  name: Joi.string().trim().min(1).max(100).required()
+  name: Joi.string().trim().min(1).max(VALIDATION_LIMITS.GROUP_NAME_MAX_LENGTH).required()
     .messages({
       'string.min': 'Название группы обязательно',
-      'string.max': 'Название группы максимум 100 символов',
+      'string.max': `Название группы максимум ${VALIDATION_LIMITS.GROUP_NAME_MAX_LENGTH} символов`,
     }),
   member_ids: Joi.array().items(Joi.number().integer().positive()).optional(),
 });
 
 export const updateGroupSchema = Joi.object({
-  name: Joi.string().trim().min(1).max(100).optional(),
+  name: Joi.string().trim().min(1).max(VALIDATION_LIMITS.GROUP_NAME_MAX_LENGTH).optional(),
 });
 
 export const addGroupMemberSchema = Joi.object({
-  username: Joi.string().trim().min(3).max(50).required(),
+  username: Joi.string().trim().min(VALIDATION_LIMITS.USERNAME_MIN_LENGTH).max(VALIDATION_LIMITS.USERNAME_MAX_LENGTH).required(),
 });
 
 // Схема для групповых сообщений (без receiver_id)
 export const sendGroupMessageSchema = Joi.object({
-  content: Joi.string().trim().max(10000).allow('').optional(),
+  content: Joi.string().trim().max(VALIDATION_LIMITS.MESSAGE_MAX_LENGTH).allow('').optional(),
   type: Joi.string().valid('text', 'poll').optional(),
   question: Joi.when('type', {
     is: 'poll',
-    then: Joi.string().trim().min(1).max(500).required(),
+    then: Joi.string().trim().min(1).max(VALIDATION_LIMITS.POLL_QUESTION_MAX_LENGTH).required(),
     otherwise: Joi.optional(),
   }),
   options: Joi.when('type', {
     is: 'poll',
-    then: Joi.array().items(Joi.string().trim().max(200)).min(2).max(10).required(),
+    then: Joi.array().items(Joi.string().trim().max(VALIDATION_LIMITS.POLL_OPTION_MAX_LENGTH)).min(VALIDATION_LIMITS.POLL_MIN_OPTIONS).max(VALIDATION_LIMITS.POLL_MAX_OPTIONS).required(),
     otherwise: Joi.optional(),
   }),
   multiple: Joi.when('type', {
@@ -201,7 +202,7 @@ export const voteGroupPollSchema = Joi.object({
 
 // Схемы для реакций
 export const addReactionSchema = Joi.object({
-  emoji: Joi.string().valid('👍', '👎', '❤️', '🔥', '😂', '😮', '😢').required(),
+  emoji: Joi.string().valid(...ALLOWED_REACTION_EMOJIS).required(),
 });
 
 // Валидация параметров URL
