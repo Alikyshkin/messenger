@@ -47,10 +47,26 @@ if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
 if (!existsSync(publicDir)) mkdirSync(publicDir, { recursive: true });
 
 const app = express();
-// Включаем trust proxy для работы за reverse proxy (Docker, nginx и т.д.)
+// Включаем trust proxy только если приложение работает за reverse proxy (Docker, nginx и т.д.)
 // Это нужно для правильной работы rate limiting и определения IP адресов
-// Используем более безопасную настройку: доверяем только первому прокси
-app.set('trust proxy', 1);
+// Используем переменную окружения TRUST_PROXY или определяем автоматически по наличию X-Forwarded-For
+// Если TRUST_PROXY не установлен, проверяем наличие заголовка X-Forwarded-For в первом запросе
+const trustProxyEnv = process.env.TRUST_PROXY;
+if (trustProxyEnv === 'true' || trustProxyEnv === '1') {
+  // Явно включено через переменную окружения
+  app.set('trust proxy', 1);
+} else if (trustProxyEnv === 'false' || trustProxyEnv === '0') {
+  // Явно отключено через переменную окружения
+  app.set('trust proxy', false);
+} else {
+  // Автоматическое определение: если приложение работает в Docker или за прокси,
+  // обычно есть переменная окружения или заголовки X-Forwarded-For
+  // По умолчанию отключаем для локальной разработки, включаем в production если есть признаки прокси
+  const isProduction = config.nodeEnv === 'production';
+  const hasDockerEnv = process.env.DOCKER_CONTAINER === 'true' || process.env.KUBERNETES_SERVICE_HOST;
+  // Включаем только если явно указано или есть признаки работы за прокси
+  app.set('trust proxy', isProduction && hasDockerEnv);
+}
 const server = createServer(app);
 
 // Security headers (должен быть первым middleware)
