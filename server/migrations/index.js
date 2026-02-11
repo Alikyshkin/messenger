@@ -346,6 +346,26 @@ function applyMigration(db, migration) {
     return;
   }
   
+  // Миграция 008: добавляем sender_public_key — делаем идемпотентной (колонка может уже быть из db.js)
+  if (migration.version === 8) {
+    const transaction = db.transaction(() => {
+      const hasColumn = db.prepare(
+        "SELECT 1 FROM pragma_table_info('messages') WHERE name='sender_public_key'"
+      ).get();
+      if (!hasColumn) {
+        db.exec('ALTER TABLE messages ADD COLUMN sender_public_key TEXT');
+      }
+      db.exec(
+        "UPDATE messages SET sender_public_key = (SELECT public_key FROM users WHERE id = messages.sender_id) WHERE sender_public_key IS NULL"
+      );
+      db.prepare('INSERT INTO schema_migrations (version, name) VALUES (?, ?)')
+        .run(migration.version, migration.name);
+    });
+    transaction();
+    log.info(`Миграция ${migration.version} применена успешно`);
+    return;
+  }
+
   // Для остальных миграций выполняем SQL как обычно
   const sql = readFileSync(filePath, 'utf-8');
   
