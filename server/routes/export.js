@@ -2,6 +2,7 @@ import { Router } from 'express';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
 import { decryptIfLegacy } from '../cipher.js';
+import { escapeHtml } from '../middleware/sanitize.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 
 const router = Router();
@@ -230,13 +231,13 @@ router.get('/html', asyncHandler(async (req, res) => {
   <div class="section">
     <h2>Профиль пользователя</h2>
     <div class="user-info">
-      <div><strong>ID:</strong> ${user.id}</div>
-      <div><strong>Имя пользователя:</strong> ${user.username}</div>
-      <div><strong>Отображаемое имя:</strong> ${user.display_name || user.username}</div>
-      <div><strong>Биография:</strong> ${user.bio || '—'}</div>
-      <div><strong>Email:</strong> ${user.email || '—'}</div>
-      <div><strong>День рождения:</strong> ${user.birthday || '—'}</div>
-      <div><strong>Телефон:</strong> ${user.phone || '—'}</div>
+      <div><strong>ID:</strong> ${escapeHtml(String(user.id))}</div>
+      <div><strong>Имя пользователя:</strong> ${escapeHtml(user.username)}</div>
+      <div><strong>Отображаемое имя:</strong> ${escapeHtml(user.display_name || user.username)}</div>
+      <div><strong>Биография:</strong> ${user.bio ? escapeHtml(user.bio) : '—'}</div>
+      <div><strong>Email:</strong> ${user.email ? escapeHtml(user.email) : '—'}</div>
+      <div><strong>День рождения:</strong> ${user.birthday ? escapeHtml(user.birthday) : '—'}</div>
+      <div><strong>Телефон:</strong> ${user.phone ? escapeHtml(user.phone) : '—'}</div>
       <div><strong>Дата регистрации:</strong> ${new Date(user.created_at).toLocaleString('ru-RU')}</div>
       <div><strong>Статус:</strong> ${user.is_online ? 'Онлайн' : 'Офлайн'}</div>
       <div><strong>Последний визит:</strong> ${user.last_seen ? new Date(user.last_seen).toLocaleString('ru-RU') : '—'}</div>
@@ -258,10 +259,10 @@ router.get('/html', asyncHandler(async (req, res) => {
       <tbody>
         ${contacts.map(c => `
           <tr>
-            <td>${c.id}</td>
-            <td>${c.username}</td>
-            <td>${c.display_name || c.username}</td>
-            <td>${c.bio || '—'}</td>
+            <td>${escapeHtml(String(c.id))}</td>
+            <td>${escapeHtml(c.username)}</td>
+            <td>${escapeHtml(c.display_name || c.username)}</td>
+            <td>${c.bio ? escapeHtml(c.bio) : '—'}</td>
             <td>${new Date(c.created_at).toLocaleString('ru-RU')}</td>
           </tr>
         `).join('')}
@@ -288,13 +289,13 @@ router.get('/html', asyncHandler(async (req, res) => {
           const senderName = getUserName(m.sender_id);
           const receiverName = getUserName(m.receiver_id);
           const content = decryptIfLegacy(m.content);
-          const attachment = m.attachment_path ? `<span class="attachment">${m.attachment_filename || 'Файл'}</span>` : '—';
+          const attachment = m.attachment_path ? `<span class="attachment">${escapeHtml(m.attachment_filename || 'Файл')}</span>` : '—';
           return `
           <tr>
-            <td>${m.id}</td>
-            <td>${senderName}</td>
-            <td>${receiverName}</td>
-            <td class="message-content">${content.substring(0, 100)}${content.length > 100 ? '...' : ''}</td>
+            <td>${escapeHtml(String(m.id))}</td>
+            <td>${escapeHtml(senderName)}</td>
+            <td>${escapeHtml(receiverName)}</td>
+            <td class="message-content">${escapeHtml(content.substring(0, 100))}${content.length > 100 ? '...' : ''}</td>
             <td>${new Date(m.created_at).toLocaleString('ru-RU')}</td>
             <td>${m.read_at ? new Date(m.read_at).toLocaleString('ru-RU') : 'Нет'}</td>
             <td>${attachment}</td>
@@ -319,8 +320,8 @@ router.get('/html', asyncHandler(async (req, res) => {
       <tbody>
         ${groups.map(g => `
           <tr>
-            <td>${g.id}</td>
-            <td>${g.name}</td>
+            <td>${escapeHtml(String(g.id))}</td>
+            <td>${escapeHtml(g.name)}</td>
             <td>${g.role === 'admin' ? 'Администратор' : 'Участник'}</td>
             <td>${new Date(g.created_at).toLocaleString('ru-RU')}</td>
           </tr>
@@ -347,13 +348,13 @@ router.get('/html', asyncHandler(async (req, res) => {
           const senderName = getUserName(gm.sender_id);
           const groupName = getGroupName(gm.group_id);
           const content = decryptIfLegacy(gm.content);
-          const attachment = gm.attachment_path ? `<span class="attachment">${gm.attachment_filename || 'Файл'}</span>` : '—';
+          const attachment = gm.attachment_path ? `<span class="attachment">${escapeHtml(gm.attachment_filename || 'Файл')}</span>` : '—';
           return `
           <tr>
-            <td>${gm.id}</td>
-            <td>${groupName}</td>
-            <td>${senderName}</td>
-            <td class="message-content">${content.substring(0, 100)}${content.length > 100 ? '...' : ''}</td>
+            <td>${escapeHtml(String(gm.id))}</td>
+            <td>${escapeHtml(groupName)}</td>
+            <td>${escapeHtml(senderName)}</td>
+            <td class="message-content">${escapeHtml(content.substring(0, 100))}${content.length > 100 ? '...' : ''}</td>
             <td>${new Date(gm.created_at).toLocaleString('ru-RU')}</td>
             <td>${attachment}</td>
           </tr>

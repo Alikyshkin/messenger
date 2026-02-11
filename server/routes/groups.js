@@ -17,6 +17,7 @@ import { validateFile } from '../middleware/fileValidation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { validatePagination, createPaginationMeta } from '../middleware/pagination.js';
 import { ALLOWED_REACTION_EMOJIS, FILE_LIMITS, ALLOWED_FILE_TYPES } from '../config/constants.js';
+import { log } from '../utils/logger.js';
 
 const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getGroupMessageReactions(groupMessageId) {
@@ -518,6 +519,9 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
     const row = db.prepare(
       'SELECT id, group_id, sender_id, content, created_at, message_type FROM group_messages WHERE id = ?',
     ).get(msgId);
+    if (!row) {
+      return res.status(500).json({ error: 'Ошибка при создании опроса' });
+    }
     const sender = db.prepare('SELECT public_key, display_name, username FROM users WHERE id = ?').get(me);
     const payload = {
       id: row.id,
@@ -687,6 +691,11 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
     notifyNewGroupMessage(memberIds, me, payload);
     payloads.push(payload);
   }
+  
+  if (payloads.length === 0) {
+    return res.status(500).json({ error: 'Не удалось создать сообщения с файлами' });
+  }
+  
   if (payloads.length === 1) return res.status(201).json(payloads[0]);
   return res.status(201).json({ messages: payloads });
 });

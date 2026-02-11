@@ -403,7 +403,10 @@ wss.on('connection', (ws, req) => {
   }
   const userId = payload.userId;
   if (!clients.has(userId)) clients.set(userId, new Set());
-  clients.get(userId).add(ws);
+  const userClients = clients.get(userId);
+  if (userClients) {
+    userClients.add(ws);
+  }
   ws.userId = userId;
   
   // Обновляем статус пользователя на онлайн
@@ -421,8 +424,31 @@ wss.on('connection', (ws, req) => {
   ws.on('message', (raw) => {
     try {
       const data = JSON.parse(raw.toString());
-      if (data.type === 'call_signal' && data.toUserId != null && data.signal) {
+      
+      // Валидация типа сообщения
+      if (!data.type || typeof data.type !== 'string') {
+        log.warn('Invalid WebSocket message: missing or invalid type', { userId });
+        return;
+      }
+      
+      if (data.type === 'call_signal') {
+        // Валидация данных звонка
+        if (data.toUserId == null || typeof data.toUserId !== 'number') {
+          log.warn('Invalid call_signal: missing or invalid toUserId', { userId });
+          return;
+        }
+        if (!data.signal || typeof data.signal !== 'string') {
+          log.warn('Invalid call_signal: missing or invalid signal', { userId });
+          return;
+        }
+        
         const toId = Number(data.toUserId);
+        // Проверка валидности ID
+        if (!Number.isInteger(toId) || toId <= 0 || toId === userId) {
+          log.warn('Invalid call_signal: invalid toUserId', { userId, toId });
+          return;
+        }
+        
         const set = clients.get(toId);
         const n = set ? set.size : 0;
         log.ws('call_signal', { fromUserId: userId, toUserId: toId, connections: n });
@@ -433,6 +459,14 @@ wss.on('connection', (ws, req) => {
         // Сообщение создается от имени звонившего (toId) к получателю (userId)
         if (data.signal === 'reject') {
           try {
+            // Проверяем, что пользователь существует перед созданием сообщения
+            const senderExists = db.prepare('SELECT id FROM users WHERE id = ?').get(toId);
+            const receiverExists = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+            if (!senderExists || !receiverExists) {
+              log.warn('Cannot create missed call message: user not found', { senderId: toId, receiverId: userId });
+              return;
+            }
+            
             const { syncMessagesFTS } = await import('./utils/ftsSync.js');
             const result = db.prepare(
               `INSERT INTO messages (sender_id, receiver_id, content, message_type) VALUES (?, ?, ?, ?)`
@@ -442,8 +476,17 @@ wss.on('connection', (ws, req) => {
             const row = db.prepare(
               'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
             ).get(msgId);
+            
+            if (!row) {
+              log.error('Failed to retrieve created missed call message', { msgId });
+              return;
+            }
+            
             const sender = db.prepare('SELECT public_key, display_name, username FROM users WHERE id = ?').get(row.sender_id);
-            const baseUrl = req.headers.host ? `http://${req.headers.host}` : 'http://localhost:3000';
+            // Определяем протокол из заголовков (для поддержки HTTPS через прокси)
+            const proto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+            const host = req.headers.host || 'localhost:3000';
+            const baseUrl = `${proto}://${host}`;
             const payload = {
               id: row.id,
               sender_id: row.sender_id,
@@ -471,6 +514,13 @@ wss.on('connection', (ws, req) => {
           } catch (e) {
             log.error('Ошибка при создании сообщения о пропущенном звонке', e);
           }
+        }
+        
+        // Проверяем, что получатель существует перед отправкой сигнала
+        const recipientExists = db.prepare('SELECT id FROM users WHERE id = ?').get(toId);
+        if (!recipientExists) {
+          log.warn('Cannot send call signal: recipient not found', { toId, fromUserId: userId });
+          return;
         }
         
         broadcastToUser(toId, {

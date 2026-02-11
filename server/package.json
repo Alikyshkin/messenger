@@ -11,7 +11,7 @@
     "migrate": "node scripts/migrate.js",
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/auth.test.js tests/api.test.js"
+    "test": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/auth.test.js tests/api.test.js tests/websocket.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

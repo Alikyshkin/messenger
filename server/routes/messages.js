@@ -16,6 +16,7 @@ import { validateFile } from '../middleware/fileValidation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { ALLOWED_REACTION_EMOJIS, FILE_LIMITS, ALLOWED_FILE_TYPES } from '../config/constants.js';
 import { syncMessagesFTS } from '../utils/ftsSync.js';
+import { log } from '../utils/logger.js';
 const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getMessageReactions(messageId) {
   const rows = db.prepare('SELECT user_id, emoji FROM message_reactions WHERE message_id = ?').all(messageId);
@@ -335,6 +336,9 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     const row = db.prepare(
       'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id FROM messages WHERE id = ?'
     ).get(msgId);
+    if (!row) {
+      return res.status(500).json({ error: 'Ошибка при создании опроса' });
+    }
     const payload = {
       id: row.id,
       sender_id: row.sender_id,
@@ -409,6 +413,9 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     const row = db.prepare(
       'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
     ).get(msgId);
+    if (!row) {
+      return res.status(500).json({ error: 'Ошибка при создании сообщения' });
+    }
     const payload = buildPayload(row);
     notifyNewMessage(payload);
     return res.status(201).json(payload);
@@ -448,10 +455,20 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     const row = db.prepare(
       'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name FROM messages WHERE id = ?'
     ).get(msgId);
+    if (!row) {
+      log.error('Failed to retrieve created message after file upload', { msgId, fileIndex: i });
+      // Пропускаем этот файл, но продолжаем обработку остальных
+      continue;
+    }
     const payload = buildPayload(row);
     notifyNewMessage(payload);
     payloads.push(payload);
   }
+  
+  if (payloads.length === 0) {
+    return res.status(500).json({ error: 'Не удалось создать сообщения с файлами' });
+  }
+  
   if (payloads.length === 1) return res.status(201).json(payloads[0]);
   return res.status(201).json({ messages: payloads });
 });
