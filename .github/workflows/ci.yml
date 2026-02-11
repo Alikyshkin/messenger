@@ -27,7 +27,7 @@ jobs:
       
       - name: Format check
         working-directory: ./client
-        run: flutter format --set-exit-if-changed .
+        run: dart format --set-exit-if-changed .
       
       - name: Analyze
         working-directory: ./client
