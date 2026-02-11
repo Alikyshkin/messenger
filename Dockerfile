@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 # Multi-stage build для оптимизации размера образа
 
 # Stage 1: Build
@@ -5,9 +6,10 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Копируем package.json и устанавливаем зависимости
+# Копируем package.json и устанавливаем зависимости с кэшированием
 COPY server/package*.json ./server/
-RUN cd server && npm ci --only=production
+RUN --mount=type=cache,target=/root/.npm \
+    cd server && npm ci --only=production
 
 # Stage 2: Production
 FROM node:20-alpine

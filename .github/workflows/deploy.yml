@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build-flutter:
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     
@@ -18,15 +18,48 @@ jobs:
       with:
         flutter-version: '3.x'
         channel: 'stable'
+        cache: true
+    
+    - name: Cache Flutter dependencies
+      uses: actions/cache@v4
+      with:
+        path: |
+          client/.dart_tool
+          client/build
+          ${{ env.PUB_CACHE }}
+        key: ${{ runner.os }}-flutter-${{ hashFiles('client/pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-flutter-
     
     - name: Build Flutter web app
       working-directory: ./client
+      env:
+        PUB_CACHE: ${{ runner.tool_cache }}/pub_cache
       run: |
         flutter pub get
-        flutter build web --release
+        # Собираем без source maps для уменьшения размера
+        flutter build web --release --web-renderer canvaskit --no-source-maps
+    
+    - name: Upload Flutter build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: flutter-web-build
+        path: client/build/web
+        retention-days: 1
+
+  build-docker:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
     
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
+      with:
+        driver-opts: |
+          image=moby/buildkit:latest
+          network=host
     
     - name: Check Docker credentials
       if: github.event_name != 'pull_request'
@@ -54,32 +87,41 @@ jobs:
           ${{ secrets.DOCKER_USERNAME }}/messenger-server:${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-flutter, build-docker]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     
-    - name: Deploy Flutter web app to server
-      if: github.event_name != 'pull_request'
-      uses: appleboy/ssh-action@v1
-      with:
-        host: ${{ secrets.DEPLOY_HOST }}
-        username: ${{ secrets.DEPLOY_USER }}
-        key: ${{ secrets.DEPLOY_SSH_KEY }}
-        script: |
-          mkdir -p /opt/messenger/public
-          cd /opt/messenger/public
-          # Удаляем старые файлы перед копированием новых
-          rm -rf *
-    - name: Copy Flutter web app files
-      if: github.event_name != 'pull_request'
-      uses: appleboy/scp-action@v0.1.7
-      with:
-        host: ${{ secrets.DEPLOY_HOST }}
-        username: ${{ secrets.DEPLOY_USER }}
-        key: ${{ secrets.DEPLOY_SSH_KEY }}
-        source: "client/build/web/*"
-        target: "/opt/messenger/public/"
-        strip_components: 3
+    steps:
+    - uses: actions/checkout@v4
     
-    - name: Deploy to server
-      if: github.event_name != 'pull_request'
+    - name: Download Flutter build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: flutter-web-build
+        path: client/build/web
+    
+    - name: Setup SSH for rsync
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+    
+    - name: Deploy Flutter web app using rsync (optimized: compression + incremental)
+      run: |
+        rsync -avz --compress-level=6 --delete \
+          --exclude='.git' \
+          --exclude='*.map' \
+          --exclude='.DS_Store' \
+          --info=progress2 \
+          client/build/web/ \
+          ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:/opt/messenger/public/
+      env:
+        RSYNC_RSH: ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no -o Compression=yes
+    
+    - name: Deploy Docker to server
       uses: appleboy/ssh-action@v1
       with:
         host: ${{ secrets.DEPLOY_HOST }}
@@ -108,6 +150,6 @@ jobs:
           else
             docker-compose pull
             docker-compose up -d
-            docker-compose exec -T messenger-server npm run migrate || true
-            docker-compose restart messenger-server || true
+            docker compose exec -T messenger-server npm run migrate || true
+            docker compose restart messenger-server || true
           fi
