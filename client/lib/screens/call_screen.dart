@@ -58,6 +58,7 @@ class _CallScreenState extends State<CallScreen> {
   String? _error;
   final List<Map<String, dynamic>> _pendingCandidates = [];
   bool _offerReceived = false; // Флаг для защиты от дублирующих offer
+  bool _isConnecting = false; // Флаг процесса подключения
 
   /// Видео и микрофон включены по умолчанию для видеозвонка.
   /// Для голосового звонка камера выключена.
@@ -511,6 +512,7 @@ class _CallScreenState extends State<CallScreen> {
           AppSoundService.instance.stopRingtone();
           setState(() {
             _state = 'connected';
+            _isConnecting = true; // Начинаем процесс подключения после получения answer
           });
         }
       } catch (e) {
@@ -519,6 +521,7 @@ class _CallScreenState extends State<CallScreen> {
           setState(() {
             _state = 'ended';
             _error = 'Ошибка при установке соединения';
+            _isConnecting = false;
           });
         }
       }
@@ -629,6 +632,7 @@ class _CallScreenState extends State<CallScreen> {
     _localStream = null;
     _remoteStream = null;
     _offerReceived = false;
+    _isConnecting = false;
     // Сообщение о пропущенном звонке создается автоматически на сервере при отправке сигнала reject
     if (mounted) {
       setState(() => _state = 'ended');
