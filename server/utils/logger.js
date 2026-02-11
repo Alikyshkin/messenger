@@ -1,4 +1,5 @@
 import pino from 'pino';
+import { sanitizeUrl, sanitizeHeaders } from './sanitizeLogs.js';
 
 const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
 
@@ -60,11 +61,12 @@ export const log = {
   http: (req, res, responseTime) => {
     logger.info({
       method: req.method,
-      url: req.url,
+      url: sanitizeUrl(req.url),
       statusCode: res.statusCode,
       responseTime: `${responseTime}ms`,
-      ip: req.ip || req.connection.remoteAddress,
+      ip: req.ip || req.connection?.remoteAddress,
       userAgent: req.get('user-agent'),
+      // Не логируем заголовки с чувствительными данными
     }, 'HTTP request');
   },
   

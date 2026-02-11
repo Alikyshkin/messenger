@@ -1,14 +1,14 @@
 import { log } from '../utils/logger.js';
+import { sanitizeRequest } from '../utils/sanitizeLogs.js';
 
 /**
  * Централизованный обработчик ошибок
  */
 export function errorHandler(err, req, res, next) {
-  // Логируем ошибку
+  // Логируем ошибку с санитизированными данными
+  const sanitizedReq = sanitizeRequest(req);
   log.error('Request error', err, {
-    method: req.method,
-    url: req.url,
-    ip: req.ip || req.connection.remoteAddress,
+    ...sanitizedReq,
     userId: req.user?.userId,
   });
 
