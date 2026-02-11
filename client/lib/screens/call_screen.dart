@@ -76,6 +76,9 @@ class _CallScreenState extends State<CallScreen> {
   List<MediaDeviceInfo> _mediaDevices = [];
   String? _selectedVideoDeviceId;
   String? _selectedAudioDeviceId;
+  
+  /// Переключение между передней и задней камерой.
+  bool _isFrontCamera = true;
 
   @override
   void initState() {
@@ -106,7 +109,7 @@ class _CallScreenState extends State<CallScreen> {
     setState(() => _state = 'calling');
     try {
       await _renderersFuture;
-      await _getUserMedia();
+      await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
       _applyInitialMute();
       _pc = await createPeerConnection(_iceServers, {});
       _setupPeerConnection();
@@ -159,16 +162,18 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _getUserMedia({String? videoDeviceId, String? audioDeviceId}) async {
+    // Улучшаем качество видео для лучшего опыта
     final Map<String, dynamic> videoConstraint = kIsWeb
         ? {
-            'mandatory': {'minWidth': '320', 'minHeight': '240', 'minFrameRate': '15'},
-            'facingMode': 'user',
+            'mandatory': {'minWidth': '640', 'minHeight': '480', 'minFrameRate': '24'},
+            'facingMode': _isFrontCamera ? 'user' : 'environment',
             'optional': [],
           }
         : {
-            'facingMode': 'user',
-            'width': {'ideal': 640},
-            'height': {'ideal': 480},
+            'facingMode': _isFrontCamera ? 'user' : 'environment',
+            'width': {'ideal': 1280, 'min': 640},
+            'height': {'ideal': 720, 'min': 480},
+            'frameRate': {'ideal': 30, 'min': 24},
           };
     final videoConstraintMap = Map<String, dynamic>.from(videoConstraint);
     if (videoDeviceId != null && videoDeviceId.isNotEmpty) {
@@ -208,6 +213,43 @@ class _CallScreenState extends State<CallScreen> {
       t.enabled = !t.enabled;
     }
     setState(() => _cameraEnabled = !_cameraEnabled);
+  }
+  
+  /// Переключение между передней и задней камерой.
+  Future<void> _switchCamera() async {
+    if (_localStream == null || _screenShareEnabled || _pc == null) return;
+    _isFrontCamera = !_isFrontCamera;
+    try {
+      // Получаем новое видео с другой камеры
+      await _getUserMedia(
+        videoDeviceId: null, // Будет использован facingMode
+        audioDeviceId: _selectedAudioDeviceId,
+      );
+      // Обновляем трек в PeerConnection
+      final videoTracks = _localStream!.getVideoTracks();
+      if (videoTracks.isNotEmpty) {
+        _cameraVideoTrack = videoTracks.first;
+        final senders = await _pc!.getSenders();
+        for (final s in senders) {
+          if (s.track?.kind == 'video' && !_screenShareEnabled) {
+            await s.replaceTrack(_cameraVideoTrack);
+            break;
+          }
+        }
+      }
+      if (_renderersInitialized && _localStream != null) {
+        _localRenderer.srcObject = _localStream;
+      }
+      if (mounted) setState(() {});
+    } catch (e) {
+      // Возвращаемся к предыдущей камере при ошибке
+      _isFrontCamera = !_isFrontCamera;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Не удалось переключить камеру: $e')),
+        );
+      }
+    }
   }
 
   void _toggleMic() {
@@ -276,8 +318,18 @@ class _CallScreenState extends State<CallScreen> {
         break;
       }
     }
-    if (videoSender != null && _cameraVideoTrack != null) {
-      await videoSender.replaceTrack(_cameraVideoTrack);
+    // Если камера была отключена, нужно включить её снова или использовать существующий трек
+    if (videoSender != null) {
+      if (_cameraVideoTrack != null) {
+        await videoSender.replaceTrack(_cameraVideoTrack);
+      } else if (_localStream != null) {
+        // Если трек камеры потерян, получаем новый
+        final videoTracks = _localStream!.getVideoTracks();
+        if (videoTracks.isNotEmpty) {
+          _cameraVideoTrack = videoTracks.first;
+          await videoSender.replaceTrack(_cameraVideoTrack);
+        }
+      }
     }
     _screenStream?.getTracks().forEach((t) => t.stop());
     await _screenStream?.dispose();
@@ -345,7 +397,7 @@ class _CallScreenState extends State<CallScreen> {
       if (_state == 'ringing') return;
       try {
         await _renderersFuture;
-        await _getUserMedia();
+        await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
         _applyInitialMute();
         _pc = await createPeerConnection(_iceServers, {});
         _setupPeerConnection();
@@ -443,7 +495,7 @@ class _CallScreenState extends State<CallScreen> {
     setState(() => _state = 'init');
     try {
       await _renderersFuture;
-      await _getUserMedia();
+      await _getUserMedia(videoDeviceId: null, audioDeviceId: null);
       _applyInitialMute();
       _pc = await createPeerConnection(_iceServers, {});
       _setupPeerConnection();
@@ -631,7 +683,7 @@ class _CallScreenState extends State<CallScreen> {
         else if (showLocal && !_screenShareEnabled)
           RTCVideoView(
             _localRenderer,
-            mirror: true,
+            mirror: _isFrontCamera, // Зеркалим только переднюю камеру
             objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
           )
         else if (_state == 'connected' && _screenShareEnabled)
@@ -658,7 +710,7 @@ class _CallScreenState extends State<CallScreen> {
                     ? RTCVideoView(_screenRenderer,
                         objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain)
                     : RTCVideoView(_localRenderer,
-                        mirror: true,
+                        mirror: _isFrontCamera, // Зеркалим только переднюю камеру
                         objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover))
                 : const Center(child: Text('Вы', style: TextStyle(color: Colors.white70))),
           ),
@@ -716,7 +768,7 @@ class _CallScreenState extends State<CallScreen> {
               ? RTCVideoView(_screenRenderer,
                   objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain)
               : RTCVideoView(_localRenderer,
-                  mirror: true,
+                  mirror: _isFrontCamera, // Зеркалим только переднюю камеру
                   objectFit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover),
         ),
       ),
@@ -821,13 +873,23 @@ class _CallScreenState extends State<CallScreen> {
               ),
               const SizedBox(width: 12),
               IconButton.filled(
-                onPressed: _screenShareEnabled ? _toggleScreenShare : _toggleScreenShare,
+                onPressed: _toggleScreenShare,
                 icon: Icon(_screenShareEnabled ? Icons.stop_screen_share : Icons.screen_share),
                 style: IconButton.styleFrom(
                   backgroundColor: _screenShareEnabled ? Colors.orange.shade700 : Colors.grey.shade700,
                   foregroundColor: Colors.white,
                 ),
                 tooltip: _screenShareEnabled ? 'Остановить демонстрацию' : 'Демонстрация экрана',
+              ),
+              const SizedBox(width: 12),
+              IconButton.filled(
+                onPressed: _screenShareEnabled ? null : _switchCamera,
+                icon: const Icon(Icons.flip_camera_ios),
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.grey.shade700,
+                  foregroundColor: Colors.white,
+                ),
+                tooltip: 'Переключить камеру',
               ),
               const SizedBox(width: 12),
               IconButton.filled(
