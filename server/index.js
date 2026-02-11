@@ -26,6 +26,7 @@ import searchRoutes from './routes/search.js';
 import exportRoutes from './routes/export.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './utils/swagger.js';
+import { metricsMiddleware, getMetrics, metrics } from './utils/metrics.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const uploadsDir = join(__dirname, 'uploads');
@@ -102,6 +103,18 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
+});
+
+// Prometheus метрики endpoint
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', register.contentType);
+    const metrics = await getMetrics();
+    res.end(metrics);
+  } catch (error) {
+    log.error({ error }, 'Ошибка при получении метрик');
+    res.status(500).end();
+  }
 });
 
 // Health checks
@@ -256,6 +269,8 @@ app.get('/reset-password', (req, res) => {
 const wss = new WebSocketServer({ server, path: '/ws' });
 
 wss.on('connection', (ws, req) => {
+  // Обновляем метрику подключений WebSocket
+  metrics.websocket.connections.inc();
   const url = new URL(req.url || '', `http://${req.headers.host}`);
   const token = url.searchParams.get('token');
   const payload = token ? verifyToken(token) : null;
@@ -299,6 +314,8 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
+    // Обновляем метрику подключений WebSocket
+    metrics.websocket.connections.dec();
     const set = clients.get(userId);
     if (set) {
       set.delete(ws);
