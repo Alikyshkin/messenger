@@ -30,6 +30,7 @@ import { swaggerSpec } from './utils/swagger.js';
 import { metricsMiddleware, getMetrics, metrics } from './utils/metrics.js';
 import { initCache } from './utils/cache.js';
 import { initFCM } from './utils/pushNotifications.js';
+import { securityHeaders } from './middleware/security.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const uploadsDir = join(__dirname, 'uploads');
@@ -39,6 +40,9 @@ if (!existsSync(publicDir)) mkdirSync(publicDir, { recursive: true });
 
 const app = express();
 const server = createServer(app);
+
+// Security headers (должен быть первым middleware)
+app.use(securityHeaders());
 
 // CORS настройка
 app.use(cors({
