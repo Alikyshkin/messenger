@@ -3,4 +3,4 @@ import 'dart:html' as html;
 
 /// Проверка безопасного контекста в браузере (HTTPS или localhost).
 /// getUserMedia/WebRTC требуют secure context.
-bool get isSecureContext => html.window.isSecureContext;
+bool get isSecureContext => html.window.isSecureContext ?? false;
