@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 
 /// Цвета приложения в одном месте — меняются из одного файла.
-/// Деловой, приглушённый стиль.
+/// Jade #AEB8A0 — приглушённый зелёно-серый.
 class AppColors {
   AppColors._();
 
+  // --- Jade #AEB8A0 ---
+  static const Color jade = Color(0xFFAEB8A0);
+
   // --- Светлая тема ---
-  static const Color lightPrimary = Color(0xFF3D6B99);
-  static const Color lightOnPrimary = Color(0xFFFFFFFF);
-  static const Color lightPrimaryContainer = Color(0xFFE2E9F0);
+  static const Color lightPrimary = Color(0xFFAEB8A0);
+  static const Color lightOnPrimary = Color(0xFF1A1A1A);
+  static const Color lightPrimaryContainer = Color(0xFFE2E6DC);
   static const Color lightOnPrimaryContainer = Color(0xFF1A1A1A);
   static const Color lightSurface = Color(0xFFFFFFFF);
   static const Color lightOnSurface = Color(0xFF1A1A1A);
@@ -20,10 +23,10 @@ class AppColors {
   static const Color lightOnError = Color(0xFFFFFFFF);
 
   // --- Тёмная тема ---
-  static const Color darkPrimary = Color(0xFF6B9BC4);
-  static const Color darkOnPrimary = Color(0xFFFFFFFF);
-  static const Color darkPrimaryContainer = Color(0xFF1E3A52);
-  static const Color darkOnPrimaryContainer = Color(0xFFE0E6EB);
+  static const Color darkPrimary = Color(0xFFB8C4AA);
+  static const Color darkOnPrimary = Color(0xFF1A1A1A);
+  static const Color darkPrimaryContainer = Color(0xFF4A5540);
+  static const Color darkOnPrimaryContainer = Color(0xFFE2E6DC);
   static const Color darkSurface = Color(0xFF1A1A1A);
   static const Color darkOnSurface = Color(0xFFE8EAED);
   static const Color darkSurfaceContainerHighest = Color(0xFF2A2D31);
