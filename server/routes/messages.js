@@ -408,7 +408,8 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     const options = data.options.slice(0, 10).map(o => sanitizeText(String(o))).filter(Boolean);
     if (options.length < 2) return res.status(400).json({ error: 'Минимум 2 варианта ответа' });
     const questionText = sanitizeText(data.question);
-    let msgId; let pollId;
+    let msgId = null;
+    let pollId = null;
     try {
       // Используем транзакцию для атомарности операций
       const transaction = db.transaction(() => {
@@ -416,13 +417,40 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
           `INSERT INTO messages (sender_id, receiver_id, content, message_type, attachment_path, attachment_filename, sender_public_key) VALUES (?, ?, ?, 'poll', NULL, NULL, ?)`
         ).run(me, rid, questionText, meUser?.public_key ?? null);
         msgId = Number(result.lastInsertRowid);
-        const pollResult = db.prepare(
-          'INSERT INTO polls (message_id, question, options, multiple) VALUES (?, ?, ?, ?)'
-        ).run(msgId, questionText, JSON.stringify(options), data.multiple ? 1 : 0);
-        pollId = Number(pollResult.lastInsertRowid);
+        if (!msgId || msgId <= 0 || isNaN(msgId)) {
+          throw new Error(`Failed to create message: lastInsertRowid=${result.lastInsertRowid}`);
+        }
+        // Проверяем наличие колонки multiple перед вставкой
+        let pollInsertSql = 'INSERT INTO polls (message_id, question, options';
+        let pollValues = [msgId, questionText, JSON.stringify(options)];
+        let pollPlaceholders = '?, ?, ?';
+        
+        // Проверяем, есть ли колонка multiple
+        try {
+          const tableInfo = db.prepare("PRAGMA table_info(polls)").all();
+          const hasMultiple = tableInfo.some(col => col.name === 'multiple');
+          if (hasMultiple) {
+            pollInsertSql += ', multiple) VALUES (' + pollPlaceholders + ', ?)';
+            pollValues.push(data.multiple ? 1 : 0);
+          } else {
+            pollInsertSql += ') VALUES (' + pollPlaceholders + ')';
+          }
+          const pollResult = db.prepare(pollInsertSql).run(...pollValues);
+          pollId = Number(pollResult.lastInsertRowid);
+          if (!pollId || pollId <= 0 || isNaN(pollId)) {
+            throw new Error(`Failed to create poll: lastInsertRowid=${pollResult.lastInsertRowid}`);
+          }
+        } catch (pollInsertErr) {
+          log.error({ err: pollInsertErr, msgId, sql: pollInsertSql, values: pollValues }, 'Poll insert error');
+          throw pollInsertErr;
+        }
         db.prepare('UPDATE messages SET poll_id = ? WHERE id = ?').run(pollId, msgId);
       });
       transaction();
+      // Проверяем, что переменные установлены
+      if (!msgId || !pollId || isNaN(msgId) || isNaN(pollId)) {
+        throw new Error(`Transaction completed but invalid IDs: msgId=${msgId}, pollId=${pollId}`);
+      }
       // Вызываем syncMessagesFTS вне транзакции
       try {
         syncMessagesFTS(msgId);
@@ -430,7 +458,7 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
         log.warn({ err: ftsErr, msgId }, 'FTS sync error (non-critical)');
       }
     } catch (pollErr) {
-      log.error({ err: pollErr, rid, me, code: pollErr.code, message: pollErr.message, stack: pollErr.stack }, 'POST /messages - poll creation error');
+      log.error({ err: pollErr, rid, me, msgId, pollId, code: pollErr.code, message: pollErr.message, stack: pollErr.stack }, 'POST /messages - poll creation error');
       throw pollErr;
     }
     const row = db.prepare(

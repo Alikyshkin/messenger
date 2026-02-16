@@ -100,6 +100,7 @@ try { db.exec('ALTER TABLE users ADD COLUMN avatar_path TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN public_key TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN message_type TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN poll_id INTEGER'); } catch (_) {}
+try { db.exec('ALTER TABLE polls ADD COLUMN multiple INTEGER DEFAULT 0'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN attachment_kind TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN attachment_duration_sec INTEGER'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN attachment_encrypted INTEGER'); } catch (_) {}
