@@ -96,6 +96,7 @@ class _CallScreenState extends State<CallScreen> {
     }
     _renderersFuture = _initRenderers();
     _ws = context.read<WsService>();
+    context.read<CallMinimizedService>().registerActiveCall(widget.peer, widget.isVideoCall);
 
     // Проверяем, не идет ли уже звонок с этим пользователем (при разворачивании из минимизации)
     final minimizedService = context.read<CallMinimizedService>();
@@ -919,6 +920,9 @@ class _CallScreenState extends State<CallScreen> {
     AppSoundService.instance.stopRingtone();
     _signalSub?.cancel();
     _statsTimer?.cancel();
+    try {
+      context.read<CallMinimizedService>().clearActiveCall();
+    } catch (_) {}
     _localRenderer.srcObject = null;
     _remoteRenderer.srcObject = null;
     _screenRenderer.srcObject = null;
@@ -1562,49 +1566,47 @@ class _CallScreenState extends State<CallScreen> {
       left: 0,
       right: 0,
       bottom: 0,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CallControlButton.participants(
-                onPressed: () => setState(() => _showPanel = !_showPanel),
-                isExpanded: _showPanel,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            CallControlButton.participants(
+              onPressed: () => setState(() => _showPanel = !_showPanel),
+              isExpanded: _showPanel,
+              size: 48,
+            ),
+            CallControlButton.microphone(
+              onPressed: _toggleMic,
+              isEnabled: _micEnabled,
+              size: 48,
+            ),
+            if (widget.isVideoCall)
+              CallControlButton.camera(
+                onPressed: _toggleCamera,
+                isEnabled: _cameraEnabled,
+                size: 48,
               ),
-              const SizedBox(width: 12),
-              CallControlButton.microphone(
-                onPressed: _toggleMic,
-                isEnabled: _micEnabled,
+            if (widget.isVideoCall) ...[
+              CallControlButton.screenShare(
+                onPressed: _toggleScreenShare,
+                isEnabled: _screenShareEnabled,
+                size: 48,
               ),
-              const SizedBox(width: 12),
-              if (widget.isVideoCall)
-                CallControlButton.camera(
-                  onPressed: _toggleCamera,
-                  isEnabled: _cameraEnabled,
-                ),
-              if (widget.isVideoCall) const SizedBox(width: 12),
-              const SizedBox(width: 12),
-              if (widget.isVideoCall) ...[
-                CallControlButton.screenShare(
-                  onPressed: _toggleScreenShare,
-                  isEnabled: _screenShareEnabled,
-                ),
-                const SizedBox(width: 12),
-                CallControlButton.switchCamera(
-                  onPressed: _screenShareEnabled ? null : _switchCamera,
-                ),
-                const SizedBox(width: 12),
-              ],
-              const SizedBox(width: 12),
-              CallActionButton.reject(
-                onPressed: _hangUp,
-                padding: const EdgeInsets.all(24),
+              CallControlButton.switchCamera(
+                onPressed: _screenShareEnabled ? null : _switchCamera,
+                size: 48,
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-        ],
+            CallActionButton.reject(
+              onPressed: _hangUp,
+              size: 48,
+              padding: const EdgeInsets.all(12),
+            ),
+          ],
+        ),
       ),
     );
   }

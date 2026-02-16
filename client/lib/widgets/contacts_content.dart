@@ -127,56 +127,6 @@ class _ContactsContentState extends State<ContactsContent> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Заголовок и кнопки действий
-        Container(
-          padding: AppSpacing.navigationPadding,
-          height: AppSizes.appBarHeight,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text(
-                  context.tr('contacts'),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.people_alt_outlined),
-                    tooltip: context.tr('possible_friends'),
-                    onPressed: () async {
-                      final nav = widget.navigator ?? Navigator.of(context);
-                      await nav.push(
-                        MaterialPageRoute(
-                          builder: (_) => const PossibleFriendsScreen(),
-                        ),
-                      );
-                      _load();
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    tooltip: context.tr('add_by_username'),
-                    onPressed: () async {
-                      final nav = widget.navigator ?? Navigator.of(context);
-                      await nav.push(
-                        MaterialPageRoute(
-                          builder: (_) => const AddContactScreen(),
-                        ),
-                      );
-                      _load();
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
         Expanded(
           child: _loading
               ? ListView.builder(

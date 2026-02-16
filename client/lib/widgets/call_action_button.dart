@@ -52,8 +52,7 @@ class CallActionButton extends StatelessWidget {
   }) {
     return CallActionButton(
       onPressed: onPressed,
-      icon: Icons.call_end,
-      iconRotation: -0.12, // выпрямляем наклон иконки трубки
+      icon: Icons.call_end_rounded,
       tooltip: tooltip,
       backgroundColor: Colors.red,
       foregroundColor: Colors.white,

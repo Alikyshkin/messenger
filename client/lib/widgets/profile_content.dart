@@ -84,30 +84,6 @@ class _ProfileContentState extends State<ProfileContent> {
         }
         return Column(
           children: [
-            // Заголовок и кнопка настроек
-            Container(
-              padding: AppSpacing.navigationPadding,
-              height: AppSizes.appBarHeight,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16),
-                    child: Text(
-                      context.tr('profile'),
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.settings),
-                    tooltip: context.tr('settings'),
-                    onPressed: () => context.push('/settings'),
-                  ),
-                ],
-              ),
-            ),
             Expanded(
               child: ListView(
                 padding: AppSpacing.screenPaddingVertical,

@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/attachment_cache.dart';
 import '../services/locale_service.dart';
 import '../services/theme_service.dart';
+import '../services/chat_list_refresh_service.dart';
 import '../widgets/app_back_button.dart';
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
@@ -1019,10 +1020,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: const Icon(Icons.delete_sweep, size: 20),
               label: Text(context.tr('clear_all_cache')),
             ),
+            FilledButton.tonalIcon(
+              onPressed: _loading ? null : _clearAllChatsAndMessages,
+              icon: const Icon(Icons.chat_bubble_outline, size: 20),
+              label: Text(context.tr('clear_all_chats_messages')),
+            ),
           ],
         ),
       ],
     );
+  }
+
+  Future<void> _clearAllChatsAndMessages() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.tr('clear_all_chats_messages_title')),
+        content: Text(context.tr('clear_all_chats_messages_body')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('delete'))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _loading = true);
+    try {
+      await LocalDb.clearAll();
+      if (mounted) {
+        try {
+          context.read<ChatListRefreshService>().requestRefresh();
+        } catch (_) {}
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(context.tr('all_cache_cleared'))),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Widget _buildDangerContent(BuildContext context) {

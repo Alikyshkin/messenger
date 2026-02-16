@@ -23,10 +23,13 @@ import '../widgets/error_state_widget.dart';
 import '../widgets/empty_state_widget.dart';
 import '../services/app_update_service.dart';
 import '../services/chat_list_refresh_service.dart';
+import '../services/call_minimized_service.dart';
 import '../config/version.dart' show AppVersion;
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
 import '../widgets/nav_badge.dart';
+import 'possible_friends_screen.dart';
+import 'add_contact_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Widget? child;
@@ -384,6 +387,61 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  List<Widget> _appBarActionsForMobile(BuildContext context, bool isMobile) {
+    if (!isMobile) return [];
+    switch (_currentView) {
+      case _NavigationItem.chats:
+        return [
+          IconButton(
+            icon: const Icon(Icons.search),
+            tooltip: context.tr('search_in_chats'),
+            onPressed: () => context.push('/search'),
+          ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: context.tr('new_chat'),
+            onPressed: () async {
+              await context.push('/start-chat');
+              _load();
+            },
+          ),
+        ];
+      case _NavigationItem.contacts:
+        return [
+          IconButton(
+            icon: const Icon(Icons.people_alt_outlined),
+            tooltip: context.tr('possible_friends'),
+            onPressed: () async {
+              final nav = _navigatorKey.currentState ?? Navigator.of(context);
+              await nav.push(
+                MaterialPageRoute(builder: (_) => const PossibleFriendsScreen()),
+              );
+              _loadFriendRequests();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: context.tr('add_by_username'),
+            onPressed: () async {
+              final nav = _navigatorKey.currentState ?? Navigator.of(context);
+              await nav.push(
+                MaterialPageRoute(builder: (_) => const AddContactScreen()),
+              );
+              _loadFriendRequests();
+            },
+          ),
+        ];
+      case _NavigationItem.profile:
+        return [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: context.tr('settings'),
+            onPressed: () => context.push('/settings'),
+          ),
+        ];
+    }
+  }
+
   Widget _buildContentView(BuildContext context) {
     switch (_currentView) {
       case _NavigationItem.chats:
@@ -403,43 +461,6 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildChatsView(BuildContext context) {
     return Column(
       children: [
-        // Заголовок и кнопка нового чата
-        Container(
-          padding: AppSpacing.navigationPadding,
-          height: AppSizes.appBarHeight,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text(
-                  context.tr('chats'),
-                  style: Theme.of(
-                    context,
-                  ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
-                ),
-              ),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.search),
-                    tooltip: context.tr('search_in_chats'),
-                    onPressed: () => context.push('/search'),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    tooltip: context.tr('new_chat'),
-                    onPressed: () async {
-                      await context.push('/start-chat');
-                      _load();
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
         const AppUpdateBanner(),
         Expanded(
           child: RefreshIndicator(
@@ -762,6 +783,7 @@ class _HomeScreenState extends State<HomeScreen>
             ? AppBar(
                 title: Text(_getAppBarTitle(context)),
                 actions: [
+                  if (isMobile) ..._appBarActionsForMobile(context, isMobile),
                   if (isMobile)
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert),
@@ -1059,6 +1081,18 @@ class _HomeScreenState extends State<HomeScreen>
             );
   }
 
+  void _onTabTap(String path, _NavigationItem target) {
+    if (!mounted || _currentView == target) return;
+    final minimizedService = context.read<CallMinimizedService>();
+    if (minimizedService.hasActiveCall && minimizedService.peer != null) {
+      minimizedService.minimizeCall(minimizedService.peer!, minimizedService.isVideoCall);
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    }
+    context.go(path);
+  }
+
   Widget _buildBottomNav(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
@@ -1078,33 +1112,21 @@ class _HomeScreenState extends State<HomeScreen>
                 icon: Icons.account_circle_outlined,
                 label: context.tr('my_profile'),
                 isActive: _currentView == _NavigationItem.profile,
-                onTap: () {
-                  if (mounted && _currentView != _NavigationItem.profile) {
-                    context.go('/profile');
-                  }
-                },
+                onTap: () => _onTabTap('/profile', _NavigationItem.profile),
               ),
               _BottomNavItem(
                 icon: Icons.chat_outlined,
                 label: context.tr('chats'),
                 isActive: _currentView == _NavigationItem.chats,
                 badge: _totalUnreadCount > 0 ? _totalUnreadCount : null,
-                onTap: () {
-                  if (mounted && _currentView != _NavigationItem.chats) {
-                    context.go('/');
-                  }
-                },
+                onTap: () => _onTabTap('/', _NavigationItem.chats),
               ),
               _BottomNavItem(
                 icon: Icons.people_outline,
                 label: context.tr('contacts'),
                 isActive: _currentView == _NavigationItem.contacts,
                 badge: _friendRequests.isNotEmpty ? _friendRequests.length : null,
-                onTap: () {
-                  if (mounted && _currentView != _NavigationItem.contacts) {
-                    context.go('/contacts');
-                  }
-                },
+                onTap: () => _onTabTap('/contacts', _NavigationItem.contacts),
               ),
             ],
           ),

@@ -290,8 +290,19 @@ class _ChatScreenState extends State<ChatScreen> {
       _error = null;
     });
     final cached = await LocalDb.getMessages(peerId);
+    final myId = auth.user?.id;
+    var decryptedCachedById = <int, Message>{};
     if (cached.isNotEmpty && mounted) {
-      setState(() => _messages = cached);
+      final decryptedCached = <Message>[];
+      for (final m in cached) {
+        final dec = await _decryptMessage(m, myId: myId);
+        decryptedCached.add(dec);
+        decryptedCachedById[dec.id] = dec;
+        if (!dec.content.startsWith('e2ee:')) {
+          await LocalDb.upsertMessage(dec, peerId);
+        }
+      }
+      setState(() => _messages = decryptedCached);
     }
     try {
       final api = Api(auth.token);
@@ -301,8 +312,7 @@ class _ChatScreenState extends State<ChatScreen> {
       }
       final ws = _ws ?? context.read<WsService>();
       await _drainIncoming(ws);
-      final myId = auth.user?.id;
-      final cachedById = {for (final m in cached) m.id: m};
+      final cachedById = decryptedCachedById;
       final decryptedList = <Message>[];
       for (final m in list) {
         final dec = await _decryptMessage(m, myId: myId);
@@ -326,8 +336,12 @@ class _ChatScreenState extends State<ChatScreen> {
       final mergedIds = merged.map((m) => m.id).toSet();
       for (final m in fromDb) {
         if (!mergedIds.contains(m.id)) {
-          merged.add(m);
-          mergedIds.add(m.id);
+          final dec = await _decryptMessage(m, myId: myId);
+          merged.add(dec);
+          mergedIds.add(dec.id);
+          if (!dec.content.startsWith('e2ee:')) {
+            await LocalDb.upsertMessage(dec, peerId);
+          }
         }
       }
       merged.sort((a, b) => a.createdAt.compareTo(b.createdAt));

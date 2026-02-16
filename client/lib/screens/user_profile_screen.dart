@@ -9,6 +9,7 @@ import '../utils/format_last_seen.dart';
 import '../widgets/app_back_button.dart';
 import '../widgets/user_avatar.dart';
 import 'chat_screen.dart';
+import 'call_screen.dart';
 
 /// Профиль другого пользователя: отображается только количество друзей (не список).
 class UserProfileScreen extends StatefulWidget {
@@ -24,29 +25,28 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   User? _user;
   bool _loading = true;
   String? _error;
+  bool _isContact = false;
 
   @override
   void initState() {
     super.initState();
     _user = widget.user;
-    if (_user!.friendsCount == null) {
-      _load();
-    } else {
-      _loading = false;
-    }
+    _load();
   }
 
   Future<void> _load() async {
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) {
-      return;
-    }
+    if (!auth.isLoggedIn) return;
     setState(() => _loading = true);
     try {
-      final u = await Api(auth.token).getUserProfile(widget.user.id);
+      final api = Api(auth.token);
+      final u = await api.getUserProfile(widget.user.id);
+      final contacts = await api.getContacts();
+      final isContact = contacts.any((c) => c.id == u.id);
       if (!mounted) return;
       setState(() {
         _user = u;
+        _isContact = isContact;
         _loading = false;
       });
     } catch (e) {
@@ -55,6 +55,50 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _loading = false;
         _error = e is ApiException ? e.message : context.tr('load_error');
       });
+    }
+  }
+
+  Future<void> _addContact() async {
+    final u = _user ?? widget.user;
+    final auth = context.read<AuthService>();
+    try {
+      await Api(auth.token).addContact(u.username);
+      if (!mounted) return;
+      setState(() => _isContact = true);
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is ApiException ? e.message : context.tr('connection_error'))),
+      );
+    }
+  }
+
+  Future<void> _removeContact() async {
+    final u = _user ?? widget.user;
+    final auth = context.read<AuthService>();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(context.tr('remove_friend_title')),
+        content: Text(context.tr('remove_friend_body').replaceFirst('%s', u.displayName)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('delete'))),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await Api(auth.token).removeContact(u.id);
+      if (!mounted) return;
+      setState(() => _isContact = false);
+      _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is ApiException ? e.message : context.tr('connection_error'))),
+      );
     }
   }
 
@@ -151,24 +195,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       appBar: AppBar(
         leading: const AppBackButton(),
         title: Text(u.displayName),
-        actions: [
-          if (!isOwnProfile)
-            IconButton(
-              icon: Icon(u.isBlocked == true ? Icons.block : Icons.block_outlined),
-              tooltip: u.isBlocked == true ? context.tr('unblock_user') : context.tr('block_user'),
-              onPressed: _toggleBlock,
-            ),
-          if (!isOwnProfile && u.isBlocked != true)
-            IconButton(
-              icon: const Icon(Icons.message),
-              tooltip: context.tr('write'),
-              onPressed: () {
-                Navigator.of(context).pushReplacement(
-                  AppPageRoute(builder: (_) => ChatScreen(peer: u)),
-                );
-              },
-            ),
-        ],
       ),
       body: _loading
           ? Center(
@@ -274,29 +300,66 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 if (!isOwnProfile) ...[
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: u.isBlocked == true
-                        ? OutlinedButton.icon(
-                            onPressed: _toggleBlock,
-                            icon: const Icon(Icons.block_outlined),
-                            label: Text(context.tr('unblock_user')),
-                          )
-                        : FilledButton.icon(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      alignment: WrapAlignment.center,
+                      children: [
+                        if (_isContact)
+                          FilledButton.icon(
                             onPressed: () {
-                              Navigator.of(context).pushReplacement(
+                              Navigator.of(context).push(
                                 AppPageRoute(builder: (_) => ChatScreen(peer: u)),
                               );
                             },
                             icon: const Icon(Icons.message),
                             label: Text(context.tr('write')),
+                          )
+                        else
+                          FilledButton.icon(
+                            onPressed: _addContact,
+                            icon: const Icon(Icons.person_add),
+                            label: Text(context.tr('add_friend')),
                           ),
-                  ),
-                  const SizedBox(height: 12),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: OutlinedButton.icon(
-                      onPressed: _toggleBlock,
-                      icon: Icon(u.isBlocked == true ? Icons.block_outlined : Icons.block, size: 18),
-                      label: Text(u.isBlocked == true ? context.tr('unblock_user') : context.tr('block_user')),
+                        if (_isContact)
+                          OutlinedButton.icon(
+                            onPressed: _removeContact,
+                            icon: const Icon(Icons.person_remove_outlined),
+                            label: Text(context.tr('remove_friend_tooltip')),
+                          ),
+                        if (u.isBlocked == true)
+                          OutlinedButton.icon(
+                            onPressed: _toggleBlock,
+                            icon: const Icon(Icons.block_outlined),
+                            label: Text(context.tr('unblock_user')),
+                          )
+                        else
+                          OutlinedButton.icon(
+                            onPressed: _toggleBlock,
+                            icon: const Icon(Icons.block, size: 18),
+                            label: Text(context.tr('block_user')),
+                          ),
+                        if (_isContact && u.isBlocked != true) ...[
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                AppPageRoute(builder: (_) => CallScreen(peer: u, isIncoming: false, isVideoCall: false)),
+                              );
+                            },
+                            icon: const Icon(Icons.phone),
+                            label: Text(context.tr('audio_call')),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                AppPageRoute(builder: (_) => CallScreen(peer: u, isIncoming: false, isVideoCall: true)),
+                              );
+                            },
+                            icon: const Icon(Icons.videocam),
+                            label: Text(context.tr('video_call')),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ],

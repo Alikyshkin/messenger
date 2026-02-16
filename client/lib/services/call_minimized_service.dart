@@ -38,13 +38,16 @@ class MinimizedCallState {
 /// Сервис для управления свернутым состоянием звонка
 class CallMinimizedService extends ChangeNotifier {
   MinimizedCallState _state = MinimizedCallState();
+  User? _activeCallPeer;
+  bool _activeCallVideoCall = true;
 
   MinimizedCallState get state => _state;
   bool get isMinimized => _state.isMinimized;
-  User? get peer => _state.peer;
+  User? get peer => _state.peer ?? _activeCallPeer;
   Group? get group => _state.group;
   bool get isVideoCall => _state.isVideoCall;
   bool get isGroupCall => _state.isGroupCall;
+  bool get hasActiveCall => _activeCallPeer != null;
 
   /// Свернуть индивидуальный звонок
   void minimizeCall(User peer, bool isVideoCall) {
@@ -77,6 +80,20 @@ class CallMinimizedService extends ChangeNotifier {
   /// Завершить звонок (очистить состояние)
   void endCall() {
     _state = MinimizedCallState(isMinimized: false);
+    _activeCallPeer = null;
+    notifyListeners();
+  }
+
+  /// Регистрация активного звонка (вызывается CallScreen при монтировании)
+  void registerActiveCall(User peer, bool isVideoCall) {
+    _activeCallPeer = peer;
+    _activeCallVideoCall = isVideoCall;
+    notifyListeners();
+  }
+
+  /// Сброс активного звонка (вызывается CallScreen при dispose)
+  void clearActiveCall() {
+    _activeCallPeer = null;
     notifyListeners();
   }
 }
