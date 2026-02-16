@@ -64,17 +64,18 @@ function getBaseUrl(req) {
 }
 
 router.patch('/:peerId/read', validateParams(peerIdParamSchema), asyncHandler(async (req, res) => {
-  const peerId = req.validatedParams.peerId;
-  const me = req.user.userId;
+  const peerId = Number(req.validatedParams.peerId);
+  const me = Number(req.user.userId);
   log.route('messages', 'PATCH /:peerId/read', 'START', { peerId, me });
   try {
     const stmt = db.prepare(
       'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE receiver_id = ? AND sender_id = ? AND read_at IS NULL'
     );
-    stmt.run(me, peerId);
+    const result = stmt.run(me, peerId);
+    log.route('messages', 'PATCH /:peerId/read', 'DB_UPDATE', { peerId, me, changes: result.changes });
   } catch (err) {
     log.route('messages', 'PATCH /:peerId/read', 'ERROR', { peerId, me, code: err.code }, err.message);
-    log.error({ err, peerId, me, code: err.code, message: err.message }, 'PATCH /messages/:peerId/read - DB error');
+    log.error({ err, peerId, me, code: err.code, message: err.message, stack: err.stack }, 'PATCH /messages/:peerId/read - DB error');
     throw err;
   }
   log.route('messages', 'PATCH /:peerId/read', 'END', { peerId, me }, 'ok');
@@ -82,27 +83,32 @@ router.patch('/:peerId/read', validateParams(peerIdParamSchema), asyncHandler(as
 }));
 
 router.patch('/:messageId', validateParams(messageIdParamSchema), validate(editMessageSchema), asyncHandler(async (req, res) => {
-  const messageId = req.validatedParams.messageId;
+  const messageId = Number(req.validatedParams.messageId);
   const { content } = req.validated;
-  const me = req.user.userId;
+  const me = Number(req.user.userId);
   const row = db.prepare('SELECT id, sender_id, receiver_id, content, message_type, attachment_path FROM messages WHERE id = ?').get(messageId);
   if (!row) return res.status(404).json({ error: 'Сообщение не найдено' });
-  if (row.sender_id !== me) return res.status(403).json({ error: 'Только отправитель может редактировать сообщение' });
+  if (Number(row.sender_id) !== me) return res.status(403).json({ error: 'Только отправитель может редактировать сообщение' });
   if (row.message_type !== 'text' || row.attachment_path) {
     return res.status(400).json({ error: 'Редактировать можно только текстовые сообщения без вложений' });
   }
   const sanitized = sanitizeText(content);
-  db.prepare('UPDATE messages SET content = ? WHERE id = ?').run(sanitized, messageId);
   try {
-    db.prepare('UPDATE messages_fts SET content = ? WHERE rowid = ?').run(sanitized, messageId);
-  } catch (_) {}
-  notifyMessageEdited(messageId, row.sender_id, row.receiver_id, sanitized);
-  const updated = db.prepare('SELECT id, content, created_at FROM messages WHERE id = ?').get(messageId);
-  res.json({
-    id: updated.id,
-    content: decryptIfLegacy(updated.content),
-    created_at: updated.created_at,
-  });
+    db.prepare('UPDATE messages SET content = ? WHERE id = ?').run(sanitized, messageId);
+    try {
+      db.prepare('UPDATE messages_fts SET content = ? WHERE rowid = ?').run(sanitized, messageId);
+    } catch (_) {}
+    notifyMessageEdited(messageId, Number(row.sender_id), Number(row.receiver_id), sanitized);
+    const updated = db.prepare('SELECT id, content, created_at FROM messages WHERE id = ?').get(messageId);
+    res.json({
+      id: updated.id,
+      content: decryptIfLegacy(updated.content),
+      created_at: updated.created_at,
+    });
+  } catch (err) {
+    log.error({ err, messageId, me, code: err.code, message: err.message, stack: err.stack }, 'PATCH /messages/:messageId - DB error');
+    throw err;
+  }
 }));
 
 router.post('/:messageId/reaction', validateParams(messageIdParamSchema), validate(addReactionSchema), asyncHandler(async (req, res) => {
@@ -404,18 +410,21 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     const questionText = sanitizeText(data.question);
     let msgId; let pollId;
     try {
-      const result = db.prepare(
-        `INSERT INTO messages (sender_id, receiver_id, content, message_type, attachment_path, attachment_filename, sender_public_key) VALUES (?, ?, ?, 'poll', NULL, NULL, ?)`
-      ).run(me, rid, questionText, meUser?.public_key ?? null);
-      msgId = Number(result.lastInsertRowid);
-      const pollResult = db.prepare(
-        'INSERT INTO polls (message_id, question, options, multiple) VALUES (?, ?, ?, ?)'
-      ).run(msgId, questionText, JSON.stringify(options), data.multiple ? 1 : 0);
-      pollId = Number(pollResult.lastInsertRowid);
-      db.prepare('UPDATE messages SET poll_id = ? WHERE id = ?').run(pollId, msgId);
-      syncMessagesFTS(msgId);
+      // Используем транзакцию для атомарности операций
+      db.transaction(() => {
+        const result = db.prepare(
+          `INSERT INTO messages (sender_id, receiver_id, content, message_type, attachment_path, attachment_filename, sender_public_key) VALUES (?, ?, ?, 'poll', NULL, NULL, ?)`
+        ).run(Number(me), Number(rid), questionText, meUser?.public_key ?? null);
+        msgId = Number(result.lastInsertRowid);
+        const pollResult = db.prepare(
+          'INSERT INTO polls (message_id, question, options, multiple) VALUES (?, ?, ?, ?)'
+        ).run(msgId, questionText, JSON.stringify(options), data.multiple ? 1 : 0);
+        pollId = Number(pollResult.lastInsertRowid);
+        db.prepare('UPDATE messages SET poll_id = ? WHERE id = ?').run(pollId, msgId);
+        syncMessagesFTS(msgId);
+      })();
     } catch (pollErr) {
-      log.error({ err: pollErr, rid, me, code: pollErr.code, message: pollErr.message }, 'POST /messages - poll creation error');
+      log.error({ err: pollErr, rid, me, code: pollErr.code, message: pollErr.message, stack: pollErr.stack }, 'POST /messages - poll creation error');
       throw pollErr;
     }
     const row = db.prepare(
@@ -593,48 +602,56 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
 
 // Удаление сообщения: for_me=true — только для себя, иначе — для всех
 router.delete('/:messageId', validateParams(messageIdParamSchema), asyncHandler(async (req, res) => {
-  const messageId = req.validatedParams.messageId;
+  const messageId = Number(req.validatedParams.messageId);
   const forMe = req.query.for_me === 'true' || req.query.for_me === '1';
-  const me = req.user.userId;
+  const me = Number(req.user.userId);
   
   const message = db.prepare('SELECT id, sender_id, receiver_id FROM messages WHERE id = ?').get(messageId);
   if (!message) {
     return res.status(404).json({ error: 'Сообщение не найдено' });
   }
   
-  if (message.sender_id !== me && message.receiver_id !== me) {
+  if (Number(message.sender_id) !== me && Number(message.receiver_id) !== me) {
     return res.status(403).json({ error: 'Нет доступа к сообщению' });
   }
   
   if (forMe) {
     try {
-      db.prepare('INSERT OR IGNORE INTO message_deleted_for (user_id, message_id) VALUES (?, ?)').run(me, messageId);
+      db.prepare('INSERT OR IGNORE INTO message_deleted_for (user_id, message_id) VALUES (?, ?)').run(Number(me), Number(messageId));
     } catch (e) {
       if (e.message && e.message.includes('message_deleted_for')) {
         return res.status(501).json({ error: 'Функция «удалить для себя» не поддерживается' });
       }
+      log.error({ err: e, messageId, me, code: e.code, message: e.message, stack: e.stack }, 'DELETE /messages/:messageId (forMe) - DB error');
       throw e;
     }
     return res.status(204).send();
   }
   
-  // Удаление для всех
-  db.prepare('DELETE FROM messages WHERE id = ?').run(messageId);
-  db.prepare('DELETE FROM message_reactions WHERE message_id = ?').run(messageId);
-  db.prepare('DELETE FROM message_deleted_for WHERE message_id = ?').run(messageId);
-  const poll = db.prepare('SELECT id FROM polls WHERE message_id = ?').get(messageId);
-  if (poll) {
-    db.prepare('DELETE FROM poll_votes WHERE poll_id = ?').run(poll.id);
-    db.prepare('DELETE FROM polls WHERE id = ?').run(poll.id);
-  }
+  // Удаление для всех - используем транзакцию для атомарности
   try {
-    db.prepare('DELETE FROM messages_fts WHERE rowid = ?').run(messageId);
-  } catch (_) {}
+    db.transaction(() => {
+      db.prepare('DELETE FROM messages WHERE id = ?').run(Number(messageId));
+      db.prepare('DELETE FROM message_reactions WHERE message_id = ?').run(Number(messageId));
+      db.prepare('DELETE FROM message_deleted_for WHERE message_id = ?').run(Number(messageId));
+      const poll = db.prepare('SELECT id FROM polls WHERE message_id = ?').get(Number(messageId));
+      if (poll) {
+        db.prepare('DELETE FROM poll_votes WHERE poll_id = ?').run(Number(poll.id));
+        db.prepare('DELETE FROM polls WHERE id = ?').run(Number(poll.id));
+      }
+      try {
+        db.prepare('DELETE FROM messages_fts WHERE rowid = ?').run(Number(messageId));
+      } catch (_) {}
+    })();
+  } catch (err) {
+    log.error({ err, messageId, me, code: err.code, message: err.message, stack: err.stack }, 'DELETE /messages/:messageId - DB error');
+    throw err;
+  }
   
-  const otherUserId = message.sender_id === me ? message.receiver_id : message.sender_id;
-  const peerIdForOther = me; // для получателя peer в этом чате — тот, кто удалил (отправитель)
+  const otherUserId = Number(message.sender_id) === Number(me) ? Number(message.receiver_id) : Number(message.sender_id);
+  const peerIdForOther = Number(me); // для получателя peer в этом чате — тот, кто удалил (отправитель)
   const { notifyMessageDeleted } = await import('../realtime.js');
-  notifyMessageDeleted(otherUserId, messageId, peerIdForOther);
+  notifyMessageDeleted(otherUserId, Number(messageId), peerIdForOther);
   
   res.status(204).send();
 }));
