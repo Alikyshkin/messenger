@@ -212,6 +212,10 @@ class AppLocalizations {
     'unmute_chat': 'Включить уведомления',
     'pin_chat': 'Закрепить',
     'unpin_chat': 'Открепить',
+    'search_in_chats': 'Поиск по чатам',
+    'search_in_chats_hint': 'Поиск сообщений...',
+    'search_in_chats_enter_query': 'Введите минимум 2 символа для поиска',
+    'search_no_results': 'Ничего не найдено',
     'profile_tooltip': 'Профиль',
     'zero_friends': '0 друзей',
     'possible_friends_empty':
@@ -426,6 +430,10 @@ class AppLocalizations {
     'unmute_chat': 'Unmute notifications',
     'pin_chat': 'Pin',
     'unpin_chat': 'Unpin',
+    'search_in_chats': 'Search in chats',
+    'search_in_chats_hint': 'Search messages...',
+    'search_in_chats_enter_query': 'Enter at least 2 characters to search',
+    'search_no_results': 'No results found',
     'profile_tooltip': 'Profile',
     'zero_friends': '0 friends',
     'possible_friends_empty':

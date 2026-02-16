@@ -16,6 +16,7 @@ import '../screens/forgot_password_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/phone_login_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/search_chats_screen.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/chat_list_refresh_service.dart';
@@ -173,6 +174,10 @@ GoRouter createAppRouter(AuthService authService) {
                   },
                   navigator: null,
                 ),
+              ),
+              GoRoute(
+                path: 'search',
+                builder: (context, state) => const SearchChatsScreen(),
               ),
               GoRoute(
                 path: 'start-chat',

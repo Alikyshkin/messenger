@@ -42,6 +42,7 @@ router.get('/messages', validatePagination, (req, res) => {
       JOIN messages_fts fts ON m.id = fts.rowid
       WHERE (m.sender_id = ? OR m.receiver_id = ?)
         AND (m.sender_id = ? OR m.receiver_id = ?)
+        AND NOT EXISTS (SELECT 1 FROM blocked_users b WHERE b.blocker_id = ? AND b.blocked_id = CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END)
         AND messages_fts MATCH ?
     `;
     
@@ -52,7 +53,7 @@ router.get('/messages', validatePagination, (req, res) => {
     } else {
       params.push(me, me);
     }
-    params.push(`"${query}"`);
+    params.push(me, me, `"${query}"`);
     
     sql += ' ORDER BY m.created_at DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
@@ -65,9 +66,10 @@ router.get('/messages', validatePagination, (req, res) => {
       FROM messages m
       JOIN messages_fts fts ON m.id = fts.rowid
       WHERE (m.sender_id = ? OR m.receiver_id = ?)
+        AND NOT EXISTS (SELECT 1 FROM blocked_users b WHERE b.blocker_id = ? AND b.blocked_id = CASE WHEN m.sender_id = ? THEN m.receiver_id ELSE m.sender_id END)
         AND messages_fts MATCH ?
     `;
-    const countParams = [me, me, `"${query}"`];
+    const countParams = [me, me, me, me, `"${query}"`];
     if (peerId) {
       countSql = countSql.replace('(m.sender_id = ? OR m.receiver_id = ?)', '(m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?)');
       countParams.splice(2, 0, peerId, peerId);

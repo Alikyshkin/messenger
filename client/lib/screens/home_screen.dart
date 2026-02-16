@@ -419,13 +419,23 @@ class _HomeScreenState extends State<HomeScreen>
                   ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.add),
-                tooltip: context.tr('new_chat'),
-                onPressed: () async {
-                  await context.push('/start-chat');
-                  _load();
-                },
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.search),
+                    tooltip: context.tr('search_in_chats'),
+                    onPressed: () => context.push('/search'),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    tooltip: context.tr('new_chat'),
+                    onPressed: () async {
+                      await context.push('/start-chat');
+                      _load();
+                    },
+                  ),
+                ],
               ),
             ],
           ),

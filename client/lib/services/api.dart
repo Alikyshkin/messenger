@@ -7,6 +7,7 @@ import '../models/message.dart';
 import '../models/chat.dart';
 import '../models/group.dart';
 import '../models/friend_request.dart';
+import '../models/search_result.dart';
 
 List<MessageReaction> _parseReactions(dynamic v) {
   if (v is! List) {
@@ -360,6 +361,33 @@ class Api {
         'Ошибка при поиске пользователей по телефонам: ${e.toString()}',
       );
     }
+  }
+
+  /// Поиск по сообщениям в чатах (FTS).
+  /// peerId — опционально, иначе поиск по всем личным чатам.
+  Future<SearchMessagesResult> searchMessages(String q, {int? peerId, int limit = 50, int offset = 0}) async {
+    final params = <String, String>{'q': q, 'limit': '$limit', 'offset': '$offset'};
+    if (peerId != null) params['peerId'] = '$peerId';
+    final r = await http.get(
+      Uri.parse('$base/search/messages').replace(queryParameters: params),
+      headers: _headers,
+    );
+    _checkResponse(r);
+    final json = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+    return SearchMessagesResult.fromJson(json);
+  }
+
+  /// Поиск по сообщениям в группах.
+  Future<SearchMessagesResult> searchGroupMessages(String q, {int? groupId, int limit = 50, int offset = 0}) async {
+    final params = <String, String>{'q': q, 'limit': '$limit', 'offset': '$offset'};
+    if (groupId != null) params['groupId'] = '$groupId';
+    final r = await http.get(
+      Uri.parse('$base/search/group-messages').replace(queryParameters: params),
+      headers: _headers,
+    );
+    _checkResponse(r);
+    final json = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+    return SearchMessagesResult.fromJson(json);
   }
 
   Future<List<ChatPreview>> getChats() async {
