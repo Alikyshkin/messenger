@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
+import '../utils/user_action_logger.dart';
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
 import 'empty_state_widget.dart';
@@ -45,6 +46,7 @@ class _UserSearchWidgetState extends State<UserSearchWidget> {
 
   Future<void> _search() async {
     final q = _query.text.trim();
+    logUserAction('user_search_widget_search', {'query': q, 'len': q.length});
     if (q.length < widget.minQueryLength) {
       setState(() {
         _results = [];

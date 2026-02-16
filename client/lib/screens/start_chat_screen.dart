@@ -5,6 +5,7 @@ import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../utils/app_page_route.dart';
+import '../utils/user_action_logger.dart';
 import '../widgets/app_back_button.dart';
 import 'chat_screen.dart';
 
@@ -24,12 +25,14 @@ class _StartChatScreenState extends State<StartChatScreen> {
 
   @override
   void dispose() {
+    logAction('start_chat_screen', 'dispose', 'done');
     _query.dispose();
     super.dispose();
   }
 
   Future<void> _search() async {
     final q = _query.text.trim();
+    logUserAction('start_chat_search', {'query': q, 'len': q.length});
     if (q.length < 2) {
       setState(() {
         _results = [];
@@ -37,6 +40,7 @@ class _StartChatScreenState extends State<StartChatScreen> {
       });
       return;
     }
+    final scope = logActionStart('start_chat_screen', '_search', {'query': q});
     setState(() {
       _searching = true;
       _error = null;
@@ -51,7 +55,9 @@ class _StartChatScreenState extends State<StartChatScreen> {
         _results = list;
         _searching = false;
       });
+      scope.end({'count': list.length});
     } catch (e) {
+      scope.fail(e);
       if (!mounted) {
         return;
       }
@@ -63,6 +69,7 @@ class _StartChatScreenState extends State<StartChatScreen> {
   }
 
   void _openChat(User u) {
+    logUserAction('start_chat_open', {'userId': u.id, 'username': u.username});
     Navigator.of(context).pop();
     Navigator.of(
       context,

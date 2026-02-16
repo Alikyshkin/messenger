@@ -1295,9 +1295,11 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_sending || _isRecording) {
       return;
     }
+    final scope = logActionStart('chat_screen', 'voice_record_start', {'peerId': widget.peer.id});
     try {
       final hasPermission = await _audioRecorder.hasPermission();
       if (!hasPermission) {
+        scope.fail('Permission denied');
         if (!mounted) {
           return;
         }
@@ -1324,7 +1326,9 @@ class _ChatScreenState extends State<ChatScreen> {
         _recordPath = path;
         _recordStartTime = DateTime.now();
       });
+      scope.end({'status': 'recording'});
     } catch (e) {
+      scope.fail(e);
       if (!mounted) {
         return;
       }
@@ -1344,6 +1348,7 @@ class _ChatScreenState extends State<ChatScreen> {
     if (!_isRecording || _recordPath == null) {
       return;
     }
+    final scope = logActionStart('chat_screen', 'voice_record_stop', {'peerId': widget.peer.id});
     final startTime = _recordStartTime;
     try {
       final path = await _audioRecorder.stop();
@@ -1356,6 +1361,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _recordStartTime = null;
       });
       if (path == null || path.isEmpty) {
+        scope.fail('Empty path');
         return;
       }
       int durationSec = 0;
@@ -1372,6 +1378,7 @@ class _ChatScreenState extends State<ChatScreen> {
         durationSec = DateTime.now().difference(startTime).inSeconds;
       }
       if (durationSec < 1) {
+        scope.fail('Duration too short: $durationSec');
         return;
       }
       var voiceBytes = Uint8List.fromList(await readVoiceFileBytes(path));
@@ -1393,7 +1400,10 @@ class _ChatScreenState extends State<ChatScreen> {
           encrypted: encrypted,
         ),
       );
-    } catch (_) {}
+      scope.end({'durationSec': durationSec, 'encrypted': encrypted});
+    } catch (e) {
+      scope.fail(e);
+    }
   }
 
   Future<void> _openRecordVideoNote() async {

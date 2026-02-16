@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
+import '../utils/user_action_logger.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/message.dart';
@@ -264,6 +265,7 @@ class LocalDb {
 
   /// Удалить чат и все сообщения с пользователем из локальной БД
   static Future<void> deleteChat(int peerId) async {
+    logAction('local_db', 'deleteChat', 'START', {'peerId': peerId});
     final db = await _getDb();
     if (db == null) {
       return;
@@ -280,6 +282,7 @@ class LocalDb {
       whereArgs: [peerId, peerId],
     );
     await db.delete('outbox', where: 'peer_id = ?', whereArgs: [peerId]);
+    logAction('local_db', 'deleteChat', 'END', {'peerId': peerId}, 'ok');
   }
 
   /// Проверить, скрыт ли чат

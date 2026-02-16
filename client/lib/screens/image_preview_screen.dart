@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../utils/download_file.dart';
+import '../utils/user_action_logger.dart';
 import '../widgets/app_back_button.dart';
 
 /// Полноэкранный просмотр изображения. По тапу — превью, в меню (⋮) — «Скачать».
@@ -19,11 +20,13 @@ class ImagePreviewScreen extends StatelessWidget {
   });
 
   Future<void> _download(BuildContext context) async {
+    final scope = logActionStart('image_preview_screen', '_download', {'filename': filename});
     Uint8List? bytes = imageBytes;
     if (bytes == null && bytesFuture != null) {
       bytes = await bytesFuture;
     }
     if (bytes == null || bytes.isEmpty) {
+      scope.fail('no bytes');
       if (!context.mounted) {
         return;
       }
@@ -37,10 +40,12 @@ class ImagePreviewScreen extends StatelessWidget {
       if (!context.mounted) {
         return;
       }
+      scope.end({'bytes': bytes.length});
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Сохранено')));
-    } catch (_) {
+    } catch (e) {
+      scope.fail(e);
       if (!context.mounted) {
         return;
       }
@@ -67,7 +72,10 @@ class ImagePreviewScreen extends StatelessWidget {
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
-              if (value == 'download') _download(context);
+              if (value == 'download') {
+                logUserAction('image_preview_download_tap');
+                _download(context);
+              }
             },
             itemBuilder: (context) => [
               const PopupMenuItem(

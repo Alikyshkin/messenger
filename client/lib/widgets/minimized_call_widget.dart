@@ -33,16 +33,19 @@ class MinimizedCallWidget extends StatelessWidget {
       right: 8,
       left: 8,
       child: Material(
-        elevation: 8,
+        elevation: 12,
+        shadowColor: Colors.black54,
         borderRadius: BorderRadius.circular(12),
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () => _expandCall(context, service),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: [
+        child: Tooltip(
+          message: 'Нажмите для возврата к звонку',
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _expandCall(context, service),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
                 // Аватар
                 if (isGroupCall && group != null)
                   Stack(
@@ -171,6 +174,7 @@ class MinimizedCallWidget extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../models/group.dart';
+import '../utils/user_action_logger.dart';
 
 /// Состояние свернутого звонка
 class MinimizedCallState {
@@ -51,6 +52,7 @@ class CallMinimizedService extends ChangeNotifier {
 
   /// Свернуть индивидуальный звонок
   void minimizeCall(User peer, bool isVideoCall) {
+    logAction('call_minimized_service', 'minimizeCall', 'done', {'peerId': peer.id, 'isVideo': isVideoCall});
     _state = MinimizedCallState(
       isMinimized: true,
       peer: peer,
@@ -73,12 +75,14 @@ class CallMinimizedService extends ChangeNotifier {
 
   /// Развернуть звонок
   void expandCall() {
+    logAction('call_minimized_service', 'expandCall', 'done', {'peerId': peer?.id, 'groupId': group?.id});
     _state = MinimizedCallState(isMinimized: false);
     notifyListeners();
   }
 
   /// Завершить звонок (очистить состояние)
   void endCall() {
+    logAction('call_minimized_service', 'endCall', 'done');
     _state = MinimizedCallState(isMinimized: false);
     _activeCallPeer = null;
     notifyListeners();

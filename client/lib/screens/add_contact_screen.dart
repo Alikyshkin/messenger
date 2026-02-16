@@ -21,6 +21,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
   String? _error;
 
   Future<void> _add(User u) async {
+    final scope = logActionStart('add_contact_screen', '_add', {'userId': u.id, 'username': u.username});
     logUserAction('add_contact', {'username': u.username});
     setState(() => _error = null);
     try {
@@ -34,10 +35,12 @@ class _AddContactScreenState extends State<AddContactScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(context.tr('request_sent'))));
+      scope.end({'addedId': added.id});
       Navigator.of(
         context,
       ).push(AppPageRoute(builder: (_) => ChatScreen(peer: added)));
     } on ApiException catch (e) {
+      scope.fail(e);
       if (!mounted) {
         return;
       }

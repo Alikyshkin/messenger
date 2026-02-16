@@ -4,6 +4,7 @@ import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../models/user.dart';
 import '../models/group.dart';
+import '../utils/user_action_logger.dart';
 import '../widgets/app_back_button.dart';
 import 'image_preview_screen.dart';
 
@@ -33,6 +34,10 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen>
   @override
   void initState() {
     super.initState();
+    logAction('media_gallery_screen', 'initState', 'START', {
+      'peerId': widget.peer?.id,
+      'groupId': widget.group?.id,
+    });
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
@@ -49,11 +54,16 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen>
 
   @override
   void dispose() {
+    logAction('media_gallery_screen', 'dispose', 'done');
     _tabController.dispose();
     super.dispose();
   }
 
   Future<void> _loadMedia({bool loadMore = false}) async {
+    final scope = logActionStart('media_gallery_screen', '_loadMedia', {
+      'loadMore': loadMore,
+      'type': _selectedType,
+    });
     if (!loadMore) {
       setState(() {
         _loading = true;
@@ -102,7 +112,9 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen>
         _hasMore = pagination['hasMore'] as bool? ?? false;
         _loading = false;
       });
+      scope.end({'count': newMedia.length, 'hasMore': _hasMore});
     } catch (e) {
+      scope.fail(e);
       if (!mounted) return;
       setState(() {
         _error = e.toString();
@@ -112,6 +124,7 @@ class _MediaGalleryScreenState extends State<MediaGalleryScreen>
   }
 
   void _openMedia(MediaItem item, int index) {
+    logUserAction('media_gallery_open', {'type': item.type, 'index': index});
     if (item.type == 'photo') {
       Navigator.push(
         context,

@@ -304,6 +304,11 @@ class _HomeScreenState extends State<HomeScreen>
     );
 
     if (ok == true && mounted) {
+      final scope = logActionStart('home_screen', 'delete_chat', {
+        'isGroup': isGroup,
+        'peerId': isGroup ? null : chat.peer?.id,
+        'groupId': isGroup ? chat.group?.id : null,
+      });
       try {
         if (isGroup) {
           // Для групповых чатов просто удаляем из текущего списка
@@ -314,6 +319,7 @@ class _HomeScreenState extends State<HomeScreen>
               (c) => c.isGroup && c.group?.id == chat.group?.id,
             );
           });
+          scope.end({'result': 'group_removed'});
         } else {
           // Для приватных чатов удаляем из локальной БД и обновляем список
           await LocalDb.deleteChat(chat.peer!.id);
@@ -324,8 +330,10 @@ class _HomeScreenState extends State<HomeScreen>
               );
             });
           }
+          scope.end({'result': 'private_deleted'});
         }
       } catch (e) {
+        scope.fail(e);
         if (!mounted) {
           return;
         }

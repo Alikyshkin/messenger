@@ -945,6 +945,19 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final canPopNormally = _state == 'ended';
+    return PopScope(
+      canPop: canPopNormally,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (!didPop && !canPopNormally) {
+          _minimizeCall();
+        }
+      },
+      child: _buildCallContent(context),
+    );
+  }
+
+  Widget _buildCallContent(BuildContext context) {
     if (_state == 'ended') {
       return Scaffold(
         body: Center(

@@ -7,6 +7,7 @@ import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../services/e2ee_service.dart';
 import '../utils/media_utils.dart';
+import '../utils/user_action_logger.dart';
 import '../widgets/app_back_button.dart';
 
 class RecordVideoNoteScreen extends StatefulWidget {
@@ -36,6 +37,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
   @override
   void initState() {
     super.initState();
+    logAction('record_video_note_screen', 'initState', 'START', {'peerId': widget.peerId});
     _initCamera();
   }
 
@@ -81,6 +83,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
 
   @override
   void dispose() {
+    logAction('record_video_note_screen', 'dispose', 'done');
     _recordTimer?.cancel();
     _controller?.dispose();
     super.dispose();
@@ -92,6 +95,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
         _recording) {
       return;
     }
+    logUserAction('record_video_note_start', {'peerId': widget.peerId});
     try {
       await _controller!.startVideoRecording();
       setState(() {
@@ -104,6 +108,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
         }
       });
     } catch (e) {
+      logActionError('record_video_note_screen', '_startRecording', e);
       setState(() => _error = 'Ошибка записи');
     }
   }
@@ -112,6 +117,11 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
     if (_controller == null || !_recording || _sending) {
       return;
     }
+    final scope = logActionStart('record_video_note_screen', '_stopAndSend', {
+      'peerId': widget.peerId,
+      'durationSec': _recordSeconds,
+    });
+    logUserAction('record_video_note_send', {'peerId': widget.peerId});
     _recordTimer?.cancel();
     setState(() {
       _recording = false;
@@ -149,8 +159,10 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
         attachmentEncrypted: encrypted,
       );
       if (!mounted) return;
+      scope.end({'durationSec': durationSec});
       Navigator.of(context).pop({'message': msg});
     } catch (e) {
+      scope.fail(e);
       if (!mounted) return;
       setState(() {
         _error = e is ApiException ? e.message : 'Ошибка отправки';

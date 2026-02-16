@@ -5,6 +5,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config.dart';
 import '../models/message.dart';
 import '../models/call_signal.dart';
+import '../utils/user_action_logger.dart';
 
 class ReactionUpdate {
   final int messageId;
@@ -84,6 +85,7 @@ class WsService extends ChangeNotifier {
       _newMessagePayloadController.stream;
 
   void connect(String token) {
+    logAction('ws_service', 'connect', 'START', {'tokenLen': token.length, 'wasConnected': _connected});
     if (_token == token && _connected) {
       return;
     }
@@ -99,6 +101,7 @@ class WsService extends ChangeNotifier {
   }
 
   void _doConnect() {
+    logAction('ws_service', '_doConnect', 'START', {'attempt': _reconnectAttempts});
     _sub?.cancel();
     _sub = null;
     _channel?.sink.close();
@@ -124,9 +127,11 @@ class WsService extends ChangeNotifier {
       );
       _connected = true;
       _reconnectAttempts = 0; // Сбрасываем счетчик при успешном подключении
+      logAction('ws_service', '_doConnect', 'END', null, 'connected');
       _flushPendingCallSignals(); // Отправляем накопленные сигналы
       notifyListeners();
-    } catch (_) {
+    } catch (e) {
+      logActionError('ws_service', '_doConnect', e);
       _connected = false;
       _reconnectAttempts++;
       notifyListeners();
@@ -501,6 +506,7 @@ class WsService extends ChangeNotifier {
   }
 
   void disconnect() {
+    logAction('ws_service', 'disconnect', 'done');
     _allowReconnect = false;
     _reconnectTimer?.cancel();
     _reconnectTimer = null;

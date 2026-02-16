@@ -7,6 +7,7 @@ import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../utils/app_page_route.dart';
+import '../utils/user_action_logger.dart';
 import '../widgets/app_back_button.dart';
 import 'user_profile_screen.dart';
 
@@ -35,6 +36,7 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
     if (!auth.isLoggedIn) {
       return;
     }
+    final scope = logActionStart('possible_friends_screen', '_load', {});
     setState(() {
       _loading = true;
       _error = null;
@@ -52,7 +54,9 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
         _pendingIds = {...outgoingIds, ...incoming.map((r) => r.fromUserId)};
         _loading = false;
       });
+      scope.end({'contacts': _contactIds.length, 'pending': _pendingIds.length});
     } catch (e) {
+      scope.fail(e);
       if (!mounted) {
         return;
       }
@@ -73,8 +77,11 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
   }
 
   Future<void> _syncContacts() async {
+    final scope = logActionStart('possible_friends_screen', '_syncContacts', {});
+    logUserAction('possible_friends_sync', {});
     final status = await Permission.contacts.request();
     if (!status.isGranted) {
+      scope.fail('permission denied');
       if (!mounted) {
         return;
       }
@@ -104,6 +111,7 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
         }
       }
       if (phones.isEmpty) {
+        scope.fail('no phones');
         if (!mounted) {
           return;
         }
@@ -130,7 +138,9 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
             .toList();
         _syncing = false;
       });
+      scope.end({'found': found.length, 'users': _users.length});
     } catch (e) {
+      scope.fail(e);
       if (!mounted) {
         return;
       }
@@ -146,6 +156,7 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
   @override
   void initState() {
     super.initState();
+    logAction('possible_friends_screen', 'initState', 'START');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _load().then((_) {
         if (mounted && _users.isEmpty && !_loading && _error == null) {
@@ -156,6 +167,7 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
   }
 
   Future<void> _addFriend(User u) async {
+    logUserAction('possible_friends_add', {'userId': u.id, 'username': u.username});
     final auth = context.read<AuthService>();
     try {
       await Api(auth.token).addContact(u.username);

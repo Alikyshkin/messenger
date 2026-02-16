@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../services/api.dart';
+import '../utils/user_action_logger.dart';
 import '../widgets/app_back_button.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -18,13 +19,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   @override
   void dispose() {
+    logAction('forgot_password_screen', 'dispose', 'done');
     _emailController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     final email = _emailController.text.trim();
+    final scope = logActionStart('forgot_password_screen', 'submit', {'email': email.isNotEmpty ? '***' : ''});
     if (email.isEmpty) {
+      scope.fail('empty email');
       setState(() => _error = context.tr('enter_email'));
       return;
     }
@@ -42,7 +46,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _loading = false;
         _sent = true;
       });
+      scope.end({'sent': true});
     } on ApiException catch (e) {
+      scope.fail(e);
       if (!mounted) {
         return;
       }
@@ -50,7 +56,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _error = e.message;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      scope.fail(e);
       if (!mounted) {
         return;
       }
@@ -59,6 +66,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _loading = false;
       });
     }
+  }
+
+  void _onBackToLogin() {
+    logUserAction('forgot_password_back_to_login');
+    Navigator.of(context).pop();
   }
 
   @override
@@ -88,7 +100,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
                 const SizedBox(height: 24),
                 FilledButton(
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: _onBackToLogin,
                   child: Text(context.tr('back_to_login')),
                 ),
               ] else ...[

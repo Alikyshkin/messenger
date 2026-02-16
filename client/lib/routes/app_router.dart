@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../utils/user_action_logger.dart';
 import '../screens/login_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/chats_list_page.dart';
@@ -45,11 +46,13 @@ GoRouter createAppRouter(AuthService authService) {
 
       // Если пользователь не авторизован и пытается зайти на защищенные страницы
       if (!isLoggedIn && !isLoggingIn) {
+        logAction('app_router', 'redirect', 'done', {'to': '/login', 'from': state.matchedLocation}, 'auth required');
         return '/login';
       }
 
       // Если пользователь авторизован и пытается зайти на страницы входа
       if (isLoggedIn && isLoggingIn) {
+        logAction('app_router', 'redirect', 'done', {'to': '/', 'from': state.matchedLocation}, 'already logged in');
         return '/';
       }
 

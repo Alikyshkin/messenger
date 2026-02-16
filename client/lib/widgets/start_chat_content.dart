@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../utils/app_page_route.dart';
+import '../utils/user_action_logger.dart';
 import '../screens/chat_screen.dart';
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
@@ -14,6 +15,7 @@ class StartChatContent extends StatelessWidget {
   const StartChatContent({super.key, this.navigator});
 
   void _openChat(BuildContext context, User u) {
+    logUserAction('start_chat_content_open', {'userId': u.id});
     final nav = navigator ?? Navigator.of(context);
     nav.push(AppPageRoute(builder: (_) => ChatScreen(peer: u)));
   }

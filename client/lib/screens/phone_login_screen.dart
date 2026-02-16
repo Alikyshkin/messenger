@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/oauth_service.dart';
 import '../services/api.dart';
+import '../utils/user_action_logger.dart';
 
 /// Экран входа по номеру телефона (SMS-код)
 class PhoneLoginScreen extends StatefulWidget {
@@ -23,6 +24,7 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
 
   @override
   void dispose() {
+    logAction('phone_login_screen', 'dispose', 'done');
     _phoneController.dispose();
     _codeController.dispose();
     super.dispose();
@@ -30,7 +32,9 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
 
   Future<void> _sendCode() async {
     final phone = _phoneController.text.trim().replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    final scope = logActionStart('phone_login_screen', 'sendCode', {'phoneLen': phone.length});
     if (phone.isEmpty) {
+      scope.fail('empty phone');
       setState(() => _error = context.tr('enter_phone'));
       return;
     }
@@ -46,13 +50,16 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
         _codeSent = true;
         _loading = false;
       });
+      scope.end({'codeSent': true});
     } on ApiException catch (e) {
+      scope.fail(e);
       if (!mounted) return;
       setState(() {
         _error = e.message;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      scope.fail(e);
       if (!mounted) return;
       setState(() {
         _error = context.tr('connection_error');
@@ -65,7 +72,9 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
     final phone = _phoneController.text.trim().replaceAll(RegExp(r'[\s\-\(\)]'), '');
     final normalized = phone.startsWith('+') ? phone : '+7$phone';
     final code = _codeController.text.trim();
+    final scope = logActionStart('phone_login_screen', 'verify', {'codeLen': code.length});
     if (code.length != 6) {
+      scope.fail('invalid code length');
       setState(() => _error = context.tr('enter_code_6'));
       return;
     }
@@ -78,20 +87,28 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
       if (!mounted) return;
       await context.read<AuthService>().loginWithOAuth(res);
       if (!mounted) return;
+      scope.end({'userId': res.user.id});
       context.go('/');
     } on ApiException catch (e) {
+      scope.fail(e);
       if (!mounted) return;
       setState(() {
         _error = e.message;
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
+      scope.fail(e);
       if (!mounted) return;
       setState(() {
         _error = context.tr('connection_error');
         _loading = false;
       });
     }
+  }
+
+  void _onBack() {
+    logUserAction('phone_login_back');
+    context.pop();
   }
 
   @override
@@ -101,7 +118,7 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
         title: Text(context.tr('login_with_phone')),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          onPressed: _onBack,
         ),
       ),
       body: SafeArea(

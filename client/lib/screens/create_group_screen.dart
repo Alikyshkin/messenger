@@ -30,16 +30,19 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   @override
   void initState() {
     super.initState();
+    logAction('create_group_screen', 'initState', 'START');
     _loadContacts();
   }
 
   @override
   void dispose() {
+    logAction('create_group_screen', 'dispose', 'done');
     _nameController.dispose();
     super.dispose();
   }
 
   Future<void> _loadContacts() async {
+    final scope = logActionStart('create_group_screen', '_loadContacts', {});
     final auth = context.read<AuthService>();
     if (!auth.isLoggedIn) {
       return;
@@ -52,7 +55,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         _contacts = list;
         _loading = false;
       });
+      scope.end({'count': list.length});
     } catch (e) {
+      scope.fail(e);
       if (!mounted) return;
       setState(() {
         _loading = false;
@@ -62,6 +67,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   }
 
   Future<void> _pickPhoto() async {
+    logUserAction('create_group_pick_photo', {});
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
       allowMultiple: false,

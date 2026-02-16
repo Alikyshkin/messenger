@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
+import '../utils/user_action_logger.dart';
 import '../widgets/user_avatar.dart';
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
@@ -67,6 +68,7 @@ class _ProfileContentState extends State<ProfileContent> {
   @override
   void initState() {
     super.initState();
+    logAction('profile_content', 'initState', 'START');
     if (!_userRefreshed) {
       _userRefreshed = true;
       // Не вызываем refreshUser автоматически, чтобы не вызывать лишние перестройки
@@ -176,6 +178,7 @@ class _ProfileContentState extends State<ProfileContent> {
                             _friendsCountLabel(context, u.friendsCount),
                           ),
                           onTap: () {
+                            logUserAction('profile_content_friends_tap');
                             // Переключение на контакты будет обработано через навигацию
                           },
                         ),
@@ -184,7 +187,10 @@ class _ProfileContentState extends State<ProfileContent> {
                           leading: const Icon(Icons.settings_outlined),
                           title: Text(context.tr('settings')),
                           subtitle: Text(context.tr('settings_subtitle')),
-                          onTap: () => context.push('/settings'),
+                          onTap: () {
+                            logUserAction('profile_content_settings_tap');
+                            context.push('/settings');
+                          },
                         ),
                       ],
                     ),
