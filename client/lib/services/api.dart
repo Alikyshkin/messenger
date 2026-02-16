@@ -548,11 +548,13 @@ class Api {
   }
 
   Future<void> markMessagesRead(int peerId) async {
-    final r = await http.patch(
-      Uri.parse('$base/messages/$peerId/read'),
-      headers: _headers,
-    );
-    _checkResponse(r);
+    return _logged('PATCH', '/messages/$peerId/read', () async {
+      final r = await http.patch(
+        Uri.parse('$base/messages/$peerId/read'),
+        headers: _headers,
+      );
+      _checkResponse(r);
+    });
   }
 
   /// Редактирует текстовое сообщение. Возвращает обновлённый контент.
@@ -599,19 +601,20 @@ class Api {
     int? forwardFromSenderId,
     String? forwardFromDisplayName,
   }) async {
-    final body = <String, dynamic>{
-      'receiver_id': receiverId,
-      'content': content,
-    };
-    if (replyToId != null) {
-      body['reply_to_id'] = replyToId;
-    }
-    if (isForwarded) {
-      body['is_forwarded'] = true;
-      if (forwardFromSenderId != null) {
-        body['forward_from_sender_id'] = forwardFromSenderId;
+    return _logged('POST', '/messages', () async {
+      final body = <String, dynamic>{
+        'receiver_id': receiverId,
+        'content': content,
+      };
+      if (replyToId != null) {
+        body['reply_to_id'] = replyToId;
       }
-      if (forwardFromDisplayName != null) {
+      if (isForwarded) {
+        body['is_forwarded'] = true;
+        if (forwardFromSenderId != null) {
+          body['forward_from_sender_id'] = forwardFromSenderId;
+        }
+        if (forwardFromDisplayName != null) {
         body['forward_from_display_name'] = forwardFromDisplayName;
       }
     }
@@ -643,6 +646,7 @@ class Api {
       // Для всех остальных ошибок пробрасываем дальше
       rethrow;
     }
+    });
   }
 
   Future<Message> sendMessageWithLocation(
@@ -651,22 +655,24 @@ class Api {
     double lng, {
     String? label,
   }) async {
-    final body = <String, dynamic>{
-      'receiver_id': receiverId,
-      'type': 'location',
-      'lat': lat,
-      'lng': lng,
-    };
-    if (label != null && label.isNotEmpty) {
-      body['location_label'] = label;
-    }
-    final r = await http.post(
-      Uri.parse('$base/messages'),
-      headers: _headers,
-      body: jsonEncode(body),
-    );
-    _checkResponse(r);
-    return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+    return _logged('POST', '/messages (location)', () async {
+      final body = <String, dynamic>{
+        'receiver_id': receiverId,
+        'type': 'location',
+        'lat': lat,
+        'lng': lng,
+      };
+      if (label != null && label.isNotEmpty) {
+        body['location_label'] = label;
+      }
+      final r = await http.post(
+        Uri.parse('$base/messages'),
+        headers: _headers,
+        body: jsonEncode(body),
+      );
+      _checkResponse(r);
+      return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+    });
   }
 
   Future<Message> sendMissedCallMessage(int receiverId) async {
@@ -692,18 +698,20 @@ class Api {
     String filename, {
     bool attachmentEncrypted = false,
   }) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['receiver_id'] = receiverId.toString();
-    request.fields['content'] = content;
-    if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
-    request.files.add(
-      http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
-    );
-    final streamed = await request.send();
-    final r = await http.Response.fromStream(streamed);
-    _checkResponse(r);
-    return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+    return _logged('POST', '/messages (file)', () async {
+      final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['receiver_id'] = receiverId.toString();
+      request.fields['content'] = content;
+      if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
+      request.files.add(
+        http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
+      );
+      final streamed = await request.send();
+      final r = await http.Response.fromStream(streamed);
+      _checkResponse(r);
+      return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+    });
   }
 
   /// Отправка нескольких файлов (например, альбом фото). Возвращает список сообщений.
@@ -716,7 +724,8 @@ class Api {
     if (files.isEmpty) {
       return [];
     }
-    final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
+    return _logged('POST', '/messages (multiple files)', () async {
+      final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['receiver_id'] = receiverId.toString();
     request.fields['content'] = content;
@@ -746,7 +755,8 @@ class Api {
     int durationSec, {
     bool attachmentEncrypted = false,
   }) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
+    return _logged('POST', '/messages (voice)', () async {
+      final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['receiver_id'] = receiverId.toString();
     request.fields['content'] = '';
@@ -756,10 +766,11 @@ class Api {
     request.files.add(
       http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
     );
-    final streamed = await request.send();
-    final r = await http.Response.fromStream(streamed);
-    _checkResponse(r);
-    return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+      final streamed = await request.send();
+      final r = await http.Response.fromStream(streamed);
+      _checkResponse(r);
+      return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+    });
   }
 
   Future<Message> sendVideoNoteMessage(
@@ -769,7 +780,8 @@ class Api {
     int durationSec, {
     bool attachmentEncrypted = false,
   }) async {
-    final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
+    return _logged('POST', '/messages (video_note)', () async {
+      final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
     request.headers['Authorization'] = 'Bearer $token';
     request.fields['receiver_id'] = receiverId.toString();
     request.fields['content'] = '';
@@ -779,10 +791,11 @@ class Api {
     request.files.add(
       http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
     );
-    final streamed = await request.send();
-    final r = await http.Response.fromStream(streamed);
-    _checkResponse(r);
-    return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+      final streamed = await request.send();
+      final r = await http.Response.fromStream(streamed);
+      _checkResponse(r);
+      return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+    });
   }
 
   Future<void> deleteMessage(int messageId, {bool forMe = false}) async {
@@ -873,19 +886,21 @@ class Api {
     List<String> options, {
     bool multiple = false,
   }) async {
-    final r = await http.post(
-      Uri.parse('$base/messages'),
-      headers: _headers,
-      body: jsonEncode({
-        'receiver_id': receiverId,
-        'type': 'poll',
-        'question': question,
-        'options': options,
-        'multiple': multiple,
-      }),
-    );
-    _checkResponse(r);
-    return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+    return _logged('POST', '/messages (poll)', () async {
+      final r = await http.post(
+        Uri.parse('$base/messages'),
+        headers: _headers,
+        body: jsonEncode({
+          'receiver_id': receiverId,
+          'type': 'poll',
+          'question': question,
+          'options': options,
+          'multiple': multiple,
+        }),
+      );
+      _checkResponse(r);
+      return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+    });
   }
 
   Future<PollResult> votePoll(int pollId, int optionIndex) async {

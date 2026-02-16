@@ -66,6 +66,8 @@ class _ChatScreenState extends State<ChatScreen> {
   final Map<String, Future<Uint8List?>> _attachmentFutureCache = {};
   Timer? _typingDebounce;
   DateTime _lastTypingSent = DateTime(0);
+  DateTime? _lastMarkReadTime;
+  Timer? _markReadDebounce;
 
   @override
   void initState() {
@@ -186,9 +188,20 @@ class _ChatScreenState extends State<ChatScreen> {
       }
     }
     // Пользователь в чате — помечаем все сообщения прочитанными, чтобы при выходе не показывался счётчик непрочитанных
+    // Используем debounce, чтобы не вызывать слишком часто
     if (mounted) {
-      final auth = context.read<AuthService>();
-      Api(auth.token).markMessagesRead(widget.peer.id).catchError((_) {});
+      final now = DateTime.now();
+      if (_lastMarkReadTime == null || now.difference(_lastMarkReadTime!).inSeconds >= 2) {
+        _markReadDebounce?.cancel();
+        _markReadDebounce = Timer(const Duration(milliseconds: 500), () {
+          if (!mounted) return;
+          final auth = context.read<AuthService>();
+          _lastMarkReadTime = DateTime.now();
+          Api(auth.token).markMessagesRead(widget.peer.id).catchError((e) {
+            logActionError('chat_screen', 'markMessagesRead_onVisible', e, {'peerId': widget.peer.id});
+          });
+        });
+      }
     }
   }
 
@@ -275,6 +288,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     _typingDebounce?.cancel();
+    _markReadDebounce?.cancel();
     _text.removeListener(_onTextChanged);
     if (_isRecording) {
       _audioRecorder.stop();
@@ -296,6 +310,8 @@ class _ChatScreenState extends State<ChatScreen> {
     }
     final peerId = widget.peer.id;
     try {
+      // Обновляем время последнего вызова, чтобы _onPageVisible не вызывал повторно
+      _lastMarkReadTime = DateTime.now();
       await Api(auth.token).markMessagesRead(peerId);
       await LocalDb.clearChatUnread(peerId);
       if (mounted) {
@@ -1229,6 +1245,7 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       _scrollToBottom();
     } catch (e) {
+      logUserActionError('send_poll', e);
       if (!mounted) {
         return;
       }
@@ -1381,7 +1398,17 @@ class _ChatScreenState extends State<ChatScreen> {
         scope.fail('Duration too short: $durationSec');
         return;
       }
-      var voiceBytes = Uint8List.fromList(await readVoiceFileBytes(path));
+      Uint8List voiceBytes;
+      try {
+        voiceBytes = Uint8List.fromList(await readVoiceFileBytes(path));
+      } catch (e, st) {
+        scope.fail(e, st);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка чтения записи: ${e.toString()}')),
+        );
+        return;
+      }
       var encrypted = false;
       if (widget.peer.publicKey != null) {
         final enc = await _e2ee.encryptBytes(voiceBytes, widget.peer.publicKey);

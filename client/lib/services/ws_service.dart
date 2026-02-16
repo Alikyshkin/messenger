@@ -87,6 +87,7 @@ class WsService extends ChangeNotifier {
   void connect(String token) {
     logAction('ws_service', 'connect', 'START', {'tokenLen': token.length, 'wasConnected': _connected});
     if (_token == token && _connected) {
+      logAction('ws_service', 'connect', 'SKIP', {'reason': 'already_connected'});
       return;
     }
     _reconnectTimer?.cancel();
@@ -112,12 +113,14 @@ class WsService extends ChangeNotifier {
       _sub = _channel!.stream.listen(
         _onMessage,
         onError: (e) {
+          logActionError('ws_service', '_doConnect_onError', e, {'attempt': _reconnectAttempts});
           _connected = false;
           _reconnectAttempts++;
           notifyListeners();
           _scheduleReconnect();
         },
         onDone: () {
+          logAction('ws_service', '_doConnect_onDone', 'done', {'attempt': _reconnectAttempts});
           _connected = false;
           _reconnectAttempts++;
           notifyListeners();

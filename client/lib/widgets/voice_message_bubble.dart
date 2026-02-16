@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import '../utils/temp_file.dart';
+import '../utils/create_blob_url.dart';
+import '../utils/revoke_blob_url.dart';
 
 class VoiceMessageBubble extends StatefulWidget {
   final String? audioUrl;
@@ -25,6 +27,7 @@ class VoiceMessageBubble extends StatefulWidget {
 class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
   final AudioPlayer _player = AudioPlayer();
   bool _initialized = false;
+  String? _blobUrl; // Для очистки blob URL на веб (только на веб)
 
   @override
   void initState() {
@@ -43,9 +46,14 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
 
   @override
   void dispose() {
+    // Очищаем blob URL на веб
+    if (_blobUrl != null) {
+      revokeBlobUrl(_blobUrl!);
+    }
     _player.dispose();
     super.dispose();
   }
+
 
   Future<void> _togglePlay() async {
     try {
@@ -56,9 +64,16 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
           if (widget.audioBytesFuture != null) {
             final bytes = await widget.audioBytesFuture!;
             if (kIsWeb) {
-              await _player.setUrl(
-                'data:audio/mp4;base64,${base64Encode(bytes)}',
-              );
+              // Используем blob URL вместо data URI для обхода CSP
+              _blobUrl = await createBlobUrlFromBytes(bytes, 'audio/mp4');
+              if (_blobUrl != null) {
+                await _player.setUrl(_blobUrl!);
+              } else {
+                // Fallback на data URI если blob не работает
+                await _player.setUrl(
+                  'data:audio/mp4;base64,${base64Encode(bytes)}',
+                );
+              }
             } else {
               final path = await writeTempBytes(bytes, 'voice.m4a');
               await _player.setFilePath(path);

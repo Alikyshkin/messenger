@@ -13,7 +13,15 @@ class MinimizedCallWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final service = context.watch<CallMinimizedService>();
+    // Используем Provider.of с безопасной проверкой
+    CallMinimizedService? service;
+    try {
+      service = Provider.of<CallMinimizedService>(context, listen: true);
+    } catch (e) {
+      // Provider недоступен - возможно виджет используется вне дерева Provider
+      logActionError('minimized_call_widget', 'build_provider_error', e, null);
+      return const SizedBox.shrink();
+    }
 
     if (!service.isMinimized) {
       return const SizedBox.shrink();
