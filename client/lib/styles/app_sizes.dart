@@ -2,6 +2,21 @@
 class AppSizes {
   AppSizes._();
 
+  /// Ширина экрана, ниже которой считается мобильный режим (боковая панель → нижняя навигация)
+  static const double mobileBreakpoint = 600;
+
+  /// Ширина экрана для компактного режима (уменьшенные отступы)
+  static const double compactBreakpoint = 400;
+
+  /// Проверка: мобильный режим (узкий экран)
+  static bool isMobile(double width) => width < mobileBreakpoint;
+
+  /// Проверка: компактный режим (очень узкий экран)
+  static bool isCompact(double width) => width < compactBreakpoint;
+
+  /// Высота нижней навигации (с учётом safe area)
+  static const double bottomNavHeight = 56.0;
+
   // Размеры иконок
   static const double iconXS = 16.0;
   static const double iconSM = 18.0;

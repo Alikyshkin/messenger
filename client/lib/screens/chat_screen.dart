@@ -20,6 +20,7 @@ import '../services/ws_service.dart';
 import '../utils/app_page_route.dart';
 import '../utils/error_utils.dart';
 import '../utils/download_file.dart';
+import '../styles/app_sizes.dart';
 import '../utils/voice_file_io.dart';
 import '../widgets/app_back_button.dart';
 import '../widgets/skeleton.dart';
@@ -1231,47 +1232,113 @@ class _ChatScreenState extends State<ChatScreen> {
         iconTheme: IconThemeData(color: appBarFg),
         actionsIconTheme: IconThemeData(color: appBarFg),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            tooltip: 'Профиль',
-            onPressed: () {
-              Navigator.of(context).push(
-                AppPageRoute(
-                  builder: (_) => UserProfileScreen(user: widget.peer),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.phone),
-            tooltip: 'Голосовой звонок',
-            onPressed: () {
-              Navigator.of(context).push(
-                AppPageRoute(
-                  builder: (_) => CallScreen(
-                    peer: widget.peer,
-                    isIncoming: false,
-                    isVideoCall: false,
+          if (MediaQuery.sizeOf(context).width >= AppSizes.mobileBreakpoint) ...[
+            IconButton(
+              icon: const Icon(Icons.person_outline),
+              tooltip: 'Профиль',
+              onPressed: () {
+                Navigator.of(context).push(
+                  AppPageRoute(
+                    builder: (_) => UserProfileScreen(user: widget.peer),
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.phone),
+              tooltip: 'Голосовой звонок',
+              onPressed: () {
+                Navigator.of(context).push(
+                  AppPageRoute(
+                    builder: (_) => CallScreen(
+                      peer: widget.peer,
+                      isIncoming: false,
+                      isVideoCall: false,
+                    ),
+                  ),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.videocam),
+              tooltip: 'Видеозвонок',
+              onPressed: () {
+                Navigator.of(context).push(
+                  AppPageRoute(
+                    builder: (_) => CallScreen(
+                      peer: widget.peer,
+                      isIncoming: false,
+                      isVideoCall: true,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ] else
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: appBarFg),
+              onSelected: (value) {
+                if (value == 'profile') {
+                  Navigator.of(context).push(
+                    AppPageRoute(
+                      builder: (_) => UserProfileScreen(user: widget.peer),
+                    ),
+                  );
+                } else if (value == 'voice') {
+                  Navigator.of(context).push(
+                    AppPageRoute(
+                      builder: (_) => CallScreen(
+                        peer: widget.peer,
+                        isIncoming: false,
+                        isVideoCall: false,
+                      ),
+                    ),
+                  );
+                } else if (value == 'video') {
+                  Navigator.of(context).push(
+                    AppPageRoute(
+                      builder: (_) => CallScreen(
+                        peer: widget.peer,
+                        isIncoming: false,
+                        isVideoCall: true,
+                      ),
+                    ),
+                  );
+                }
+              },
+              itemBuilder: (ctx) => [
+                const PopupMenuItem(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      Icon(Icons.person_outline, size: 20),
+                      SizedBox(width: 12),
+                      Text('Профиль'),
+                    ],
                   ),
                 ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.videocam),
-            tooltip: 'Видеозвонок',
-            onPressed: () {
-              Navigator.of(context).push(
-                AppPageRoute(
-                  builder: (_) => CallScreen(
-                    peer: widget.peer,
-                    isIncoming: false,
-                    isVideoCall: true,
+                const PopupMenuItem(
+                  value: 'voice',
+                  child: Row(
+                    children: [
+                      Icon(Icons.phone, size: 20),
+                      SizedBox(width: 12),
+                      Text('Голосовой звонок'),
+                    ],
                   ),
                 ),
-              );
-            },
-          ),
+                const PopupMenuItem(
+                  value: 'video',
+                  child: Row(
+                    children: [
+                      Icon(Icons.videocam, size: 20),
+                      SizedBox(width: 12),
+                      Text('Видеозвонок'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
       body: Column(

@@ -4,6 +4,7 @@ import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/api.dart';
 import '../widgets/app_back_button.dart';
+import '../styles/app_sizes.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -87,7 +88,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: SingleChildScrollView(
           primary: true,
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(AppSizes.isCompact(MediaQuery.sizeOf(context).width) ? 16 : 24),
           child: Form(
             key: _formKey,
             child: Column(

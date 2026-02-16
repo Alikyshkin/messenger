@@ -320,79 +320,173 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
         ],
       ),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Левое меню категорий
-          Container(
-            width: AppSizes.navigationWidth,
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerLowest,
-              border: Border(
-                right: BorderSide(
-                  color: Theme.of(context).dividerColor,
-                  width: 1,
-                ),
-              ),
-            ),
-            child: Column(
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isMobile = AppSizes.isMobile(constraints.maxWidth);
+          if (isMobile) {
+            return Column(
               children: [
-                AppSpacing.spacingVerticalSM,
-                _buildCategoryButton(
-                  context,
-                  _SettingsCategory.profile,
-                  Icons.person_outline,
-                ),
-                _buildCategoryButton(
-                  context,
-                  _SettingsCategory.appearance,
-                  Icons.palette_outlined,
-                ),
-                _buildCategoryButton(
-                  context,
-                  _SettingsCategory.security,
-                  Icons.lock_outline,
-                ),
-                _buildCategoryButton(
-                  context,
-                  _SettingsCategory.storage,
-                  Icons.storage_outlined,
-                ),
-                _buildCategoryButton(
-                  context,
-                  _SettingsCategory.danger,
-                  Icons.warning_amber_outlined,
-                ),
-                const Spacer(),
-              ],
-            ),
-          ),
-          // Правая часть с контентом
-          Expanded(
-            child: Column(
-              children: [
-                // Заголовок
-                Container(
-                  padding: AppSpacing.navigationPadding,
-                  height: AppSizes.appBarHeight,
+                // Горизонтальное меню категорий на мобильных
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   child: Row(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 16),
-                        child: Text(
-                          _getCategoryTitle(context, _currentCategory),
-                          style: Theme.of(context).textTheme.titleLarge
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
+                      _buildMobileCategoryChip(
+                        context,
+                        _SettingsCategory.profile,
+                        Icons.person_outline,
+                      ),
+                      _buildMobileCategoryChip(
+                        context,
+                        _SettingsCategory.appearance,
+                        Icons.palette_outlined,
+                      ),
+                      _buildMobileCategoryChip(
+                        context,
+                        _SettingsCategory.security,
+                        Icons.lock_outline,
+                      ),
+                      _buildMobileCategoryChip(
+                        context,
+                        _SettingsCategory.storage,
+                        Icons.storage_outlined,
+                      ),
+                      _buildMobileCategoryChip(
+                        context,
+                        _SettingsCategory.danger,
+                        Icons.warning_amber_outlined,
                       ),
                     ],
                   ),
                 ),
+                const Divider(height: 1),
                 Expanded(child: _buildContentView(context)),
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                width: AppSizes.navigationWidth,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerLowest,
+                  border: Border(
+                    right: BorderSide(
+                      color: Theme.of(context).dividerColor,
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    AppSpacing.spacingVerticalSM,
+                    _buildCategoryButton(
+                      context,
+                      _SettingsCategory.profile,
+                      Icons.person_outline,
+                    ),
+                    _buildCategoryButton(
+                      context,
+                      _SettingsCategory.appearance,
+                      Icons.palette_outlined,
+                    ),
+                    _buildCategoryButton(
+                      context,
+                      _SettingsCategory.security,
+                      Icons.lock_outline,
+                    ),
+                    _buildCategoryButton(
+                      context,
+                      _SettingsCategory.storage,
+                      Icons.storage_outlined,
+                    ),
+                    _buildCategoryButton(
+                      context,
+                      _SettingsCategory.danger,
+                      Icons.warning_amber_outlined,
+                    ),
+                    const Spacer(),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Container(
+                      padding: AppSpacing.navigationPadding,
+                      height: AppSizes.appBarHeight,
+                      child: Row(
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(left: 16),
+                            child: Text(
+                              _getCategoryTitle(context, _currentCategory),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(child: _buildContentView(context)),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMobileCategoryChip(
+    BuildContext context,
+    _SettingsCategory category,
+    IconData icon,
+  ) {
+    final isActive = _currentCategory == category;
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Material(
+        color: isActive
+            ? theme.colorScheme.primaryContainer
+            : theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: () {
+            if (mounted && _currentCategory != category) {
+              setState(() => _currentCategory = category);
+            }
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 18,
+                  color: isActive
+                      ? theme.colorScheme.onPrimaryContainer
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _getCategoryTitle(context, category),
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: isActive
+                        ? theme.colorScheme.onPrimaryContainer
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

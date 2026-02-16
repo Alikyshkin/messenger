@@ -604,17 +604,128 @@ class _HomeScreenState extends State<HomeScreen>
     super.build(context); // Required for AutomaticKeepAliveClientMixin
     _currentView = _viewFromPath(GoRouterState.of(context).uri.path);
     final content = _isMainRoute ? _buildContentView(context) : widget.child!;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isMobile = AppSizes.isMobile(screenWidth);
+
     return OfflineIndicator(
       child: Scaffold(
         appBar: _isMainRoute
-            ? AppBar(title: Text(_getAppBarTitle(context)))
+            ? AppBar(
+                title: Text(_getAppBarTitle(context)),
+                actions: [
+                  if (isMobile)
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
+                      onSelected: (value) async {
+                        if (value == 'settings') {
+                          final nav =
+                              _navigatorKey.currentState ?? Navigator.of(context);
+                          nav.push(
+                            MaterialPageRoute(
+                              builder: (_) => SettingsScreen(
+                                navigator: _navigatorKey.currentState,
+                              ),
+                            ),
+                          );
+                        } else if (value == 'logout') {
+                          final navigator = _navigatorKey.currentState;
+                          if (navigator == null) return;
+                          final ok = await showDialog<bool>(
+                            context: navigator.context,
+                            useRootNavigator: false,
+                            builder: (ctx) => AlertDialog(
+                              title: Text(context.tr('logout_confirm')),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: Text(context.tr('cancel')),
+                                ),
+                                FilledButton(
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  child: Text(context.tr('logout')),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (ok == true && mounted) {
+                            final authService = context.read<AuthService>();
+                            await authService.logout();
+                            if (mounted) context.go('/login');
+                          }
+                        }
+                      },
+                      itemBuilder: (ctx) => [
+                        PopupMenuItem(
+                          value: 'settings',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.settings, size: 20),
+                              const SizedBox(width: 12),
+                              Text(context.tr('settings')),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'logout',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.logout,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                              const SizedBox(width: 12),
+                              Text(
+                                context.tr('logout'),
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                ],
+              )
             : null,
-        body: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Левая навигация: профиль, чаты, друзья, внизу выход
-            Container(
-              width: AppSizes.navigationWidth,
+        body: isMobile
+            ? SafeArea(
+                child: _isMainRoute
+                    ? Navigator(
+                        key: _navigatorKey,
+                        onGenerateRoute: (settings) => MaterialPageRoute(
+                          builder: (_) => _buildContentView(context),
+                          settings: settings,
+                        ),
+                      )
+                    : content,
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildSideNav(context),
+                  Expanded(
+                    child: _isMainRoute
+                        ? Navigator(
+                            key: _navigatorKey,
+                            onGenerateRoute: (settings) => MaterialPageRoute(
+                              builder: (_) => _buildContentView(context),
+                              settings: settings,
+                            ),
+                          )
+                        : content,
+                  ),
+                ],
+              ),
+        bottomNavigationBar: isMobile ? _buildBottomNav(context) : null,
+      ),
+    );
+  }
+
+  Widget _buildSideNav(BuildContext context) {
+    return Container(
+      width: AppSizes.navigationWidth,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surfaceContainerLowest,
                 border: Border(
@@ -814,19 +925,120 @@ class _HomeScreenState extends State<HomeScreen>
                   const SizedBox(height: 12),
                 ],
               ),
-            ),
-            Expanded(
-              child: _isMainRoute
-                  ? Navigator(
-                      key: _navigatorKey,
-                      onGenerateRoute: (settings) => MaterialPageRoute(
-                        builder: (_) => _buildContentView(context),
-                        settings: settings,
-                      ),
-                    )
-                  : content,
-            ),
-          ],
+            );
+  }
+
+  Widget _buildBottomNav(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: theme.dividerColor, width: 1),
+        ),
+      ),
+      child: SafeArea(
+        child: SizedBox(
+          height: AppSizes.bottomNavHeight,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _BottomNavItem(
+                icon: Icons.account_circle_outlined,
+                label: context.tr('my_profile'),
+                isActive: _currentView == _NavigationItem.profile,
+                onTap: () {
+                  if (mounted && _currentView != _NavigationItem.profile) {
+                    context.go('/profile');
+                  }
+                },
+              ),
+              _BottomNavItem(
+                icon: Icons.chat_outlined,
+                label: context.tr('chats'),
+                isActive: _currentView == _NavigationItem.chats,
+                badge: _totalUnreadCount > 0 ? _totalUnreadCount : null,
+                onTap: () {
+                  if (mounted && _currentView != _NavigationItem.chats) {
+                    context.go('/');
+                  }
+                },
+              ),
+              _BottomNavItem(
+                icon: Icons.people_outline,
+                label: context.tr('contacts'),
+                isActive: _currentView == _NavigationItem.contacts,
+                badge: _friendRequests.isNotEmpty ? _friendRequests.length : null,
+                onTap: () {
+                  if (mounted && _currentView != _NavigationItem.contacts) {
+                    context.go('/contacts');
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BottomNavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final int? badge;
+  final VoidCallback onTap;
+
+  const _BottomNavItem({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    this.badge,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    icon,
+                    size: 26,
+                    color: isActive
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
+                  if (badge != null && badge! > 0)
+                    Positioned(
+                      right: -8,
+                      top: -8,
+                      child: NavBadge(count: badge!),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: isActive
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -5,6 +5,7 @@ import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/api.dart' show ApiException, AuthResponse, OAuthProviders;
 import '../services/oauth_service.dart';
+import '../styles/app_sizes.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -102,13 +103,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final padding = AppSizes.isCompact(screenWidth) ? 16.0 : 24.0;
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: EdgeInsets.symmetric(horizontal: padding),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 380),
+              constraints: BoxConstraints(maxWidth: screenWidth < 400 ? double.infinity : 380),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -257,11 +260,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                       onPressed: _loading
                                           ? null
                                           : () async {
+                                              final messenger = ScaffoldMessenger.of(context);
                                               try {
                                                 await OAuthService.signInWithTelegram();
                                               } catch (e) {
                                                 if (mounted) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                  messenger.showSnackBar(
                                                     SnackBar(content: Text(e.toString())),
                                                   );
                                                 }
