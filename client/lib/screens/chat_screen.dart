@@ -19,6 +19,7 @@ import '../services/attachment_cache.dart';
 import '../services/e2ee_service.dart';
 import '../services/ws_service.dart';
 import '../utils/app_page_route.dart';
+import '../utils/format_last_seen.dart';
 import '../utils/error_utils.dart';
 import '../utils/download_file.dart';
 import '../styles/app_sizes.dart';
@@ -1387,9 +1388,13 @@ class _ChatScreenState extends State<ChatScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    '@${widget.peer.username}',
+                    widget.peer.isOnline == true || (widget.peer.lastSeen != null && widget.peer.lastSeen!.isNotEmpty)
+                        ? formatLastSeen(context, widget.peer.lastSeen, widget.peer.isOnline)
+                        : '@${widget.peer.username}',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: appBarFg.withValues(alpha: 0.8),
+                      color: widget.peer.isOnline == true
+                          ? Colors.greenAccent
+                          : appBarFg.withValues(alpha: 0.8),
                       fontSize: 13,
                     ),
                     overflow: TextOverflow.ellipsis,
