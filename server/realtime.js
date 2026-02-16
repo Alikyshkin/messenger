@@ -44,3 +44,8 @@ export function notifyMessageEdited(messageId, senderId, receiverId, content) {
   broadcastToUser(senderId, { ...payload, peer_id: receiverId });
   broadcastToUser(receiverId, { ...payload, peer_id: senderId });
 }
+
+/** Удаление сообщения для всех: уведомить второго участника чата. */
+export function notifyMessageDeleted(receiverUserId, messageId, peerId) {
+  broadcastToUser(receiverUserId, { type: 'message_deleted', message_id: messageId, peer_id: peerId });
+}

@@ -30,6 +30,15 @@ class EditMessageUpdate {
   });
 }
 
+class DeleteMessageUpdate {
+  final int messageId;
+  final int peerId;
+  DeleteMessageUpdate({
+    required this.messageId,
+    required this.peerId,
+  });
+}
+
 class WsService extends ChangeNotifier {
   WebSocketChannel? _channel;
   StreamSubscription? _sub;
@@ -43,6 +52,7 @@ class WsService extends ChangeNotifier {
   final List<Message> _incoming = [];
   final List<ReactionUpdate> _reactionUpdates = [];
   final List<EditMessageUpdate> _editUpdates = [];
+  final List<DeleteMessageUpdate> _deleteUpdates = [];
   final List<Map<String, dynamic>> _pendingCallSignals =
       []; // Очередь сигналов звонка при отсутствии соединения
   final StreamController<CallSignal> _callSignalController =
@@ -220,6 +230,16 @@ class WsService extends ChangeNotifier {
           ),
         );
         notifyListeners();
+      } else if (map['type'] == 'message_deleted' &&
+          map['message_id'] != null &&
+          map['peer_id'] != null) {
+        _deleteUpdates.add(
+          DeleteMessageUpdate(
+            messageId: map['message_id'] as int,
+            peerId: map['peer_id'] as int,
+          ),
+        );
+        notifyListeners();
       }
     } catch (_) {}
   }
@@ -359,10 +379,21 @@ class WsService extends ChangeNotifier {
     return u;
   }
 
+  DeleteMessageUpdate? takeDeleteUpdateFor(int peerId) {
+    final i = _deleteUpdates.indexWhere((u) => u.peerId == peerId);
+    if (i < 0) {
+      return null;
+    }
+    final u = _deleteUpdates.removeAt(i);
+    notifyListeners();
+    return u;
+  }
+
   void clearPending() {
     _incoming.clear();
     _reactionUpdates.clear();
     _editUpdates.clear();
+    _deleteUpdates.clear();
     notifyListeners();
   }
 
@@ -379,6 +410,7 @@ class WsService extends ChangeNotifier {
     _incoming.clear();
     _reactionUpdates.clear();
     _editUpdates.clear();
+    _deleteUpdates.clear();
     _pendingCallSignals.clear();
     notifyListeners();
   }

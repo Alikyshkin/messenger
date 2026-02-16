@@ -635,6 +635,13 @@ class Api {
     return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
   }
 
+  Future<void> deleteMessage(int messageId, {bool forMe = false}) async {
+    final uri = Uri.parse('$base/messages/$messageId');
+    final url = forMe ? uri.replace(queryParameters: {'for_me': 'true'}) : uri;
+    final r = await http.delete(url, headers: _headers);
+    _checkResponse(r);
+  }
+
   Future<List<MessageReaction>> setMessageReaction(
     int messageId,
     String emoji,

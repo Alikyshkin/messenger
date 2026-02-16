@@ -204,6 +204,8 @@ class AppLocalizations {
     'last_seen_today': 'был(а) сегодня в %s',
     'last_seen_yesterday': 'был(а) вчера',
     'last_seen_long_ago': 'был(а) давно',
+    'delete_for_me': 'Удалить для себя',
+    'delete_for_all': 'Удалить для всех',
     'profile_tooltip': 'Профиль',
     'zero_friends': '0 друзей',
     'possible_friends_empty':
@@ -410,6 +412,8 @@ class AppLocalizations {
     'last_seen_today': 'last seen today at %s',
     'last_seen_yesterday': 'last seen yesterday',
     'last_seen_long_ago': 'last seen long ago',
+    'delete_for_me': 'Delete for me',
+    'delete_for_all': 'Delete for everyone',
     'profile_tooltip': 'Profile',
     'zero_friends': '0 friends',
     'possible_friends_empty':

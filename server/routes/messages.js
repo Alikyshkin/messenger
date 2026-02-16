@@ -174,19 +174,36 @@ router.get('/:peerId', validateParams(peerIdParamSchema), asyncHandler(async (re
   const baseUrl = getBaseUrl(req);
 
   let query = `
-    SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name, sender_public_key
-    FROM messages
-    WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+    SELECT m.id, m.sender_id, m.receiver_id, m.content, m.created_at, m.read_at, m.attachment_path, m.attachment_filename, m.message_type, m.poll_id, m.attachment_kind, m.attachment_duration_sec, m.attachment_encrypted, m.reply_to_id, m.is_forwarded, m.forward_from_sender_id, m.forward_from_display_name, m.sender_public_key
+    FROM messages m
+    LEFT JOIN message_deleted_for mdf ON mdf.message_id = m.id AND mdf.user_id = ?
+    WHERE mdf.message_id IS NULL
+      AND ((m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?))
   `;
-  const params = [me, peerId, peerId, me];
+  const params = [me, me, peerId, peerId, me];
   if (before && !Number.isNaN(before)) {
-    query += ' AND id < ?';
+    query += ' AND m.id < ?';
     params.push(before);
   }
-  query += ' ORDER BY id DESC LIMIT ?';
+  query += ' ORDER BY m.id DESC LIMIT ?';
   params.push(limit);
 
-  const rows = db.prepare(query).all(...params);
+  let rows;
+  try {
+    rows = db.prepare(query).all(...params);
+  } catch (e) {
+    if (e.message && e.message.includes('message_deleted_for')) {
+      rows = db.prepare(`
+        SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, attachment_kind, attachment_duration_sec, attachment_encrypted, reply_to_id, is_forwarded, forward_from_sender_id, forward_from_display_name, sender_public_key
+        FROM messages
+        WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+        ${before && !Number.isNaN(before) ? 'AND id < ?' : ''}
+        ORDER BY id DESC LIMIT ?
+      `).all(me, peerId, peerId, me, ...(before && !Number.isNaN(before) ? [before] : []), limit);
+    } else {
+      throw e;
+    }
+  }
   const list = rows.reverse().map(r => {
     const senderKey = r.sender_public_key ?? db.prepare('SELECT public_key FROM users WHERE id = ?').get(r.sender_id)?.public_key;
     const msg = {
@@ -513,42 +530,50 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   return res.status(201).json({ messages: payloads });
 }));
 
-// Удаление сообщения (для всех участников)
+// Удаление сообщения: for_me=true — только для себя, иначе — для всех
 router.delete('/:messageId', validateParams(messageIdParamSchema), asyncHandler(async (req, res) => {
   const messageId = req.validatedParams.messageId;
+  const forMe = req.query.for_me === 'true' || req.query.for_me === '1';
   const me = req.user.userId;
   
-  // Проверяем, что сообщение существует и принадлежит пользователю
   const message = db.prepare('SELECT id, sender_id, receiver_id FROM messages WHERE id = ?').get(messageId);
   if (!message) {
     return res.status(404).json({ error: 'Сообщение не найдено' });
   }
   
-  // Проверяем, что пользователь является отправителем или получателем
   if (message.sender_id !== me && message.receiver_id !== me) {
     return res.status(403).json({ error: 'Нет доступа к сообщению' });
   }
   
-  // Удаляем сообщение из БД
-  db.prepare('DELETE FROM messages WHERE id = ?').run(messageId);
+  if (forMe) {
+    try {
+      db.prepare('INSERT OR IGNORE INTO message_deleted_for (user_id, message_id) VALUES (?, ?)').run(me, messageId);
+    } catch (e) {
+      if (e.message && e.message.includes('message_deleted_for')) {
+        return res.status(501).json({ error: 'Функция «удалить для себя» не поддерживается' });
+      }
+      throw e;
+    }
+    return res.status(204).send();
+  }
   
-  // Удаляем связанные данные (реакции, опросы)
+  // Удаление для всех
+  db.prepare('DELETE FROM messages WHERE id = ?').run(messageId);
   db.prepare('DELETE FROM message_reactions WHERE message_id = ?').run(messageId);
+  db.prepare('DELETE FROM message_deleted_for WHERE message_id = ?').run(messageId);
   const poll = db.prepare('SELECT id FROM polls WHERE message_id = ?').get(messageId);
   if (poll) {
     db.prepare('DELETE FROM poll_votes WHERE poll_id = ?').run(poll.id);
     db.prepare('DELETE FROM polls WHERE id = ?').run(poll.id);
   }
-  
-  // Удаляем из FTS индекса
   try {
     db.prepare('DELETE FROM messages_fts WHERE rowid = ?').run(messageId);
   } catch (_) {}
   
-  // Уведомляем другого участника чата об удалении
   const otherUserId = message.sender_id === me ? message.receiver_id : message.sender_id;
+  const peerIdForOther = me; // для получателя peer в этом чате — тот, кто удалил (отправитель)
   const { notifyMessageDeleted } = await import('../realtime.js');
-  notifyMessageDeleted(otherUserId, messageId);
+  notifyMessageDeleted(otherUserId, messageId, peerIdForOther);
   
   res.status(204).send();
 }));

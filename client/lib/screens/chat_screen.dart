@@ -8,6 +8,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../database/local_db.dart';
+import '../l10n/app_localizations.dart';
 import '../models/chat.dart';
 import '../models/message.dart';
 import '../models/user.dart';
@@ -157,6 +158,14 @@ class _ChatScreenState extends State<ChatScreen> {
             content: eu!.content,
           ),
         );
+      }
+    }
+    DeleteMessageUpdate? du;
+    while ((du = ws.takeDeleteUpdateFor(widget.peer.id)) != null) {
+      final idx = _messages.indexWhere((msg) => msg.id == du!.messageId);
+      if (idx >= 0 && mounted) {
+        await LocalDb.deleteMessage(peerId: widget.peer.id, messageId: du!.messageId);
+        setState(() => _messages.removeAt(idx));
       }
     }
     // Пользователь в чате — помечаем все сообщения прочитанными, чтобы при выходе не показывался счётчик непрочитанных
@@ -479,6 +488,23 @@ class _ChatScreenState extends State<ChatScreen> {
                   _showForwardPicker(m);
                 },
               ),
+              ListTile(
+                leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
+                title: Text(context.tr('delete_for_me')),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _deleteMessage(m, forMe: true);
+                },
+              ),
+              if (m.isMine)
+                ListTile(
+                  leading: Icon(Icons.delete_forever, color: Theme.of(ctx).colorScheme.error),
+                  title: Text(context.tr('delete_for_all')),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _deleteMessage(m, forMe: false);
+                  },
+                ),
             ],
           ),
         ),
@@ -540,9 +566,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           PopupMenuItem(
             onTap: () {
-              if (!mounted) {
-                return;
-              }
+              if (!mounted) return;
               _showForwardPicker(m);
             },
             child: const ListTile(
@@ -551,10 +575,55 @@ class _ChatScreenState extends State<ChatScreen> {
               title: Text('Переслать'),
             ),
           ),
+          PopupMenuItem(
+            onTap: () {
+              if (!mounted) return;
+              _deleteMessage(m, forMe: true);
+            },
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              leading: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+              title: Text(context.tr('delete_for_me')),
+            ),
+          ),
+          if (m.isMine)
+            PopupMenuItem(
+              onTap: () {
+                if (!mounted) return;
+                _deleteMessage(m, forMe: false);
+              },
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                leading: Icon(Icons.delete_forever, color: Theme.of(context).colorScheme.error),
+                title: Text(context.tr('delete_for_all')),
+              ),
+            ),
         ],
       );
     } else {
       openSheet();
+    }
+  }
+
+  Future<void> _deleteMessage(Message m, {required bool forMe}) async {
+    final auth = context.read<AuthService>();
+    try {
+      await Api(auth.token).deleteMessage(m.id, forMe: forMe);
+      if (!mounted) return;
+      if (forMe) {
+        setState(() => _messages.removeWhere((msg) => msg.id == m.id));
+        await LocalDb.deleteMessage(peerId: widget.peer.id, messageId: m.id);
+      } else {
+        setState(() => _messages.removeWhere((msg) => msg.id == m.id));
+        await LocalDb.deleteMessage(peerId: widget.peer.id, messageId: m.id);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e is ApiException ? e.message : context.tr('connection_error')),
+        ),
+      );
     }
   }
 

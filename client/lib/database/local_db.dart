@@ -397,6 +397,17 @@ class LocalDb {
         .toList();
   }
 
+  /// Удалить сообщение из локального кэша (при удалении для себя или для всех).
+  static Future<void> deleteMessage({required int peerId, required int messageId}) async {
+    final db = await _getDb();
+    if (db == null) return;
+    await db.delete(
+      'messages',
+      where: 'id = ? AND peer_id = ?',
+      whereArgs: [messageId, peerId],
+    );
+  }
+
   /// Обнулить счётчик непрочитанных для чата (при открытии диалога).
   static Future<void> clearChatUnread(int peerId) async {
     final db = await _getDb();
