@@ -244,6 +244,32 @@ class Api {
     return jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
   }
 
+  Future<List<int>> getPrivacyHideFrom() async {
+    final r = await http.get(Uri.parse('$base/users/me/privacy/hide-from'), headers: _headers);
+    _checkResponse(r);
+    final json = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+    final list = json['user_ids'];
+    if (list is! List) return [];
+    return list.map((e) => e is int ? e : (e is num ? e.toInt() : 0)).where((x) => x > 0).toList();
+  }
+
+  Future<void> addPrivacyHideFrom(int userId) async {
+    final r = await http.post(
+      Uri.parse('$base/users/me/privacy/hide-from'),
+      headers: _headers,
+      body: jsonEncode({'user_id': userId}),
+    );
+    _checkResponse(r);
+  }
+
+  Future<void> removePrivacyHideFrom(int userId) async {
+    final r = await http.delete(
+      Uri.parse('$base/users/me/privacy/hide-from/$userId'),
+      headers: _headers,
+    );
+    _checkResponse(r);
+  }
+
   Future<void> updatePrivacy({
     String? whoCanSeeStatus,
     String? whoCanMessage,

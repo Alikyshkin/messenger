@@ -1,8 +1,10 @@
 import db from '../db.js';
 
-/** Кто может видеть статус: all, contacts, nobody */
+/** Кто может видеть статус: all, contacts, nobody. Плюс скрытие от конкретных пользователей. */
 export function canSeeStatus(viewerId, targetId) {
   if (viewerId === targetId) return true;
+  const hidden = db.prepare('SELECT 1 FROM user_privacy_hide_from WHERE user_id = ? AND hidden_from_user_id = ?').get(targetId, viewerId);
+  if (hidden) return false;
   const row = db.prepare('SELECT who_can_see_status FROM user_privacy WHERE user_id = ?').get(targetId);
   const setting = row?.who_can_see_status || 'contacts';
   if (setting === 'all') return true;

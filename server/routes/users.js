@@ -9,7 +9,7 @@ import db from '../db.js';
 import { authMiddleware } from '../auth.js';
 import { isBlockedByMe } from '../utils/blocked.js';
 import { canSeeStatus } from '../utils/privacy.js';
-import { validate, updateUserSchema, updatePrivacySchema, validateParams, idParamSchema } from '../middleware/validation.js';
+import { validate, updateUserSchema, updatePrivacySchema, addHideFromSchema, validateParams, idParamSchema } from '../middleware/validation.js';
 import { validateFile } from '../middleware/fileValidation.js';
 import { FILE_LIMITS, ALLOWED_FILE_TYPES, SEARCH_CONFIG } from '../config/constants.js';
 import { get, set, del, CacheKeys } from '../utils/cache.js';
@@ -140,6 +140,32 @@ router.patch('/me/privacy', validate(updatePrivacySchema), (req, res) => {
     ON CONFLICT(user_id) DO UPDATE SET who_can_see_status = excluded.who_can_see_status, who_can_message = excluded.who_can_message, who_can_call = excluded.who_can_call
   `).run(me, who_can_see_status, who_can_message, who_can_call);
   res.json({ who_can_see_status, who_can_message, who_can_call });
+});
+
+router.get('/me/privacy/hide-from', (req, res) => {
+  const me = req.user.userId;
+  const rows = db.prepare('SELECT hidden_from_user_id FROM user_privacy_hide_from WHERE user_id = ?').all(me);
+  res.json({ user_ids: rows.map(r => r.hidden_from_user_id) });
+});
+
+router.post('/me/privacy/hide-from', validate(addHideFromSchema), (req, res) => {
+  const me = req.user.userId;
+  const targetId = req.validated.user_id;
+  if (targetId === me) return res.status(400).json({ error: 'Нельзя скрыть статус от себя' });
+  try {
+    db.prepare('INSERT OR IGNORE INTO user_privacy_hide_from (user_id, hidden_from_user_id) VALUES (?, ?)').run(me, targetId);
+  } catch (e) {
+    if (e.code === 'SQLITE_CONSTRAINT') return res.status(400).json({ error: 'Пользователь не найден' });
+    throw e;
+  }
+  res.status(201).json({ user_id: targetId });
+});
+
+router.delete('/me/privacy/hide-from/:id', validateParams(idParamSchema), (req, res) => {
+  const me = req.user.userId;
+  const targetId = req.validatedParams.id;
+  db.prepare('DELETE FROM user_privacy_hide_from WHERE user_id = ? AND hidden_from_user_id = ?').run(me, targetId);
+  res.status(204).send();
 });
 
 router.patch('/me', validate(updateUserSchema), (req, res) => {

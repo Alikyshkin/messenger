@@ -237,6 +237,8 @@ class AppLocalizations {
     'privacy_all': 'Все',
     'privacy_contacts': 'Только контакты',
     'privacy_nobody': 'Никто',
+    'privacy_hide_status': 'Скрыть статус',
+    'privacy_show_status': 'Показать статус',
     'profile_tooltip': 'Профиль',
     'zero_friends': '0 друзей',
     'possible_friends_empty':
@@ -476,6 +478,8 @@ class AppLocalizations {
     'privacy_all': 'Everyone',
     'privacy_contacts': 'Contacts only',
     'privacy_nobody': 'Nobody',
+    'privacy_hide_status': 'Hide my status',
+    'privacy_show_status': 'Show my status',
     'profile_tooltip': 'Profile',
     'zero_friends': '0 friends',
     'possible_friends_empty':

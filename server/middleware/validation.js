@@ -259,6 +259,10 @@ export const updatePrivacySchema = Joi.object({
   who_can_call: Joi.string().valid('all', 'contacts', 'nobody').optional(),
 });
 
+export const addHideFromSchema = Joi.object({
+  user_id: Joi.number().integer().positive().required().label('ID пользователя'),
+});
+
 // Схемы для сообщений
 export const sendMessageSchema = Joi.object({
   receiver_id: Joi.number().integer().positive().required()

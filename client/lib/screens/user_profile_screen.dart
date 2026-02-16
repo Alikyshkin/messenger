@@ -26,6 +26,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _loading = true;
   String? _error;
   bool _isContact = false;
+  Set<int> _hideFromUserIds = {};
 
   @override
   void initState() {
@@ -43,10 +44,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       final u = await api.getUserProfile(widget.user.id);
       final contacts = await api.getContacts();
       final isContact = contacts.any((c) => c.id == u.id);
+      Set<int> hideFrom = {};
+      if (auth.user?.id != u.id) {
+        hideFrom = (await api.getPrivacyHideFrom()).toSet();
+      }
       if (!mounted) return;
       setState(() {
         _user = u;
         _isContact = isContact;
+        _hideFromUserIds = hideFrom;
         _loading = false;
       });
     } catch (e) {
@@ -144,6 +150,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       return iso;
     }
     return '$day ${months[month - 1]} $year';
+  }
+
+  Future<void> _toggleHideStatus() async {
+    final u = _user ?? widget.user;
+    final auth = context.read<AuthService>();
+    try {
+      if (_hideFromUserIds.contains(u.id)) {
+        await Api(auth.token).removePrivacyHideFrom(u.id);
+        setState(() => _hideFromUserIds = {..._hideFromUserIds}..remove(u.id));
+      } else {
+        await Api(auth.token).addPrivacyHideFrom(u.id);
+        setState(() => _hideFromUserIds = {..._hideFromUserIds, u.id});
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is ApiException ? e.message : context.tr('connection_error'))),
+      );
+    }
   }
 
   Future<void> _toggleBlock() async {
@@ -326,6 +351,18 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                             onPressed: _removeContact,
                             icon: const Icon(Icons.person_remove_outlined),
                             label: Text(context.tr('remove_friend_tooltip')),
+                          ),
+                        if (_hideFromUserIds.contains(u.id))
+                          OutlinedButton.icon(
+                            onPressed: _toggleHideStatus,
+                            icon: const Icon(Icons.visibility_outlined),
+                            label: Text(context.tr('privacy_show_status')),
+                          )
+                        else
+                          OutlinedButton.icon(
+                            onPressed: _toggleHideStatus,
+                            icon: const Icon(Icons.visibility_off_outlined),
+                            label: Text(context.tr('privacy_hide_status')),
                           ),
                         if (u.isBlocked == true)
                           OutlinedButton.icon(
