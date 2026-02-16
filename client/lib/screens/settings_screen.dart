@@ -47,6 +47,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    logAction('settings_screen', 'initState', 'START', null, 'инициализация настроек');
     final u = context.read<AuthService>().user;
     if (u != null) {
       _displayNameController.text = u.displayName;
@@ -58,6 +59,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     _loadCacheSize();
     _loadPrivacy();
+    logAction('settings_screen', 'initState', 'END', u != null ? {'userId': u.id} : null, 'ok');
   }
 
   Future<void> _loadPrivacy() async {
@@ -74,9 +76,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _savePrivacy() async {
-    logUserAction('settings_save_privacy');
+    final scope = logActionStart('settings_screen', '_savePrivacy', {
+      'whoCanSeeStatus': _whoCanSeeStatus,
+      'whoCanMessage': _whoCanMessage,
+      'whoCanCall': _whoCanCall,
+    });
     final auth = context.read<AuthService>();
-    if (!auth.isLoggedIn) return;
+    if (!auth.isLoggedIn) {
+      scope.end({'result': 'not_logged_in'});
+      return;
+    }
     setState(() => _loading = true);
     try {
       await Api(auth.token).updatePrivacy(
@@ -85,9 +94,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         whoCanCall: _whoCanCall,
       );
       if (mounted) {
+        scope.end({'result': 'ok'});
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('profile_saved'))));
       }
-    } catch (e) {
+    } catch (e, st) {
+      scope.fail(e, st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(e is ApiException ? e.message : context.tr('connection_error'))),

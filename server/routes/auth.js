@@ -65,6 +65,7 @@ const router = Router();
  */
 router.post('/register', registerLimiter, validate(registerSchema), asyncHandler(async (req, res) => {
   const { username, password, displayName, email } = req.validated;
+  log.route('auth', 'POST /register', 'START', { username: username.trim() });
   const normalizedUsername = username.trim().toLowerCase();
   const password_hash = bcrypt.hashSync(password, 10);
   try {
@@ -81,7 +82,7 @@ router.post('/register', registerLimiter, validate(registerSchema), asyncHandler
       userAgent: req.get('user-agent'),
       username: user.username,
     });
-    
+    log.route('auth', 'POST /register', 'END', { userId: user.id, status: 201 }, 'ok');
     res.status(201).json({
       user: {
         id: user.id,
@@ -93,8 +94,10 @@ router.post('/register', registerLimiter, validate(registerSchema), asyncHandler
     });
   } catch (e) {
     if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+      log.route('auth', 'POST /register', 'ERROR', { username }, 'имя занято');
       return res.status(409).json({ error: 'Это имя пользователя уже занято' });
     }
+    log.route('auth', 'POST /register', 'ERROR', { username }, e.message);
     log.error('Registration error', e, { username });
     throw e;
   }
@@ -137,6 +140,7 @@ router.post('/register', registerLimiter, validate(registerSchema), asyncHandler
  */
 router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async (req, res) => {
   const { username, password } = req.validated;
+  log.route('auth', 'POST /login', 'START', { username: username.trim() });
   const normalizedUsername = username.trim().toLowerCase();
   
   // Ищем пользователя
@@ -146,11 +150,13 @@ router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async (re
   
   // Проверяем, что пользователь найден и у него есть password_hash
   if (!user) {
+    log.route('auth', 'POST /login', 'ERROR', { username: normalizedUsername }, 'пользователь не найден');
     log.warn({ username: normalizedUsername, ip: req.ip }, 'Login attempt with non-existent username');
     return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
   }
   
   if (!user.password_hash) {
+    log.route('auth', 'POST /login', 'ERROR', { userId: user.id }, 'password_hash отсутствует');
     log.error({ userId: user.id, username: normalizedUsername }, 'User found but password_hash is missing');
     return res.status(500).json({ error: 'Ошибка сервера. Обратитесь к администратору.' });
   }
@@ -159,6 +165,7 @@ router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async (re
   const isPasswordValid = bcrypt.compareSync(password, user.password_hash);
   
   if (!isPasswordValid) {
+    log.route('auth', 'POST /login', 'ERROR', { userId: user.id }, 'неверный пароль');
     log.warn({ userId: user.id, username: normalizedUsername, ip: req.ip }, 'Failed login attempt - invalid password');
     return res.status(401).json({ error: 'Неверное имя пользователя или пароль' });
   }
@@ -171,6 +178,7 @@ router.post('/login', authLimiter, validate(loginSchema), asyncHandler(async (re
     userAgent: req.get('user-agent'),
   });
   
+  log.route('auth', 'POST /login', 'END', { userId: user.id }, 'ok');
   log.info({ userId: user.id, username: normalizedUsername }, 'Successful login');
   
   res.json({

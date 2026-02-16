@@ -30,23 +30,29 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
+    logAction('login_screen', 'initState', 'START', null, 'инициализация экрана входа');
     OAuthService.getProviders().then((p) {
+      logAction('login_screen', 'getOAuthProviders', 'END', {'google': p.google, 'vk': p.vk}, 'ok');
       if (mounted) setState(() => _providers = p);
     });
     if (kIsWeb) {
       _googleAuthSub = OAuthService.googleAuthStream.listen((res) async {
         if (!mounted || res == null) return;
+        logAction('login_screen', 'googleAuthStream', 'START', null, 'получен ответ от Google');
         setState(() => _loading = true);
         try {
           await context.read<AuthService>().loginWithOAuth(res);
           if (!mounted) return;
+          logAction('login_screen', 'loginWithOAuth', 'END', null, 'успех, переход на /');
           context.go('/');
         } on ApiException catch (e) {
+          logActionError('login_screen', 'loginWithOAuth', e, {'statusCode': e.statusCode});
           if (mounted) setState(() {
             _error = e.message;
             _loading = false;
           });
-        } catch (_) {
+        } catch (err, st) {
+          logActionError('login_screen', 'loginWithOAuth', err, null, st);
           if (mounted) setState(() {
             _error = context.tr('connection_error');
             _loading = false;
@@ -54,6 +60,7 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       });
     }
+    logAction('login_screen', 'initState', 'END', null, 'ok');
   }
 
   @override
@@ -65,7 +72,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
-    logUserAction('login_submit', {'username': _username.text.trim()});
+    final scope = logActionStart('login_screen', 'submit', {'username': _username.text.trim()});
     setState(() {
       _error = null;
       _loading = true;
@@ -76,21 +83,21 @@ class _LoginScreenState extends State<LoginScreen> {
         _password.text,
       );
       if (!mounted) {
+        scope.end({'result': 'mounted_false'});
         return;
       }
+      scope.end({'result': 'ok', 'navigate': '/'});
       context.go('/');
     } on ApiException catch (e) {
-      if (!mounted) {
-        return;
-      }
+      scope.fail(e);
+      if (!mounted) return;
       setState(() {
         _error = e.message;
         _loading = false;
       });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
+    } catch (e, st) {
+      scope.fail(e, st);
+      if (!mounted) return;
       setState(() {
         _error = context.tr('connection_error');
         _loading = false;
@@ -111,28 +118,35 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _oauthLogin(Future<AuthResponse?> Function() fn) async {
-    logUserAction('login_oauth');
+    final scope = logActionStart('login_screen', 'oauthLogin', null);
     setState(() {
       _error = null;
       _loading = true;
     });
     try {
       final res = await fn();
-      if (!mounted) return;
+      if (!mounted) {
+        scope.end({'result': 'mounted_false'});
+        return;
+      }
       if (res == null) {
+        scope.end({'result': 'res_null', 'reason': 'пользователь отменил'});
         setState(() => _loading = false);
         return;
       }
       await context.read<AuthService>().loginWithOAuth(res);
       if (!mounted) return;
+      scope.end({'result': 'ok', 'navigate': '/'});
       context.go('/');
     } on ApiException catch (e) {
+      scope.fail(e);
       if (!mounted) return;
       setState(() {
         _error = e.message;
         _loading = false;
       });
-    } catch (e) {
+    } catch (e, st) {
+      scope.fail(e, st);
       if (!mounted) return;
       setState(() {
         _error = e.toString().contains('501') ? context.tr('oauth_not_configured') : context.tr('connection_error');
@@ -252,12 +266,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: _loading
                                   ? null
                                   : () {
+                                      logAction('login_screen', 'nav_push', 'done', {'route': '/forgot-password'});
                                       context.push('/forgot-password');
                                     },
                               child: Text(context.tr('forgot_password')),
                             ),
                             TextButton(
                               onPressed: () {
+                                logAction('login_screen', 'nav_push', 'done', {'route': '/register'});
                                 context.push('/register');
                               },
                               child: Text(context.tr('no_account_register')),

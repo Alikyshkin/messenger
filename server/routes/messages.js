@@ -66,15 +66,18 @@ function getBaseUrl(req) {
 router.patch('/:peerId/read', validateParams(peerIdParamSchema), asyncHandler(async (req, res) => {
   const peerId = req.validatedParams.peerId;
   const me = req.user.userId;
+  log.route('messages', 'PATCH /:peerId/read', 'START', { peerId, me });
   try {
     const stmt = db.prepare(
       'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE receiver_id = ? AND sender_id = ? AND read_at IS NULL'
     );
     stmt.run(me, peerId);
   } catch (err) {
+    log.route('messages', 'PATCH /:peerId/read', 'ERROR', { peerId, me }, err.message);
     log.error({ err, peerId, me }, 'PATCH /messages/:peerId/read - DB error');
     throw err;
   }
+  log.route('messages', 'PATCH /:peerId/read', 'END', { peerId, me }, 'ok');
   res.status(204).send();
 }));
 

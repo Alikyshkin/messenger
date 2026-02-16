@@ -288,13 +288,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _load() async {
+    final scope = logActionStart('chat_screen', '_load', {'peerId': widget.peer.id});
     final auth = context.read<AuthService>();
     if (!auth.isLoggedIn) {
+      scope.end({'result': 'not_logged_in'});
       return;
     }
     final peerId = widget.peer.id;
-    // Сразу помечаем прочитанными и обновляем локальный кэш — счётчик должен исчезнуть.
-    // Важно: await, чтобы при возврате в список сервер уже вернул unread_count = 0.
     try {
       await Api(auth.token).markMessagesRead(peerId);
       await LocalDb.clearChatUnread(peerId);
@@ -303,7 +303,9 @@ class _ChatScreenState extends State<ChatScreen> {
           context.read<ChatListRefreshService>().requestRefresh();
         } catch (_) {}
       }
-    } catch (_) {}
+    } catch (e) {
+      logAction('chat_screen', 'markMessagesRead', 'ERROR', {'peerId': peerId}, e.toString());
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -371,12 +373,13 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages = merged;
         _loading = false;
       });
+      scope.end({'result': 'ok', 'count': merged.length});
       _scrollToBottom(force: true); // При загрузке всегда прокручиваем вниз
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _focusNode.requestFocus();
       });
-    } catch (e) {
-      logUserActionError('load_chat_messages', e, StackTrace.current);
+    } catch (e, st) {
+      scope.fail(e, st);
       if (!mounted) {
         return;
       }

@@ -57,17 +57,31 @@ export const log = {
     logger.error(errorData, message);
   },
   
-  // HTTP запросы
+  // HTTP запросы — скурпулёзно: метод, путь, статус, время, userId
   http: (req, res, responseTime) => {
-    logger.info({
+    const data = {
+      file: 'http',
+      action: `${req.method} ${req.path}`,
+      phase: 'END',
       method: req.method,
+      path: req.path,
       url: sanitizeUrl(req.url),
       statusCode: res.statusCode,
       responseTime: `${responseTime}ms`,
       ip: req.ip || req.connection?.remoteAddress,
       userAgent: req.get('user-agent'),
-      // Не логируем заголовки с чувствительными данными
-    }, 'HTTP request');
+    };
+    if (req.user?.userId) data.userId = req.user.userId;
+    logger.info(data, `[http] ${req.method} ${req.path} ${res.statusCode} ${responseTime}ms`);
+  },
+
+  // Лог маршрута: файл, действие, фаза (START/END/ERROR), детали
+  route: (file, action, phase, details = {}, reason = null) => {
+    const data = { file, action, phase, ...details };
+    if (reason) data.reason = reason;
+    const msg = `[${file}] ${action} | ${phase}${Object.keys(details).length ? ' | ' + JSON.stringify(details) : ''}${reason ? ' | ' + reason : ''}`;
+    if (phase === 'ERROR') logger.error(data, msg);
+    else logger.info(data, msg);
   },
   
   // WebSocket события

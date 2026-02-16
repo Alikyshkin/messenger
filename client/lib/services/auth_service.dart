@@ -22,7 +22,9 @@ class AuthService extends ChangeNotifier {
   bool get loaded => _loaded;
 
   Future<void> load() async {
+    final scope = logActionStart('auth_service', 'load', {'loaded': _loaded});
     if (_loaded) {
+      scope.end({'result': 'already_loaded'});
       return;
     }
     final prefs = await SharedPreferences.getInstance();
@@ -45,12 +47,17 @@ class AuthService extends ChangeNotifier {
         await prefs.setString(_keyUsername, u.username);
         await prefs.setString(_keyDisplayName, u.displayName);
         await _ensureE2EEKeys();
+        scope.end({'result': 'ok', 'userId': u.id});
       } catch (e) {
-        // После долгого отсутствия токен может быть недействителен — выходим, чтобы данные подтянулись заново после входа
         if (e is ApiException && (e.statusCode == 401 || e.statusCode == 403)) {
+          scope.end({'result': 'token_invalid', 'statusCode': e.statusCode});
           await clear();
+        } else {
+          scope.fail(e);
         }
       }
+    } else {
+      scope.end({'result': 'no_token'});
     }
     _loaded = true;
     notifyListeners();
@@ -87,7 +94,7 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> clear() async {
-    logUserAction('auth_logout');
+    logAction('auth_service', 'clear', 'START', null, 'выход из аккаунта');
     _user = null;
     _token = '';
     final prefs = await SharedPreferences.getInstance();
@@ -95,6 +102,7 @@ class AuthService extends ChangeNotifier {
     await prefs.remove(_keyUserId);
     await prefs.remove(_keyUsername);
     await prefs.remove(_keyDisplayName);
+    logAction('auth_service', 'clear', 'END', null, 'ok');
     notifyListeners();
   }
 

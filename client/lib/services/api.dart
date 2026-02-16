@@ -55,11 +55,26 @@ class Api {
         final m = jsonDecode(body) as Map<String, dynamic>;
         msg = m['error'] as String? ?? body;
       } catch (_) {}
-      logUserActionError(
-        'api_error ${requestHint ?? r.request?.url.path ?? "?"}',
-        ApiException(r.statusCode, msg),
-      );
+      final path = requestHint ?? r.request?.url.path ?? '?';
+      logActionError('api', 'api_error', ApiException(r.statusCode, msg), {
+        'path': path,
+        'statusCode': r.statusCode,
+        'reason': msg,
+      });
       throw ApiException(r.statusCode, msg);
+    }
+  }
+
+  /// Обёртка для логирования API-запроса: старт, конец, ошибка.
+  Future<T> _logged<T>(String method, String path, Future<T> Function() fn) async {
+    final scope = logActionStart('api', '$method $path', {'method': method, 'path': path});
+    try {
+      final result = await fn();
+      scope.end({'status': 'ok'});
+      return result;
+    } catch (e, st) {
+      scope.fail(e, st);
+      rethrow;
     }
   }
 
@@ -69,6 +84,7 @@ class Api {
     String? displayName,
     String? email,
   ]) async {
+    return _logged('POST', '/auth/register', () async {
     final r = await http.post(
       Uri.parse('$base/auth/register'),
       headers: _headers,
@@ -81,23 +97,26 @@ class Api {
           'email': email.trim().toLowerCase(),
       }),
     );
-    _checkResponse(r);
+    _checkResponse(r, '/auth/register');
     final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
     return User.fromJson(data['user'] as Map<String, dynamic>);
+    });
   }
 
   Future<AuthResponse> login(String username, String password) async {
-    final r = await http.post(
-      Uri.parse('$base/auth/login'),
-      headers: _headers,
-      body: jsonEncode({'username': username, 'password': password}),
-    );
-    _checkResponse(r);
-    final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
-    return AuthResponse(
-      user: User.fromJson(data['user'] as Map<String, dynamic>),
-      token: data['token'] as String,
-    );
+    return _logged('POST', '/auth/login', () async {
+      final r = await http.post(
+        Uri.parse('$base/auth/login'),
+        headers: _headers,
+        body: jsonEncode({'username': username, 'password': password}),
+      );
+      _checkResponse(r, '/auth/login');
+      final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+      return AuthResponse(
+        user: User.fromJson(data['user'] as Map<String, dynamic>),
+        token: data['token'] as String,
+      );
+    });
   }
 
   /// Получить список доступных OAuth провайдеров

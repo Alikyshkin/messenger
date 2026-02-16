@@ -76,9 +76,17 @@ const server = createServer(app);
 // Security headers (должен быть первым middleware)
 app.use(securityHeaders());
 
-// Middleware для логирования HTTP запросов (должен быть рано, чтобы логировать все запросы)
+// Middleware для скурпулёзного логирования HTTP: START в начале, END при завершении
 app.use((req, res, next) => {
   const start = Date.now();
+  log.info(`[http] ${req.method} ${req.path} | START`, {
+    file: 'http',
+    action: `${req.method} ${req.path}`,
+    phase: 'START',
+    method: req.method,
+    path: req.path,
+    ip: req.ip || req.connection?.remoteAddress,
+  });
   res.on('finish', () => {
     const responseTime = Date.now() - start;
     log.http(req, res, responseTime);
