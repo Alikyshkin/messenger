@@ -94,6 +94,84 @@ class Api {
     );
   }
 
+  /// Получить список доступных OAuth провайдеров
+  Future<OAuthProviders> getOAuthProviders() async {
+    final r = await http.get(Uri.parse('$base/auth/oauth/providers'), headers: _headers);
+    _checkResponse(r);
+    final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+    return OAuthProviders(
+      google: data['google'] as bool? ?? false,
+      vk: data['vk'] as bool? ?? false,
+      telegram: data['telegram'] as bool? ?? false,
+      phone: data['phone'] as bool? ?? false,
+    );
+  }
+
+  Future<AuthResponse> loginWithGoogle(String idToken) async {
+    final r = await http.post(
+      Uri.parse('$base/auth/oauth/google'),
+      headers: _headers,
+      body: jsonEncode({'idToken': idToken}),
+    );
+    _checkResponse(r);
+    final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+    return AuthResponse(
+      user: User.fromJson(data['user'] as Map<String, dynamic>),
+      token: data['token'] as String,
+    );
+  }
+
+  Future<AuthResponse> loginWithVk(String accessToken, String userId) async {
+    final r = await http.post(
+      Uri.parse('$base/auth/oauth/vk'),
+      headers: _headers,
+      body: jsonEncode({'accessToken': accessToken, 'userId': userId}),
+    );
+    _checkResponse(r);
+    final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+    return AuthResponse(
+      user: User.fromJson(data['user'] as Map<String, dynamic>),
+      token: data['token'] as String,
+    );
+  }
+
+  Future<AuthResponse> loginWithTelegram(Map<String, dynamic> authData) async {
+    final r = await http.post(
+      Uri.parse('$base/auth/oauth/telegram'),
+      headers: _headers,
+      body: jsonEncode(authData),
+    );
+    _checkResponse(r);
+    final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+    return AuthResponse(
+      user: User.fromJson(data['user'] as Map<String, dynamic>),
+      token: data['token'] as String,
+    );
+  }
+
+  Future<void> sendPhoneCode(String phone) async {
+    final r = await http.post(
+      Uri.parse('$base/auth/oauth/phone/send-code'),
+      headers: _headers,
+      body: jsonEncode({'phone': phone}),
+    );
+    _checkResponse(r);
+  }
+
+  Future<AuthResponse> verifyPhoneCode(String phone, String code) async {
+    final r = await http.post(
+      Uri.parse('$base/auth/oauth/phone/verify'),
+      headers: _headers,
+      body: jsonEncode({'phone': phone, 'code': code}),
+    );
+    _checkResponse(r);
+    final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+    return AuthResponse(
+      user: User.fromJson(data['user'] as Map<String, dynamic>),
+      token: data['token'] as String,
+    );
+  }
+
   Future<User> me() async {
     final r = await http.get(Uri.parse('$base/users/me'), headers: _headers);
     _checkResponse(r);
@@ -1023,6 +1101,19 @@ class AuthResponse {
   final User user;
   final String token;
   AuthResponse({required this.user, required this.token});
+}
+
+class OAuthProviders {
+  final bool google;
+  final bool vk;
+  final bool telegram;
+  final bool phone;
+  OAuthProviders({
+    required this.google,
+    required this.vk,
+    required this.telegram,
+    required this.phone,
+  });
 }
 
 class ApiException implements Exception {

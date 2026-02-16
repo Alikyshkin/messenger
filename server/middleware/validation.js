@@ -166,6 +166,38 @@ export const resetPasswordSchema = Joi.object({
     }),
 });
 
+// OAuth схемы
+export const googleAuthSchema = Joi.object({
+  idToken: Joi.string().required().label('Google ID Token'),
+});
+
+export const vkAuthSchema = Joi.object({
+  accessToken: Joi.string().required().label('VK Access Token'),
+  userId: Joi.string().required().label('VK User ID'),
+});
+
+export const telegramAuthSchema = Joi.object({
+  id: Joi.number().integer().positive().required().label('Telegram ID'),
+  first_name: Joi.string().allow('').optional(),
+  last_name: Joi.string().allow('').optional(),
+  username: Joi.string().allow('').optional(),
+  photo_url: Joi.string().uri().allow('').optional(),
+  auth_date: Joi.number().integer().required().label('Auth date'),
+  hash: Joi.string().required().label('Hash'),
+});
+
+export const phoneSendCodeSchema = Joi.object({
+  phone: Joi.string().pattern(/^\+?\d{10,15}$/).required().label('Телефон')
+    .messages({ 'string.pattern.base': 'Некорректный номер телефона' }),
+});
+
+export const phoneVerifySchema = Joi.object({
+  phone: Joi.string().pattern(/^\+?\d{10,15}$/).required().label('Телефон')
+    .messages({ 'string.pattern.base': 'Некорректный номер телефона' }),
+  code: Joi.string().length(6).pattern(/^\d+$/).required().label('Код')
+    .messages({ 'string.pattern.base': 'Код должен содержать 6 цифр' }),
+});
+
 export const changePasswordSchema = Joi.object({
   currentPassword: Joi.string().required()
     .label('Текущий пароль')

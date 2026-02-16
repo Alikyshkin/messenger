@@ -14,6 +14,7 @@ import '../screens/group_profile_screen.dart';
 import '../screens/media_gallery_screen.dart';
 import '../screens/forgot_password_screen.dart';
 import '../screens/register_screen.dart';
+import '../screens/phone_login_screen.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/chat_list_refresh_service.dart';
@@ -36,6 +37,7 @@ GoRouter createAppRouter(AuthService authService) {
       final isLoggedIn = auth.isLoggedIn;
       final isLoggingIn =
           state.matchedLocation == '/login' ||
+          state.matchedLocation == '/login/phone' ||
           state.matchedLocation == '/register' ||
           state.matchedLocation == '/forgot-password';
 
@@ -58,6 +60,10 @@ GoRouter createAppRouter(AuthService authService) {
     },
     routes: [
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      GoRoute(
+        path: '/login/phone',
+        builder: (context, state) => const PhoneLoginScreen(),
+      ),
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),

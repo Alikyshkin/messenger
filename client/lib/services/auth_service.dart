@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../database/local_db.dart';
 import '../models/user.dart';
-import 'api.dart' show Api, ApiException;
+import 'api.dart' show Api, ApiException, AuthResponse;
 import 'e2ee_service.dart';
 
 class AuthService extends ChangeNotifier {
@@ -113,6 +113,11 @@ class AuthService extends ChangeNotifier {
   Future<void> login(String username, String password) async {
     final api = Api('');
     final res = await api.login(username, password);
+    await _save(res.user, res.token);
+    await _ensureE2EEKeys();
+  }
+
+  Future<void> loginWithOAuth(AuthResponse res) async {
     await _save(res.user, res.token);
     await _ensureE2EEKeys();
   }

@@ -111,6 +111,9 @@ try { db.exec('ALTER TABLE users ADD COLUMN phone TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN last_seen DATETIME'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN is_online INTEGER DEFAULT 0'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN sender_public_key TEXT'); } catch (_) {}
+try { db.exec('ALTER TABLE users ADD COLUMN google_id TEXT'); } catch (_) {}
+try { db.exec('ALTER TABLE users ADD COLUMN vk_id TEXT'); } catch (_) {}
+try { db.exec('ALTER TABLE users ADD COLUMN telegram_id TEXT'); } catch (_) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS password_reset_tokens (

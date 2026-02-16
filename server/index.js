@@ -17,6 +17,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import config from './config/index.js';
 
 import authRoutes from './routes/auth.js';
+import oauthRoutes from './routes/oauth.js';
 import contactsRoutes from './routes/contacts.js';
 import messagesRoutes from './routes/messages.js';
 import usersRoutes from './routes/users.js';
@@ -163,6 +164,7 @@ app.use((req, res, next) => {
     path === '/auth/register' ||
     path === '/auth/forgot-password' ||
     path === '/auth/reset-password' ||
+    path.startsWith('/auth/oauth') ||
     // Пропускаем все пути, которые не начинаются с /api или /auth
     (!path.startsWith('/api') && !path.startsWith('/auth'))
   ) {
@@ -201,6 +203,7 @@ app.use('/uploads', express.static(uploadsDir));
 
 // API маршруты (должны быть ДО статических файлов, чтобы не перехватывались)
 app.use('/auth', authRoutes);
+app.use('/auth/oauth', oauthRoutes);
 app.use('/contacts', contactsRoutes);
 app.use('/messages', messagesRoutes);
 app.use('/chats', chatsRoutes);

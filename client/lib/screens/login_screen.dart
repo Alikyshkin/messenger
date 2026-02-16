@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
-import '../services/api.dart';
+import '../services/api.dart' show ApiException, AuthResponse, OAuthProviders;
+import '../services/oauth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,6 +20,15 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   bool _passwordVisible = false;
   String? _error;
+  OAuthProviders _providers = OAuthProviders(google: false, vk: false, telegram: false, phone: false);
+
+  @override
+  void initState() {
+    super.initState();
+    OAuthService.getProviders().then((p) {
+      if (mounted) setState(() => _providers = p);
+    });
+  }
 
   @override
   void dispose() {
@@ -55,6 +65,36 @@ class _LoginScreenState extends State<LoginScreen> {
       }
       setState(() {
         _error = context.tr('connection_error');
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _oauthLogin(Future<AuthResponse?> Function() fn) async {
+    setState(() {
+      _error = null;
+      _loading = true;
+    });
+    try {
+      final res = await fn();
+      if (!mounted) return;
+      if (res == null) {
+        setState(() => _loading = false);
+        return;
+      }
+      await context.read<AuthService>().loginWithOAuth(res);
+      if (!mounted) return;
+      context.go('/');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.message;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString().contains('501') ? context.tr('oauth_not_configured') : context.tr('connection_error');
         _loading = false;
       });
     }
@@ -179,6 +219,64 @@ class _LoginScreenState extends State<LoginScreen> {
                               },
                               child: Text(context.tr('no_account_register')),
                             ),
+                            if (_providers.google || _providers.vk || _providers.telegram || _providers.phone) ...[
+                              const SizedBox(height: 24),
+                              Row(children: [
+                                Expanded(child: Divider(color: Theme.of(context).colorScheme.outline)),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Text(
+                                    context.tr('or_login_with'),
+                                    style: Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                ),
+                                Expanded(child: Divider(color: Theme.of(context).colorScheme.outline)),
+                              ]),
+                              const SizedBox(height: 16),
+                              Wrap(
+                                spacing: 12,
+                                runSpacing: 12,
+                                alignment: WrapAlignment.center,
+                                children: [
+                                  if (_providers.google)
+                                    _OAuthButton(
+                                      icon: Icons.g_mobiledata_rounded,
+                                      label: 'Google',
+                                      onPressed: _loading ? null : () => _oauthLogin(OAuthService.signInWithGoogle),
+                                    ),
+                                  if (_providers.vk)
+                                    _OAuthButton(
+                                      icon: Icons.tag,
+                                      label: 'VK',
+                                      onPressed: _loading ? null : () => _oauthLogin(OAuthService.signInWithVk),
+                                    ),
+                                  if (_providers.telegram)
+                                    _OAuthButton(
+                                      icon: Icons.send_rounded,
+                                      label: 'Telegram',
+                                      onPressed: _loading
+                                          ? null
+                                          : () async {
+                                              try {
+                                                await OAuthService.signInWithTelegram();
+                                              } catch (e) {
+                                                if (mounted) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(content: Text(e.toString())),
+                                                  );
+                                                }
+                                              }
+                                            },
+                                    ),
+                                  if (_providers.phone)
+                                    _OAuthButton(
+                                      icon: Icons.phone_android,
+                                      label: context.tr('phone'),
+                                      onPressed: _loading ? null : () => context.push('/login/phone'),
+                                    ),
+                                ],
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -189,6 +287,26 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _OAuthButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+
+  const _OAuthButton({required this.icon, required this.label, this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 20),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       ),
     );
   }

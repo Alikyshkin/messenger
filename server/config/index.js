@@ -56,6 +56,29 @@ export const config = {
     key: process.env.ENCRYPTION_KEY,
   },
   
+  // OAuth провайдеры (опционально — если не заданы, кнопки входа скрыты)
+  oauth: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    },
+    vk: {
+      appId: process.env.VK_APP_ID,
+      clientSecret: process.env.VK_CLIENT_SECRET,
+    },
+    telegram: {
+      botToken: process.env.TELEGRAM_BOT_TOKEN,
+    },
+  },
+  
+  // SMS для входа по телефону (опционально)
+  sms: {
+    provider: process.env.SMS_PROVIDER, // 'twilio' | 'custom' | пусто = отключено
+    twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
+    twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
+    twilioFromNumber: process.env.TWILIO_FROM_NUMBER,
+  },
+  
   // Константы
   constants,
 };
