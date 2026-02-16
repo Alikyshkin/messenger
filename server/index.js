@@ -12,6 +12,7 @@ import { verifyToken } from './auth.js';
 import { clients, broadcastToUser } from './realtime.js';
 import db from './db.js';
 import { isCommunicationBlocked } from './utils/blocked.js';
+import { canCall } from './utils/privacy.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { log } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -495,10 +496,16 @@ wss.on('connection', (ws, req) => {
           return;
         }
         
-        // Для личных звонков проверяем блокировку
-        if (groupId == null && isCommunicationBlocked(userId, toId)) {
-          log.warn('call_signal blocked: users have blocked each other', { userId, toId });
-          return;
+        // Для личных звонков проверяем блокировку и настройки приватности
+        if (groupId == null) {
+          if (isCommunicationBlocked(userId, toId)) {
+            log.warn('call_signal blocked: users have blocked each other', { userId, toId });
+            return;
+          }
+          if (!canCall(userId, toId)) {
+            log.warn('call_signal blocked: callee privacy settings', { userId, toId });
+            return;
+          }
         }
         
         const set = clients.get(toId);

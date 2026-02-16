@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
+import { canSeeStatus } from '../utils/privacy.js';
 import { validate, addContactSchema, validateParams, idParamSchema } from '../middleware/validation.js';
 import { validatePagination, createPaginationMeta } from '../middleware/pagination.js';
 import { get, set, del, CacheKeys } from '../utils/cache.js';
@@ -31,14 +32,17 @@ router.get('/', validatePagination, async (req, res) => {
   `).all(userId, userId, limit, offset);
   
   res.json({
-    data: rows.map(r => ({
-      id: r.id,
-      username: r.username,
-      display_name: r.display_name || r.username,
-      avatar_url: r.avatar_path ? `${baseUrl}/uploads/avatars/${r.avatar_path}` : null,
-      is_online: !!(r.is_online),
-      last_seen: r.last_seen || null,
-    })),
+    data: rows.map(r => {
+      const canSee = canSeeStatus(userId, r.id);
+      return {
+        id: r.id,
+        username: r.username,
+        display_name: r.display_name || r.username,
+        avatar_url: r.avatar_path ? `${baseUrl}/uploads/avatars/${r.avatar_path}` : null,
+        is_online: canSee ? !!(r.is_online) : null,
+        last_seen: canSee ? (r.last_seen || null) : null,
+      };
+    }),
     pagination: createPaginationMeta(total, limit, offset),
   });
 });

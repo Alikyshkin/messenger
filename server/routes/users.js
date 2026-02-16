@@ -8,7 +8,8 @@ import fs from 'fs';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
 import { isBlockedByMe } from '../utils/blocked.js';
-import { validate, updateUserSchema, validateParams, idParamSchema } from '../middleware/validation.js';
+import { canSeeStatus } from '../utils/privacy.js';
+import { validate, updateUserSchema, updatePrivacySchema, validateParams, idParamSchema } from '../middleware/validation.js';
 import { validateFile } from '../middleware/fileValidation.js';
 import { FILE_LIMITS, ALLOWED_FILE_TYPES, SEARCH_CONFIG } from '../config/constants.js';
 import { get, set, del, CacheKeys } from '../utils/cache.js';
@@ -106,6 +107,39 @@ router.get('/me', async (req, res) => {
   json.is_online = !!(user.is_online);
   json.last_seen = user.last_seen || null;
   res.json(json);
+});
+
+router.get('/me/privacy', (req, res) => {
+  const me = req.user.userId;
+  const row = db.prepare('SELECT who_can_see_status, who_can_message, who_can_call FROM user_privacy WHERE user_id = ?').get(me);
+  res.json({
+    who_can_see_status: row?.who_can_see_status ?? 'contacts',
+    who_can_message: row?.who_can_message ?? 'contacts',
+    who_can_call: row?.who_can_call ?? 'contacts',
+  });
+});
+
+router.patch('/me/privacy', validate(updatePrivacySchema), (req, res) => {
+  const me = req.user.userId;
+  const data = req.validated;
+  let who_can_see_status = 'contacts';
+  let who_can_message = 'contacts';
+  let who_can_call = 'contacts';
+  const existing = db.prepare('SELECT who_can_see_status, who_can_message, who_can_call FROM user_privacy WHERE user_id = ?').get(me);
+  if (existing) {
+    who_can_see_status = existing.who_can_see_status;
+    who_can_message = existing.who_can_message;
+    who_can_call = existing.who_can_call;
+  }
+  if (data.who_can_see_status !== undefined) who_can_see_status = data.who_can_see_status;
+  if (data.who_can_message !== undefined) who_can_message = data.who_can_message;
+  if (data.who_can_call !== undefined) who_can_call = data.who_can_call;
+  db.prepare(`
+    INSERT INTO user_privacy (user_id, who_can_see_status, who_can_message, who_can_call)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(user_id) DO UPDATE SET who_can_see_status = excluded.who_can_see_status, who_can_message = excluded.who_can_message, who_can_call = excluded.who_can_call
+  `).run(me, who_can_see_status, who_can_message, who_can_call);
+  res.json({ who_can_see_status, who_can_message, who_can_call });
 });
 
 router.patch('/me', validate(updateUserSchema), (req, res) => {
@@ -320,8 +354,13 @@ router.get('/:id', validateParams(idParamSchema), (req, res) => {
   const count = db.prepare('SELECT COUNT(*) as n FROM contacts WHERE user_id = ?').get(id);
   user.friends_count = count?.n ?? 0;
   const json = userToJson(user, getBaseUrl(req));
-  json.is_online = !!(user.is_online);
-  json.last_seen = user.last_seen || null;
+  if (me === id || canSeeStatus(me, id)) {
+    json.is_online = !!(user.is_online);
+    json.last_seen = user.last_seen || null;
+  } else {
+    json.is_online = null;
+    json.last_seen = null;
+  }
   if (me !== id) {
     json.is_blocked = isBlockedByMe(me, id);
   }

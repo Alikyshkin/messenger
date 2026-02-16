@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
+import { canSeeStatus } from '../utils/privacy.js';
 import { decryptIfLegacy } from '../cipher.js';
 import { validatePagination, createPaginationMeta } from '../middleware/pagination.js';
 import { getUsersByIds } from '../utils/queryOptimizer.js';
@@ -93,7 +94,9 @@ router.get('/', validatePagination, (req, res) => {
       const user = peersMap.get(peer_id);
       if (!user) return null; // Пользователь не найден
       
-      const isOnline = !!(user.is_online);
+      const canSee = canSeeStatus(me, peer_id);
+      const isOnline = canSee ? !!(user.is_online) : null;
+      const lastSeen = canSee ? (user.last_seen || null) : null;
       return {
         peer: {
           id: user.id,
@@ -103,7 +106,7 @@ router.get('/', validatePagination, (req, res) => {
           avatar_url: user.avatar_path ? `${baseUrl}/uploads/avatars/${user.avatar_path}` : null,
           public_key: user.public_key ?? null,
           is_online: isOnline,
-          last_seen: user.last_seen || null,
+          last_seen: lastSeen,
         },
         group: null,
         last_message: {

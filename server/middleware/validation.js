@@ -253,6 +253,12 @@ export const updateUserSchema = Joi.object({
     .label('Публичный ключ'),
 });
 
+export const updatePrivacySchema = Joi.object({
+  who_can_see_status: Joi.string().valid('all', 'contacts', 'nobody').optional(),
+  who_can_message: Joi.string().valid('all', 'contacts', 'nobody').optional(),
+  who_can_call: Joi.string().valid('all', 'contacts', 'nobody').optional(),
+});
+
 // Схемы для сообщений
 export const sendMessageSchema = Joi.object({
   receiver_id: Joi.number().integer().positive().required()

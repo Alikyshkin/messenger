@@ -237,6 +237,29 @@ class Api {
     return User.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
   }
 
+  Future<Map<String, dynamic>> getPrivacy() async {
+    final r = await http.get(Uri.parse('$base/users/me/privacy'), headers: _headers);
+    _checkResponse(r);
+    return jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+  }
+
+  Future<void> updatePrivacy({
+    String? whoCanSeeStatus,
+    String? whoCanMessage,
+    String? whoCanCall,
+  }) async {
+    final body = <String, dynamic>{};
+    if (whoCanSeeStatus != null) body['who_can_see_status'] = whoCanSeeStatus;
+    if (whoCanMessage != null) body['who_can_message'] = whoCanMessage;
+    if (whoCanCall != null) body['who_can_call'] = whoCanCall;
+    final r = await http.patch(
+      Uri.parse('$base/users/me/privacy'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    _checkResponse(r);
+  }
+
   Future<void> blockUser(int userId) async {
     final r = await http.post(
       Uri.parse('$base/users/$userId/block'),

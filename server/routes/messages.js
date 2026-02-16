@@ -18,6 +18,7 @@ import { ALLOWED_REACTION_EMOJIS, FILE_LIMITS, ALLOWED_FILE_TYPES } from '../con
 import { syncMessagesFTS } from '../utils/ftsSync.js';
 import { log } from '../utils/logger.js';
 import { isCommunicationBlocked } from '../utils/blocked.js';
+import { canMessage } from '../utils/privacy.js';
 const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getMessageReactions(messageId) {
   const rows = db.prepare('SELECT user_id, emoji FROM message_reactions WHERE message_id = ?').all(messageId);
@@ -371,6 +372,9 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   const me = req.user.userId;
   if (isCommunicationBlocked(me, rid)) {
     return res.status(403).json({ error: 'Невозможно отправить сообщение этому пользователю' });
+  }
+  if (!canMessage(me, rid)) {
+    return res.status(403).json({ error: 'Пользователь ограничил возможность писать ему' });
   }
   const isPoll = data.type === 'poll' && data.question && Array.isArray(data.options) && data.options.length >= 2;
   const isMissedCall = data.type === 'missed_call';

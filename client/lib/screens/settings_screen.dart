@@ -12,7 +12,7 @@ import '../widgets/app_back_button.dart';
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
 
-enum _SettingsCategory { profile, appearance, security, storage, danger }
+enum _SettingsCategory { profile, appearance, privacy, security, storage, danger }
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -34,6 +34,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _passwordVisible = false;
   String? _error;
   int _cacheSizeBytes = 0;
+  String _whoCanSeeStatus = 'contacts';
+  String _whoCanMessage = 'contacts';
+  String _whoCanCall = 'contacts';
 
   /// День рождения в формате YYYY-MM-DD или null если не указан.
   String? _birthday;
@@ -52,6 +55,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _birthday = u.birthday;
     }
     _loadCacheSize();
+    _loadPrivacy();
+  }
+
+  Future<void> _loadPrivacy() async {
+    final auth = context.read<AuthService>();
+    if (!auth.isLoggedIn) return;
+    try {
+      final p = await Api(auth.token).getPrivacy();
+      if (mounted) setState(() {
+        _whoCanSeeStatus = p['who_can_see_status'] as String? ?? 'contacts';
+        _whoCanMessage = p['who_can_message'] as String? ?? 'contacts';
+        _whoCanCall = p['who_can_call'] as String? ?? 'contacts';
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _savePrivacy() async {
+    final auth = context.read<AuthService>();
+    if (!auth.isLoggedIn) return;
+    setState(() => _loading = true);
+    try {
+      await Api(auth.token).updatePrivacy(
+        whoCanSeeStatus: _whoCanSeeStatus,
+        whoCanMessage: _whoCanMessage,
+        whoCanCall: _whoCanCall,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('profile_saved'))));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e is ApiException ? e.message : context.tr('connection_error'))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   /// Форматирует YYYY-MM-DD в "15 марта 1990" (или по локали).
@@ -265,6 +306,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return context.tr('profile');
       case _SettingsCategory.appearance:
         return context.tr('appearance');
+      case _SettingsCategory.privacy:
+        return context.tr('privacy_section');
       case _SettingsCategory.security:
         return context.tr('change_password_section');
       case _SettingsCategory.storage:
@@ -280,6 +323,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return _buildProfileContent(context);
       case _SettingsCategory.appearance:
         return _buildAppearanceContent(context);
+      case _SettingsCategory.privacy:
+        return _buildPrivacyContent(context);
       case _SettingsCategory.security:
         return _buildSecurityContent(context);
       case _SettingsCategory.storage:
@@ -315,6 +360,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             TextButton(
               onPressed: _saveProfile,
               child: Text(context.tr('save')),
+            )
+          else if (_currentCategory == _SettingsCategory.privacy)
+            TextButton(
+              onPressed: _savePrivacy,
+              child: Text(context.tr('save')),
             ),
         ],
       ),
@@ -339,6 +389,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         context,
                         _SettingsCategory.appearance,
                         Icons.palette_outlined,
+                      ),
+                      _buildMobileCategoryChip(
+                        context,
+                        _SettingsCategory.privacy,
+                        Icons.visibility_outlined,
                       ),
                       _buildMobileCategoryChip(
                         context,
@@ -389,6 +444,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       context,
                       _SettingsCategory.appearance,
                       Icons.palette_outlined,
+                    ),
+                    _buildCategoryButton(
+                      context,
+                      _SettingsCategory.privacy,
+                      Icons.visibility_outlined,
                     ),
                     _buildCategoryButton(
                       context,
@@ -686,6 +746,94 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: _loading ? null : _saveProfile,
             icon: const Icon(Icons.save_outlined, size: 20),
             label: Text(context.tr('save')),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPrivacyContent(BuildContext context) {
+    return ListView(
+      padding: AppSpacing.screenPaddingVertical,
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.tr('privacy_who_can_see_status'),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment(value: 'all', label: Text(context.tr('privacy_all'))),
+                    ButtonSegment(value: 'contacts', label: Text(context.tr('privacy_contacts'))),
+                    ButtonSegment(value: 'nobody', label: Text(context.tr('privacy_nobody'))),
+                  ],
+                  selected: {_whoCanSeeStatus},
+                  onSelectionChanged: _loading ? null : (s) => setState(() => _whoCanSeeStatus = s.first),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.tr('privacy_who_can_message'),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment(value: 'all', label: Text(context.tr('privacy_all'))),
+                    ButtonSegment(value: 'contacts', label: Text(context.tr('privacy_contacts'))),
+                    ButtonSegment(value: 'nobody', label: Text(context.tr('privacy_nobody'))),
+                  ],
+                  selected: {_whoCanMessage},
+                  onSelectionChanged: _loading ? null : (s) => setState(() => _whoCanMessage = s.first),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  context.tr('privacy_who_can_call'),
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  segments: [
+                    ButtonSegment(value: 'all', label: Text(context.tr('privacy_all'))),
+                    ButtonSegment(value: 'contacts', label: Text(context.tr('privacy_contacts'))),
+                    ButtonSegment(value: 'nobody', label: Text(context.tr('privacy_nobody'))),
+                  ],
+                  selected: {_whoCanCall},
+                  onSelectionChanged: _loading ? null : (s) => setState(() => _whoCanCall = s.first),
+                ),
+              ],
+            ),
           ),
         ),
       ],
