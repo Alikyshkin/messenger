@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 class CallActionButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final IconData icon;
+  /// Поворот иконки в радианах (для выпрямления call_end и т.п.)
+  final double? iconRotation;
   final String? tooltip;
   final Color? backgroundColor;
   final Color? foregroundColor;
@@ -15,6 +17,7 @@ class CallActionButton extends StatelessWidget {
     super.key,
     required this.onPressed,
     required this.icon,
+    this.iconRotation,
     this.tooltip,
     this.backgroundColor,
     this.foregroundColor,
@@ -40,6 +43,7 @@ class CallActionButton extends StatelessWidget {
   }
 
   /// Кнопка для отклонения/завершения звонка (красная)
+  /// Иконка call_end по дизайну наклонена — выпрямляем для аккуратного вида
   factory CallActionButton.reject({
     required VoidCallback? onPressed,
     String? tooltip,
@@ -49,6 +53,7 @@ class CallActionButton extends StatelessWidget {
     return CallActionButton(
       onPressed: onPressed,
       icon: Icons.call_end,
+      iconRotation: -0.12, // выпрямляем наклон иконки трубки
       tooltip: tooltip,
       backgroundColor: Colors.red,
       foregroundColor: Colors.white,
@@ -64,9 +69,16 @@ class CallActionButton extends StatelessWidget {
     final iconSize = size != null ? size! * 0.5 : 28.0;
     final defaultPadding = padding ?? EdgeInsets.all(defaultSize * 0.25);
 
+    Widget iconWidget = Icon(icon);
+    if (iconRotation != null && iconRotation != 0) {
+      iconWidget = Transform.rotate(
+        angle: iconRotation!,
+        child: iconWidget,
+      );
+    }
     return IconButton.filled(
       onPressed: onPressed,
-      icon: Icon(icon),
+      icon: iconWidget,
       tooltip: tooltip,
       style: IconButton.styleFrom(
         backgroundColor: backgroundColor ?? theme.colorScheme.primary,
