@@ -84,3 +84,7 @@ jobs:
         working-directory: ./server
         run: npm run type-check || echo "⚠️ Type check script not found, skipping..."
         continue-on-error: true
+      
+      - name: Run tests
+        working-directory: ./server
+        run: npm test

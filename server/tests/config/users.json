@@ -1,0 +1,26 @@
+{
+  "smoke": {
+    "user1": {
+      "username": "smoke_user1",
+      "password": "SmokePass123!",
+      "displayName": "Smoke User 1"
+    },
+    "user2": {
+      "username": "smoke_user2",
+      "password": "SmokePass123!",
+      "displayName": "Smoke User 2"
+    }
+  },
+  "e2e": {
+    "sender": {
+      "username": "e2e_sender",
+      "password": "E2EPass123!",
+      "displayName": "E2E Sender"
+    },
+    "receiver": {
+      "username": "e2e_receiver",
+      "password": "E2EPass123!",
+      "displayName": "E2E Receiver"
+    }
+  }
+}
