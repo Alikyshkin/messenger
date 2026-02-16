@@ -13,7 +13,7 @@ class LocalDb {
   static Database? _db;
   static bool _failed = false;
   static const _dbName = 'messenger_local.db';
-  static const _version = 6;
+  static const _version = 7;
 
   static Future<Database?> _getDb() async {
     if (_db != null) {
@@ -152,6 +152,15 @@ class LocalDb {
               ''');
             } catch (_) {}
           }
+          if (oldVersion < 7) {
+            try {
+              await db.execute('''
+                CREATE TABLE muted_chats (
+                  chat_key TEXT PRIMARY KEY
+                )
+              ''');
+            } catch (_) {}
+          }
         },
       );
       return _db;
@@ -178,6 +187,7 @@ class LocalDb {
     await db.delete('chats');
     await db.delete('messages');
     await db.delete('outbox');
+    await db.delete('muted_chats');
   }
 
   // --- Chats ---
@@ -395,6 +405,44 @@ class LocalDb {
     return rows
         .map((r) => _messageFromRow(Map<String, dynamic>.from(r)))
         .toList();
+  }
+
+  static String _mutedKey({int? peerId, int? groupId}) {
+    if (groupId != null) return 'g_$groupId';
+    return 'p_${peerId ?? 0}';
+  }
+
+  /// Проверить, отключены ли уведомления для чата.
+  static Future<bool> isChatMuted({int? peerId, int? groupId}) async {
+    final db = await _getDb();
+    if (db == null) return false;
+    final key = _mutedKey(peerId: peerId, groupId: groupId);
+    final row = await db.query(
+      'muted_chats',
+      where: 'chat_key = ?',
+      whereArgs: [key],
+    );
+    return row.isNotEmpty;
+  }
+
+  /// Включить/выключить уведомления для чата.
+  static Future<void> setChatMuted({int? peerId, int? groupId, required bool muted}) async {
+    final db = await _getDb();
+    if (db == null) return;
+    final key = _mutedKey(peerId: peerId, groupId: groupId);
+    if (muted) {
+      await db.insert('muted_chats', {'chat_key': key}, conflictAlgorithm: ConflictAlgorithm.ignore);
+    } else {
+      await db.delete('muted_chats', where: 'chat_key = ?', whereArgs: [key]);
+    }
+  }
+
+  /// Список ключей заглушенных чатов (для проверки при новом сообщении).
+  static Future<Set<String>> getMutedChatKeys() async {
+    final db = await _getDb();
+    if (db == null) return {};
+    final rows = await db.query('muted_chats');
+    return rows.map((r) => r['chat_key'] as String).toSet();
   }
 
   /// Удалить сообщение из локального кэша (при удалении для себя или для всех).

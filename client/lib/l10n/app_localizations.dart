@@ -208,6 +208,8 @@ class AppLocalizations {
     'delete_for_all': 'Удалить для всех',
     'block_user': 'Заблокировать',
     'unblock_user': 'Разблокировать',
+    'mute_chat': 'Отключить уведомления',
+    'unmute_chat': 'Включить уведомления',
     'profile_tooltip': 'Профиль',
     'zero_friends': '0 друзей',
     'possible_friends_empty':
@@ -418,6 +420,8 @@ class AppLocalizations {
     'delete_for_all': 'Delete for everyone',
     'block_user': 'Block',
     'unblock_user': 'Unblock',
+    'mute_chat': 'Mute notifications',
+    'unmute_chat': 'Unmute notifications',
     'profile_tooltip': 'Profile',
     'zero_friends': '0 friends',
     'possible_friends_empty':

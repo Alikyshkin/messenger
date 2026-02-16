@@ -42,6 +42,7 @@ enum _NavigationItem { chats, contacts, profile }
 class _HomeScreenState extends State<HomeScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   List<ChatPreview> _chats = [];
+  Set<String> _mutedChatKeys = {};
   bool _loading = true;
   String? _error;
   StreamSubscription? _newMessageSub;
@@ -100,8 +101,13 @@ class _HomeScreenState extends State<HomeScreen>
           _load();
           _loadFriendRequests();
         });
-        _newMessagePayloadSub = ws.onNewMessageWithPayload.listen((msg) {
+        _newMessagePayloadSub = ws.onNewMessageWithPayload.listen((msg) async {
           if (!mounted || isPageVisible) return;
+          final chatKey = msg.isGroupMessage
+              ? 'g_${msg.groupId}'
+              : 'p_${msg.isMine ? msg.receiverId : msg.senderId}';
+          final muted = await LocalDb.getMutedChatKeys();
+          if (muted.contains(chatKey)) return;
           AppSoundService.instance.playNotification();
           requestNotificationPermission();
           final from = msg.isGroupMessage
@@ -161,14 +167,20 @@ class _HomeScreenState extends State<HomeScreen>
     });
     // Local-first: сразу показываем кэш из локальной БД
     final cached = await LocalDb.getChats();
+    final muted = await LocalDb.getMutedChatKeys();
     if (cached.isNotEmpty && mounted) {
-      setState(() => _chats = cached);
+      setState(() {
+        _chats = cached;
+        _mutedChatKeys = muted;
+      });
     }
     try {
       final api = Api(auth.token);
       final list = await api.getChats();
       if (!mounted) return;
 
+      final muted = await LocalDb.getMutedChatKeys();
+      if (mounted) setState(() => _mutedChatKeys = muted);
       // Фильтруем скрытые чаты
       final filteredList = <ChatPreview>[];
       for (final chat in list) {
@@ -513,6 +525,15 @@ class _HomeScreenState extends State<HomeScreen>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              if (_mutedChatKeys.contains(isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}'))
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 4),
+                                  child: Icon(
+                                    Icons.notifications_off,
+                                    size: 16,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
                               if (unread > 0)
                                 Container(
                                   padding: EdgeInsets.symmetric(
@@ -556,22 +577,67 @@ class _HomeScreenState extends State<HomeScreen>
                                   ),
                                 )
                               : null,
-                          trailing: IconButton(
+                          trailing: PopupMenuButton<String>(
                             icon: Icon(
-                              Icons.delete_outline,
+                              Icons.more_vert,
                               size: AppSizes.iconSM,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.error.withValues(alpha: 0.7),
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
-                            tooltip: context.tr('delete_chat'),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(
                               minWidth: 32,
                               minHeight: 32,
                             ),
-                            onPressed: () =>
-                                _confirmDeleteChat(context, c, isGroup),
+                            onSelected: (value) async {
+                              if (value == 'mute') {
+                                final key = isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}';
+                                await LocalDb.setChatMuted(
+                                  peerId: isGroup ? null : c.peer!.id,
+                                  groupId: isGroup ? c.group!.id : null,
+                                  muted: true,
+                                );
+                                if (mounted) setState(() => _mutedChatKeys = {..._mutedChatKeys, key});
+                              } else if (value == 'unmute') {
+                                final key = isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}';
+                                await LocalDb.setChatMuted(
+                                  peerId: isGroup ? null : c.peer!.id,
+                                  groupId: isGroup ? c.group!.id : null,
+                                  muted: false,
+                                );
+                                if (mounted) setState(() => _mutedChatKeys = {..._mutedChatKeys}..remove(key));
+                              } else if (value == 'delete') {
+                                _confirmDeleteChat(context, c, isGroup);
+                              }
+                            },
+                            itemBuilder: (ctx) {
+                              final chatKey = isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}';
+                              final isMuted = _mutedChatKeys.contains(chatKey);
+                              return [
+                                PopupMenuItem(
+                                  value: isMuted ? 'unmute' : 'mute',
+                                  child: Row(
+                                    children: [
+                                      Icon(isMuted ? Icons.notifications : Icons.notifications_off, size: 20),
+                                      const SizedBox(width: 12),
+                                      Text(isMuted ? context.tr('unmute_chat') : context.tr('mute_chat')),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline, size: 20, color: Theme.of(context).colorScheme.error),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        context.tr('delete_chat'),
+                                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ];
+                            },
                           ),
                           onTap: () async {
                             if (isGroup) {
