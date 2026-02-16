@@ -10,7 +10,7 @@ class OAuthServiceImpl {
     try {
       return await _api.getOAuthProviders();
     } catch (_) {
-      return OAuthProviders(google: false, vk: false, telegram: false, phone: false);
+      return OAuthProviders(google: false, googleClientId: null, vk: false, telegram: false, phone: false);
     }
   }
 

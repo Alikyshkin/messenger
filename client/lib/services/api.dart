@@ -102,6 +102,7 @@ class Api {
     final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
     return OAuthProviders(
       google: data['google'] as bool? ?? false,
+      googleClientId: data['googleClientId'] as String?,
       vk: data['vk'] as bool? ?? false,
       telegram: data['telegram'] as bool? ?? false,
       phone: data['phone'] as bool? ?? false,
@@ -1191,11 +1192,13 @@ class AuthResponse {
 
 class OAuthProviders {
   final bool google;
+  final String? googleClientId;
   final bool vk;
   final bool telegram;
   final bool phone;
   OAuthProviders({
     required this.google,
+    this.googleClientId,
     required this.vk,
     required this.telegram,
     required this.phone,

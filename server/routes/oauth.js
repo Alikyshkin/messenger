@@ -246,6 +246,7 @@ router.get('/providers', (req, res) => {
   const sms = config.sms || {};
   res.json({
     google: !!(oauth.google?.clientId),
+    googleClientId: oauth.google?.clientId || null,
     vk: !!(oauth.vk?.appId && oauth.vk?.clientSecret),
     telegram: !!(oauth.telegram?.botToken),
     phone: sms.provider === 'twilio' && !!(sms.twilioAccountSid && sms.twilioAuthToken),
