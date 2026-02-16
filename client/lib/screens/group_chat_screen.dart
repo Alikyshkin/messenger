@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
@@ -28,27 +29,44 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   final _text = TextEditingController();
   final _scroll = ScrollController();
   Message? _replyingTo;
+  WsService? _ws;
   VoidCallback? _wsUnsub;
+  Timer? _typingDebounce;
+  DateTime _lastTypingSent = DateTime(0);
 
   @override
   void initState() {
     super.initState();
+    _text.addListener(_onTextChanged);
     _load();
-    final ws = context.read<WsService>();
+    _ws = context.read<WsService>();
+    final ws = _ws!;
     void onUpdate() {
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
       _drainIncoming(ws);
+      setState(() {});
     }
-
     _wsUnsub = () => ws.removeListener(onUpdate);
     ws.addListener(onUpdate);
     _drainIncoming(ws);
   }
 
+  void _onTextChanged() {
+    if (_text.text.trim().isEmpty) return;
+    _typingDebounce?.cancel();
+    _typingDebounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted || _ws == null) return;
+      if (DateTime.now().difference(_lastTypingSent).inSeconds >= 2) {
+        _ws!.sendGroupTyping(widget.group.id);
+        _lastTypingSent = DateTime.now();
+      }
+    });
+  }
+
   @override
   void dispose() {
+    _typingDebounce?.cancel();
+    _text.removeListener(_onTextChanged);
     _wsUnsub?.call();
     _text.dispose();
     _scroll.dispose();
@@ -415,6 +433,27 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                       return _buildMessageBubble(m);
                     },
                   ),
+          ),
+          if (_ws != null)
+            Builder(
+              builder: (context) {
+                final names = _ws!.getGroupTyping(widget.group.id);
+                if (names.isEmpty) return const SizedBox.shrink();
+                final text = names.length == 1
+                    ? context.tr('typing').replaceFirst('%s', names.first)
+                    : context.tr('typing_plural').replaceFirst('%s', names.join(', '));
+                return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  text,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              );
+            },
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),

@@ -20,6 +20,7 @@ import '../services/e2ee_service.dart';
 import '../services/ws_service.dart';
 import '../utils/app_page_route.dart';
 import '../utils/format_last_seen.dart';
+import 'dart:async';
 import '../utils/error_utils.dart';
 import '../utils/download_file.dart';
 import '../styles/app_sizes.dart';
@@ -61,15 +62,13 @@ class _ChatScreenState extends State<ChatScreen> {
   PendingAttachment? _pendingAttachment;
   List<PendingFile>? _pendingMultipleFiles;
   final Map<String, Future<Uint8List?>> _attachmentFutureCache = {};
+  Timer? _typingDebounce;
+  DateTime _lastTypingSent = DateTime(0);
 
   @override
   void initState() {
     super.initState();
-    _text.addListener(() {
-      if (mounted) {
-        setState(() {});
-      }
-    });
+    _text.addListener(_onTextChanged);
     _load();
     final ws = context.read<WsService>();
     _ws = ws;
@@ -78,11 +77,26 @@ class _ChatScreenState extends State<ChatScreen> {
         return;
       }
       _drainIncoming(ws);
+      setState(() {});
     }
 
     _wsUnsub = () => ws.removeListener(onUpdate);
     ws.addListener(onUpdate);
     _drainIncoming(ws);
+  }
+
+  void _onTextChanged() {
+    if (mounted) setState(() {});
+    if (_text.text.trim().isEmpty) return;
+    _typingDebounce?.cancel();
+    _typingDebounce = Timer(const Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      final ws = _ws;
+      if (ws != null && DateTime.now().difference(_lastTypingSent).inSeconds >= 2) {
+        ws.sendTyping(widget.peer.id);
+        _lastTypingSent = DateTime.now();
+      }
+    });
   }
 
   static const List<String> _reactionEmojis = [
@@ -258,6 +272,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _typingDebounce?.cancel();
+    _text.removeListener(_onTextChanged);
     if (_isRecording) {
       _audioRecorder.stop();
     }
@@ -1971,6 +1987,24 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ],
               ),
+            ),
+          if (_ws != null)
+            Builder(
+              builder: (context) {
+                final typing = _ws!.getPeerTyping(widget.peer.id);
+                if (typing == null) return const SizedBox.shrink();
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    context.tr('typing').replaceFirst('%s', typing),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                );
+              },
             ),
           if (_pendingMultipleFiles != null &&
               _pendingMultipleFiles!.isNotEmpty)

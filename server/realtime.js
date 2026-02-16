@@ -49,3 +49,22 @@ export function notifyMessageEdited(messageId, senderId, receiverId, content) {
 export function notifyMessageDeleted(receiverUserId, messageId, peerId) {
   broadcastToUser(receiverUserId, { type: 'message_deleted', message_id: messageId, peer_id: peerId });
 }
+
+/** Индикатор набора текста в личном чате. */
+export function broadcastTyping(toUserId, fromUserId, displayName) {
+  broadcastToUser(toUserId, {
+    type: 'typing',
+    fromUserId,
+    displayName: displayName || 'User',
+  });
+}
+
+/** Индикатор набора текста в группе. */
+export function broadcastGroupTyping(groupId, fromUserId, displayName, memberUserIds) {
+  const payload = { type: 'group_typing', groupId, fromUserId, displayName: displayName || 'User' };
+  memberUserIds.forEach((userId) => {
+    if (Number(userId) !== Number(fromUserId)) {
+      broadcastToUser(userId, payload);
+    }
+  });
+}

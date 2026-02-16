@@ -39,6 +39,12 @@ class DeleteMessageUpdate {
   });
 }
 
+class TypingInfo {
+  final String displayName;
+  final DateTime at;
+  TypingInfo({required this.displayName, required this.at});
+}
+
 class WsService extends ChangeNotifier {
   WebSocketChannel? _channel;
   StreamSubscription? _sub;
@@ -53,6 +59,10 @@ class WsService extends ChangeNotifier {
   final List<ReactionUpdate> _reactionUpdates = [];
   final List<EditMessageUpdate> _editUpdates = [];
   final List<DeleteMessageUpdate> _deleteUpdates = [];
+  final Map<int, TypingInfo> _peerTyping = {};
+  final Map<int, Map<int, TypingInfo>> _groupTyping = {};
+  Timer? _typingExpiryTimer;
+  static const _typingTimeout = Duration(seconds: 5);
   final List<Map<String, dynamic>> _pendingCallSignals =
       []; // Очередь сигналов звонка при отсутствии соединения
   final StreamController<CallSignal> _callSignalController =
@@ -240,6 +250,29 @@ class WsService extends ChangeNotifier {
           ),
         );
         notifyListeners();
+      } else if (map['type'] == 'typing' &&
+          map['fromUserId'] != null &&
+          map['displayName'] != null) {
+        final peerId = map['fromUserId'] as int;
+        _peerTyping[peerId] = TypingInfo(
+          displayName: map['displayName'] as String,
+          at: DateTime.now(),
+        );
+        _startTypingExpiryTimer();
+        notifyListeners();
+      } else if (map['type'] == 'group_typing' &&
+          map['groupId'] != null &&
+          map['fromUserId'] != null &&
+          map['displayName'] != null) {
+        final groupId = map['groupId'] as int;
+        final userId = map['fromUserId'] as int;
+        _groupTyping.putIfAbsent(groupId, () => {});
+        _groupTyping[groupId]![userId] = TypingInfo(
+          displayName: map['displayName'] as String,
+          at: DateTime.now(),
+        );
+        _startTypingExpiryTimer();
+        notifyListeners();
       }
     } catch (_) {}
   }
@@ -298,6 +331,28 @@ class WsService extends ChangeNotifier {
   }
 
   /// Отправить групповой сигнал звонка всем участникам группы
+  void sendTyping(int toUserId) {
+    if (_connected && _channel != null) {
+      try {
+        _channel!.sink.add(jsonEncode({
+          'type': 'typing',
+          'toUserId': toUserId,
+        }));
+      } catch (_) {}
+    }
+  }
+
+  void sendGroupTyping(int groupId) {
+    if (_connected && _channel != null) {
+      try {
+        _channel!.sink.add(jsonEncode({
+          'type': 'group_typing',
+          'groupId': groupId,
+        }));
+      } catch (_) {}
+    }
+  }
+
   void sendGroupCallSignal(
     int groupId,
     String signal, [
@@ -389,6 +444,54 @@ class WsService extends ChangeNotifier {
     return u;
   }
 
+  void _startTypingExpiryTimer() {
+    _typingExpiryTimer?.cancel();
+    _typingExpiryTimer = Timer.periodic(const Duration(seconds: 2), (_) {
+      final now = DateTime.now();
+      var changed = false;
+      _peerTyping.removeWhere((_, v) {
+        if (now.difference(v.at) > _typingTimeout) {
+          changed = true;
+          return true;
+        }
+        return false;
+      });
+      for (final entry in _groupTyping.entries.toList()) {
+        entry.value.removeWhere((_, v) {
+          if (now.difference(v.at) > _typingTimeout) {
+            changed = true;
+            return true;
+          }
+          return false;
+        });
+        if (entry.value.isEmpty) {
+          _groupTyping.remove(entry.key);
+          changed = true;
+        }
+      }
+      if (changed) notifyListeners();
+    });
+  }
+
+  /// Текст "печатает" для личного чата (null если никто не печатает).
+  String? getPeerTyping(int peerId) {
+    final info = _peerTyping[peerId];
+    if (info == null) return null;
+    if (DateTime.now().difference(info.at) > _typingTimeout) return null;
+    return info.displayName;
+  }
+
+  /// Список имён "печатают" для группы.
+  List<String> getGroupTyping(int groupId) {
+    final users = _groupTyping[groupId];
+    if (users == null) return [];
+    final now = DateTime.now();
+    return users.entries
+        .where((e) => now.difference(e.value.at) <= _typingTimeout)
+        .map((e) => e.value.displayName)
+        .toList();
+  }
+
   void clearPending() {
     _incoming.clear();
     _reactionUpdates.clear();
@@ -412,6 +515,10 @@ class WsService extends ChangeNotifier {
     _editUpdates.clear();
     _deleteUpdates.clear();
     _pendingCallSignals.clear();
+    _typingExpiryTimer?.cancel();
+    _typingExpiryTimer = null;
+    _peerTyping.clear();
+    _groupTyping.clear();
     notifyListeners();
   }
 }

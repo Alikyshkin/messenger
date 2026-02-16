@@ -9,7 +9,7 @@ import { mkdirSync, existsSync, statSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { verifyToken } from './auth.js';
-import { clients, broadcastToUser } from './realtime.js';
+import { clients, broadcastToUser, broadcastTyping, broadcastGroupTyping } from './realtime.js';
 import db from './db.js';
 import { isCommunicationBlocked } from './utils/blocked.js';
 import { canCall } from './utils/privacy.js';
@@ -609,6 +609,30 @@ wss.on('connection', (ws, req) => {
         broadcastToUser(toId, signalPayload);
       }
       
+      if (data.type === 'typing') {
+        const toUserId = data.toUserId != null ? Number(data.toUserId) : null;
+        if (toUserId && Number.isInteger(toUserId) && toUserId > 0 && toUserId !== userId) {
+          if (!isCommunicationBlocked(userId, toUserId)) {
+            const user = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(userId);
+            const displayName = user?.display_name || user?.username || 'User';
+            broadcastTyping(toUserId, userId, displayName);
+          }
+        }
+      }
+
+      if (data.type === 'group_typing') {
+        const groupId = data.groupId != null ? Number(data.groupId) : null;
+        if (groupId && Number.isInteger(groupId) && groupId > 0) {
+          const isMember = db.prepare('SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?').get(groupId, userId);
+          if (isMember) {
+            const members = db.prepare('SELECT user_id FROM group_members WHERE group_id = ?').all(groupId);
+            const user = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(userId);
+            const displayName = user?.display_name || user?.username || 'User';
+            broadcastGroupTyping(groupId, userId, displayName, members.map(m => m.user_id));
+          }
+        }
+      }
+
       if (data.type === 'group_call_signal') {
         // Валидация группового звонка
         if (!data.groupId || typeof data.groupId !== 'number') {
