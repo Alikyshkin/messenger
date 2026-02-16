@@ -384,8 +384,8 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   }, 'POST /messages route handler - after validation');
   const data = req.validated;
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
-  const rid = data.receiver_id;
-  const me = req.user.userId;
+  const rid = Number(data.receiver_id);
+  const me = Number(req.user.userId);
   if (isCommunicationBlocked(me, rid)) {
     return res.status(403).json({ error: 'Невозможно отправить сообщение этому пользователю' });
   }
@@ -411,18 +411,24 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     let msgId; let pollId;
     try {
       // Используем транзакцию для атомарности операций
-      db.transaction(() => {
+      const transaction = db.transaction(() => {
         const result = db.prepare(
           `INSERT INTO messages (sender_id, receiver_id, content, message_type, attachment_path, attachment_filename, sender_public_key) VALUES (?, ?, ?, 'poll', NULL, NULL, ?)`
-        ).run(Number(me), Number(rid), questionText, meUser?.public_key ?? null);
+        ).run(me, rid, questionText, meUser?.public_key ?? null);
         msgId = Number(result.lastInsertRowid);
         const pollResult = db.prepare(
           'INSERT INTO polls (message_id, question, options, multiple) VALUES (?, ?, ?, ?)'
         ).run(msgId, questionText, JSON.stringify(options), data.multiple ? 1 : 0);
         pollId = Number(pollResult.lastInsertRowid);
         db.prepare('UPDATE messages SET poll_id = ? WHERE id = ?').run(pollId, msgId);
+      });
+      transaction();
+      // Вызываем syncMessagesFTS вне транзакции
+      try {
         syncMessagesFTS(msgId);
-      })();
+      } catch (ftsErr) {
+        log.warn({ err: ftsErr, msgId }, 'FTS sync error (non-critical)');
+      }
     } catch (pollErr) {
       log.error({ err: pollErr, rid, me, code: pollErr.code, message: pollErr.message, stack: pollErr.stack }, 'POST /messages - poll creation error');
       throw pollErr;
@@ -630,7 +636,7 @@ router.delete('/:messageId', validateParams(messageIdParamSchema), asyncHandler(
   
   // Удаление для всех - используем транзакцию для атомарности
   try {
-    db.transaction(() => {
+    const transaction = db.transaction(() => {
       db.prepare('DELETE FROM messages WHERE id = ?').run(Number(messageId));
       db.prepare('DELETE FROM message_reactions WHERE message_id = ?').run(Number(messageId));
       db.prepare('DELETE FROM message_deleted_for WHERE message_id = ?').run(Number(messageId));
@@ -642,7 +648,8 @@ router.delete('/:messageId', validateParams(messageIdParamSchema), asyncHandler(
       try {
         db.prepare('DELETE FROM messages_fts WHERE rowid = ?').run(Number(messageId));
       } catch (_) {}
-    })();
+    });
+    transaction();
   } catch (err) {
     log.error({ err, messageId, me, code: err.code, message: err.message, stack: err.stack }, 'DELETE /messages/:messageId - DB error');
     throw err;
