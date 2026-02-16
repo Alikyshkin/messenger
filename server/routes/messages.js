@@ -7,11 +7,11 @@ import zlib from 'zlib';
 import { fileURLToPath } from 'url';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
-import { notifyNewMessage, notifyReaction } from '../realtime.js';
+import { notifyNewMessage, notifyReaction, notifyMessageEdited } from '../realtime.js';
 import { decryptIfLegacy } from '../cipher.js';
 import { messageLimiter, uploadLimiter } from '../middleware/rateLimit.js';
 import { sanitizeText } from '../middleware/sanitize.js';
-import { validate, sendMessageSchema, validateParams, peerIdParamSchema, messageIdParamSchema, addReactionSchema } from '../middleware/validation.js';
+import { validate, sendMessageSchema, validateParams, peerIdParamSchema, messageIdParamSchema, addReactionSchema, editMessageSchema } from '../middleware/validation.js';
 import { validateFile } from '../middleware/fileValidation.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import { ALLOWED_REACTION_EMOJIS, FILE_LIMITS, ALLOWED_FILE_TYPES } from '../config/constants.js';
@@ -69,6 +69,30 @@ router.patch('/:peerId/read', validateParams(peerIdParamSchema), asyncHandler(as
   );
   stmt.run(me, peerId);
   res.status(204).send();
+}));
+
+router.patch('/:messageId', validateParams(messageIdParamSchema), validate(editMessageSchema), asyncHandler(async (req, res) => {
+  const messageId = req.validatedParams.messageId;
+  const { content } = req.validated;
+  const me = req.user.userId;
+  const row = db.prepare('SELECT id, sender_id, receiver_id, content, message_type, attachment_path FROM messages WHERE id = ?').get(messageId);
+  if (!row) return res.status(404).json({ error: 'Сообщение не найдено' });
+  if (row.sender_id !== me) return res.status(403).json({ error: 'Только отправитель может редактировать сообщение' });
+  if (row.message_type !== 'text' || row.attachment_path) {
+    return res.status(400).json({ error: 'Редактировать можно только текстовые сообщения без вложений' });
+  }
+  const sanitized = sanitizeText(content);
+  db.prepare('UPDATE messages SET content = ? WHERE id = ?').run(sanitized, messageId);
+  try {
+    db.prepare('UPDATE messages_fts SET content = ? WHERE rowid = ?').run(sanitized, messageId);
+  } catch (_) {}
+  notifyMessageEdited(messageId, row.sender_id, row.receiver_id, sanitized);
+  const updated = db.prepare('SELECT id, content, created_at FROM messages WHERE id = ?').get(messageId);
+  res.json({
+    id: updated.id,
+    content: decryptIfLegacy(updated.content),
+    created_at: updated.created_at,
+  });
 }));
 
 router.post('/:messageId/reaction', validateParams(messageIdParamSchema), validate(addReactionSchema), asyncHandler(async (req, res) => {

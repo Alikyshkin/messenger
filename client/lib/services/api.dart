@@ -429,6 +429,18 @@ class Api {
     _checkResponse(r);
   }
 
+  /// Редактирует текстовое сообщение. Возвращает обновлённый контент.
+  Future<String> editMessage(int messageId, String content) async {
+    final r = await http.patch(
+      Uri.parse('$base/messages/$messageId'),
+      headers: _headers,
+      body: jsonEncode({'content': content}),
+    );
+    _checkResponse(r);
+    final json = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+    return json['content'] as String;
+  }
+
   Future<List<Message>> getMessages(
     int peerId, {
     int? before,

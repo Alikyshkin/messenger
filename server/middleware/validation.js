@@ -480,6 +480,16 @@ export const peerIdParamSchema = Joi.object({
     }),
 });
 
+export const editMessageSchema = Joi.object({
+  content: Joi.string().trim().min(1).max(VALIDATION_LIMITS.MESSAGE_MAX_LENGTH).required()
+    .label('Текст сообщения')
+    .messages({
+      'any.required': 'Текст сообщения обязателен',
+      'string.empty': 'Текст сообщения не может быть пустым',
+      'string.max': `Текст сообщения максимум ${VALIDATION_LIMITS.MESSAGE_MAX_LENGTH} символов`,
+    }),
+});
+
 export const messageIdParamSchema = Joi.object({
   messageId: Joi.number().integer().positive().required()
     .label('ID сообщения')

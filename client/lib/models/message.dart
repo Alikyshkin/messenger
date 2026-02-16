@@ -62,13 +62,13 @@ class Message {
 
   bool get isGroupMessage => groupId != null;
 
-  Message copyWith({List<MessageReaction>? reactions}) {
+  Message copyWith({String? content, List<MessageReaction>? reactions}) {
     return Message(
       id: id,
       senderId: senderId,
       receiverId: receiverId,
       groupId: groupId,
-      content: content,
+      content: content ?? this.content,
       createdAt: createdAt,
       readAt: readAt,
       isMine: isMine,

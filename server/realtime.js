@@ -37,3 +37,10 @@ export function notifyGroupReaction(memberUserIds, groupId, messageId, reactions
   const payload = { type: 'group_reaction', group_id: groupId, message_id: messageId, reactions };
   memberUserIds.forEach((userId) => broadcastToUser(userId, payload));
 }
+
+/** Редактирование личного сообщения: уведомить обоих участников. */
+export function notifyMessageEdited(messageId, senderId, receiverId, content) {
+  const payload = { type: 'message_edited', message_id: messageId, peer_id: null, content };
+  broadcastToUser(senderId, { ...payload, peer_id: receiverId });
+  broadcastToUser(receiverId, { ...payload, peer_id: senderId });
+}

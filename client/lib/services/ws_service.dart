@@ -19,6 +19,17 @@ class ReactionUpdate {
   });
 }
 
+class EditMessageUpdate {
+  final int messageId;
+  final int peerId;
+  final String content;
+  EditMessageUpdate({
+    required this.messageId,
+    required this.peerId,
+    required this.content,
+  });
+}
+
 class WsService extends ChangeNotifier {
   WebSocketChannel? _channel;
   StreamSubscription? _sub;
@@ -31,6 +42,7 @@ class WsService extends ChangeNotifier {
       30; // Максимальная задержка переподключения (секунды)
   final List<Message> _incoming = [];
   final List<ReactionUpdate> _reactionUpdates = [];
+  final List<EditMessageUpdate> _editUpdates = [];
   final List<Map<String, dynamic>> _pendingCallSignals =
       []; // Очередь сигналов звонка при отсутствии соединения
   final StreamController<CallSignal> _callSignalController =
@@ -196,6 +208,18 @@ class WsService extends ChangeNotifier {
           ),
         );
         notifyListeners();
+      } else if (map['type'] == 'message_edited' &&
+          map['message_id'] != null &&
+          map['peer_id'] != null &&
+          map['content'] != null) {
+        _editUpdates.add(
+          EditMessageUpdate(
+            messageId: map['message_id'] as int,
+            peerId: map['peer_id'] as int,
+            content: map['content'] as String,
+          ),
+        );
+        notifyListeners();
       }
     } catch (_) {}
   }
@@ -325,9 +349,20 @@ class WsService extends ChangeNotifier {
     return u;
   }
 
+  EditMessageUpdate? takeEditUpdateFor(int peerId) {
+    final i = _editUpdates.indexWhere((u) => u.peerId == peerId);
+    if (i < 0) {
+      return null;
+    }
+    final u = _editUpdates.removeAt(i);
+    notifyListeners();
+    return u;
+  }
+
   void clearPending() {
     _incoming.clear();
     _reactionUpdates.clear();
+    _editUpdates.clear();
     notifyListeners();
   }
 
@@ -343,6 +378,7 @@ class WsService extends ChangeNotifier {
     _connected = false;
     _incoming.clear();
     _reactionUpdates.clear();
+    _editUpdates.clear();
     _pendingCallSignals.clear();
     notifyListeners();
   }

@@ -148,6 +148,17 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       }
     }
+    EditMessageUpdate? eu;
+    while ((eu = ws.takeEditUpdateFor(widget.peer.id)) != null) {
+      final idx = _messages.indexWhere((msg) => msg.id == eu!.messageId);
+      if (idx >= 0 && mounted) {
+        setState(
+          () => _messages[idx] = _messages[idx].copyWith(
+            content: eu!.content,
+          ),
+        );
+      }
+    }
     // Пользователь в чате — помечаем все сообщения прочитанными, чтобы при выходе не показывался счётчик непрочитанных
     if (mounted) {
       final auth = context.read<AuthService>();
@@ -448,6 +459,18 @@ class _ChatScreenState extends State<ChatScreen> {
                   setState(() => _replyingTo = m);
                 },
               ),
+              if (m.isMine &&
+                  m.messageType == 'text' &&
+                  m.attachmentUrl == null &&
+                  !m.isPoll)
+                ListTile(
+                  leading: const Icon(Icons.edit_outlined),
+                  title: const Text('Редактировать'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showEditDialog(m);
+                  },
+                ),
               ListTile(
                 leading: const Icon(Icons.forward),
                 title: const Text('Переслать'),
@@ -500,6 +523,21 @@ class _ChatScreenState extends State<ChatScreen> {
               title: Text('Ответить'),
             ),
           ),
+          if (m.isMine &&
+              m.messageType == 'text' &&
+              m.attachmentUrl == null &&
+              !m.isPoll)
+            PopupMenuItem(
+              onTap: () {
+                if (!mounted) return;
+                _showEditDialog(m);
+              },
+              child: const ListTile(
+                contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                leading: Icon(Icons.edit_outlined),
+                title: Text('Редактировать'),
+              ),
+            ),
           PopupMenuItem(
             onTap: () {
               if (!mounted) {
@@ -517,6 +555,56 @@ class _ChatScreenState extends State<ChatScreen> {
       );
     } else {
       openSheet();
+    }
+  }
+
+  Future<void> _showEditDialog(Message m) async {
+    final controller = TextEditingController(text: m.content);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Редактировать сообщение'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            hintText: 'Текст сообщения',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(context.tr('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+            child: Text(context.tr('save')),
+          ),
+        ],
+      ),
+    );
+    if (result == null || result.isEmpty || !mounted) {
+      return;
+    }
+    final auth = context.read<AuthService>();
+    try {
+      await Api(auth.token).editMessage(m.id, result);
+      if (!mounted) return;
+      final idx = _messages.indexWhere((msg) => msg.id == m.id);
+      if (idx >= 0) {
+        final updated = _messages[idx].copyWith(content: result);
+        setState(() => _messages[idx] = updated);
+        await LocalDb.upsertMessage(updated, widget.peer.id);
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e is ApiException ? e.message : context.tr('connection_error')),
+        ),
+      );
     }
   }
 
