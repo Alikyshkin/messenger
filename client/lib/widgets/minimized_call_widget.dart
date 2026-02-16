@@ -19,7 +19,7 @@ class MinimizedCallWidget extends StatelessWidget {
       service = Provider.of<CallMinimizedService>(context, listen: true);
     } catch (e) {
       // Provider недоступен - возможно виджет используется вне дерева Provider
-      logActionError('minimized_call_widget', 'build_provider_error', e, null);
+      // Это нормально, если виджет еще не добавлен в дерево или Provider не инициализирован
       return const SizedBox.shrink();
     }
 

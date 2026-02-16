@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -130,7 +131,22 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
     });
     try {
       final xFile = await _controller!.stopVideoRecording();
-      var bytes = await xFile.readAsBytes();
+      Uint8List bytes;
+      try {
+        bytes = Uint8List.fromList(await xFile.readAsBytes());
+      } catch (e) {
+        // На вебе может быть проблема с blob URL из-за CSP
+        if (kIsWeb && e.toString().contains('Blob')) {
+          scope.fail('Blob URL error: $e');
+          if (!mounted) return;
+          setState(() {
+            _error = 'Ошибка чтения видео. Попробуйте записать заново.';
+            _sending = false;
+          });
+          return;
+        }
+        rethrow;
+      }
       var encrypted = false;
       if (widget.peerPublicKey != null) {
         final e2ee = E2EEService();
