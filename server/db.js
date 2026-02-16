@@ -158,6 +158,20 @@ try {
     );
   `);
 } catch (_) {}
+// Fallback: таблица из миграции 014 (если миграция не применилась)
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_privacy_hide_from (
+      user_id INTEGER NOT NULL,
+      hidden_from_user_id INTEGER NOT NULL,
+      PRIMARY KEY (user_id, hidden_from_user_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (hidden_from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+      CHECK (user_id != hidden_from_user_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_privacy_hide_from_user ON user_privacy_hide_from(user_id);
+  `);
+} catch (_) {}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS password_reset_tokens (
