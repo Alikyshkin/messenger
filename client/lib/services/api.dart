@@ -389,9 +389,13 @@ class Api {
 
   /// Поиск по сообщениям в чатах (FTS).
   /// peerId — опционально, иначе поиск по всем личным чатам.
-  Future<SearchMessagesResult> searchMessages(String q, {int? peerId, int limit = 50, int offset = 0}) async {
+  /// type: text|image|video|file|voice|video_note|poll|link|all
+  /// senderId — фильтр по отправителю.
+  Future<SearchMessagesResult> searchMessages(String q, {int? peerId, int? senderId, String type = 'all', int limit = 50, int offset = 0}) async {
     final params = <String, String>{'q': q, 'limit': '$limit', 'offset': '$offset'};
     if (peerId != null) params['peerId'] = '$peerId';
+    if (senderId != null) params['senderId'] = '$senderId';
+    if (type != 'all') params['type'] = type;
     final r = await http.get(
       Uri.parse('$base/search/messages').replace(queryParameters: params),
       headers: _headers,
@@ -402,9 +406,13 @@ class Api {
   }
 
   /// Поиск по сообщениям в группах.
-  Future<SearchMessagesResult> searchGroupMessages(String q, {int? groupId, int limit = 50, int offset = 0}) async {
+  /// type: text|image|video|file|voice|video_note|poll|link|all
+  /// senderId — фильтр по отправителю.
+  Future<SearchMessagesResult> searchGroupMessages(String q, {int? groupId, int? senderId, String type = 'all', int limit = 50, int offset = 0}) async {
     final params = <String, String>{'q': q, 'limit': '$limit', 'offset': '$offset'};
     if (groupId != null) params['groupId'] = '$groupId';
+    if (senderId != null) params['senderId'] = '$senderId';
+    if (type != 'all') params['type'] = type;
     final r = await http.get(
       Uri.parse('$base/search/group-messages').replace(queryParameters: params),
       headers: _headers,

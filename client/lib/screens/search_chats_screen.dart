@@ -18,12 +18,15 @@ class SearchChatsScreen extends StatefulWidget {
   State<SearchChatsScreen> createState() => _SearchChatsScreenState();
 }
 
+const _searchTypes = ['all', 'text', 'image', 'video', 'file', 'voice', 'link'];
+
 class _SearchChatsScreenState extends State<SearchChatsScreen> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   List<SearchMessageItem> _results = [];
   bool _loading = false;
   String? _error;
+  String _typeFilter = 'all';
   static const int _minQueryLength = 2;
 
   @override
@@ -52,8 +55,8 @@ class _SearchChatsScreenState extends State<SearchChatsScreen> {
       final auth = context.read<AuthService>();
       final api = Api(auth.token);
 
-      final personal = await api.searchMessages(q, limit: 30);
-      final group = await api.searchGroupMessages(q, limit: 30);
+      final personal = await api.searchMessages(q, type: _typeFilter, limit: 30);
+      final group = await api.searchGroupMessages(q, type: _typeFilter, limit: 30);
 
       if (!mounted) return;
 
@@ -113,7 +116,34 @@ class _SearchChatsScreenState extends State<SearchChatsScreen> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
+              children: _searchTypes.map((t) {
+                final label = t == 'all' ? context.tr('search_filter_all') : context.tr('search_filter_$t');
+                final selected = _typeFilter == t;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    label: Text(label),
+                    selected: selected,
+                    onSelected: (v) {
+                      setState(() {
+                        _typeFilter = t;
+                        if (_controller.text.trim().length >= _minQueryLength) _search();
+                      });
+                    },
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          Expanded(child: _buildBody()),
+        ],
+      ),
     );
   }
 

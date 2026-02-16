@@ -15,13 +15,17 @@ function getBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
+const ALLOWED_SEARCH_TYPES = new Set(['text', 'image', 'video', 'file', 'voice', 'video_note', 'poll', 'link', 'all']);
+
 /**
  * Поиск по сообщениям в личных чатах
- * GET /search/messages?q=текст&peerId=123&limit=50&offset=0
+ * GET /search/messages?q=текст&peerId=123&type=image|video|file|voice|text|all&senderId=456&limit=50&offset=0
  */
 router.get('/messages', validatePagination, (req, res) => {
   const { q } = req.query;
   const peerId = req.query.peerId ? parseInt(req.query.peerId, 10) : null;
+  const senderId = req.query.senderId ? parseInt(req.query.senderId, 10) : null;
+  const typeFilter = req.query.type && ALLOWED_SEARCH_TYPES.has(req.query.type) ? req.query.type : 'all';
   const { limit = 50, offset = 0 } = req.pagination;
   const me = req.user.userId;
   
@@ -54,6 +58,38 @@ router.get('/messages', validatePagination, (req, res) => {
       params.push(me, me);
     }
     params.push(me, me, `"${query}"`);
+
+    if (senderId && Number.isInteger(senderId)) {
+      sql += ' AND m.sender_id = ?';
+      params.push(senderId);
+    }
+    if (typeFilter !== 'all') {
+      if (typeFilter === 'text') {
+        sql += ' AND (m.message_type = ? OR m.message_type IS NULL) AND m.attachment_path IS NULL';
+        params.push('text');
+      } else if (typeFilter === 'image') {
+        sql += ' AND m.attachment_path IS NOT NULL AND (LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ?)';
+        params.push('%.jpg', '%.jpeg', '%.png', '%.gif', '%.webp');
+      } else if (typeFilter === 'video') {
+        sql += ' AND (m.attachment_kind = ? OR m.message_type = ? OR LOWER(m.attachment_filename) LIKE ?)';
+        params.push('video', 'video_note', '%.mp4');
+      } else if (typeFilter === 'file') {
+        sql += ' AND m.attachment_path IS NOT NULL AND m.attachment_kind = ?';
+        params.push('file');
+      } else if (typeFilter === 'voice') {
+        sql += ' AND m.attachment_kind = ?';
+        params.push('voice');
+      } else if (typeFilter === 'video_note') {
+        sql += ' AND m.attachment_kind = ?';
+        params.push('video_note');
+      } else if (typeFilter === 'poll') {
+        sql += ' AND m.message_type = ?';
+        params.push('poll');
+      } else if (typeFilter === 'link') {
+        sql += ' AND m.content LIKE ?';
+        params.push('%http%');
+      }
+    }
     
     sql += ' ORDER BY m.created_at DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
@@ -73,6 +109,37 @@ router.get('/messages', validatePagination, (req, res) => {
     if (peerId) {
       countSql = countSql.replace('(m.sender_id = ? OR m.receiver_id = ?)', '(m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?)');
       countParams.splice(2, 0, peerId, peerId);
+    }
+    if (senderId && Number.isInteger(senderId)) {
+      countSql += ' AND m.sender_id = ?';
+      countParams.push(senderId);
+    }
+    if (typeFilter !== 'all') {
+      if (typeFilter === 'text') {
+        countSql += ' AND (m.message_type = ? OR m.message_type IS NULL) AND m.attachment_path IS NULL';
+        countParams.push('text');
+      } else if (typeFilter === 'image') {
+        countSql += ' AND m.attachment_path IS NOT NULL AND (LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ?)';
+        countParams.push('%.jpg', '%.jpeg', '%.png', '%.gif', '%.webp');
+      } else if (typeFilter === 'video') {
+        countSql += ' AND (m.attachment_kind = ? OR m.message_type = ? OR LOWER(m.attachment_filename) LIKE ?)';
+        countParams.push('video', 'video_note', '%.mp4');
+      } else if (typeFilter === 'file') {
+        countSql += ' AND m.attachment_path IS NOT NULL AND m.attachment_kind = ?';
+        countParams.push('file');
+      } else if (typeFilter === 'voice') {
+        countSql += ' AND m.attachment_kind = ?';
+        countParams.push('voice');
+      } else if (typeFilter === 'video_note') {
+        countSql += ' AND m.attachment_kind = ?';
+        countParams.push('video_note');
+      } else if (typeFilter === 'poll') {
+        countSql += ' AND m.message_type = ?';
+        countParams.push('poll');
+      } else if (typeFilter === 'link') {
+        countSql += ' AND m.content LIKE ?';
+        countParams.push('%http%');
+      }
     }
     const total = db.prepare(countSql).get(...countParams)?.cnt || 0;
     
@@ -202,11 +269,13 @@ router.get('/messages', validatePagination, (req, res) => {
 
 /**
  * Поиск по сообщениям в группах
- * GET /search/group-messages?q=текст&groupId=123&limit=50&offset=0
+ * GET /search/group-messages?q=текст&groupId=123&type=image|video|file|voice|text|all&senderId=456&limit=50&offset=0
  */
 router.get('/group-messages', validatePagination, (req, res) => {
   const { q } = req.query;
   const groupId = req.query.groupId ? parseInt(req.query.groupId, 10) : null;
+  const senderId = req.query.senderId ? parseInt(req.query.senderId, 10) : null;
+  const typeFilter = req.query.type && ALLOWED_SEARCH_TYPES.has(req.query.type) ? req.query.type : 'all';
   const { limit = 50, offset = 0 } = req.pagination;
   const me = req.user.userId;
   
@@ -242,6 +311,37 @@ router.get('/group-messages', validatePagination, (req, res) => {
       sql = sql.replace('m.group_id IN (SELECT group_id FROM group_members WHERE user_id = ?)', 'm.group_id = ?');
       params[0] = groupId;
     }
+    if (senderId && Number.isInteger(senderId)) {
+      sql += ' AND m.sender_id = ?';
+      params.push(senderId);
+    }
+    if (typeFilter !== 'all') {
+      if (typeFilter === 'text') {
+        sql += ' AND (m.message_type = ? OR m.message_type IS NULL) AND m.attachment_path IS NULL';
+        params.push('text');
+      } else if (typeFilter === 'image') {
+        sql += ' AND m.attachment_path IS NOT NULL AND (LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ?)';
+        params.push('%.jpg', '%.jpeg', '%.png', '%.gif', '%.webp');
+      } else if (typeFilter === 'video') {
+        sql += ' AND (m.attachment_kind = ? OR m.message_type = ? OR LOWER(m.attachment_filename) LIKE ?)';
+        params.push('video', 'video_note', '%.mp4');
+      } else if (typeFilter === 'file') {
+        sql += ' AND m.attachment_path IS NOT NULL AND m.attachment_kind = ?';
+        params.push('file');
+      } else if (typeFilter === 'voice') {
+        sql += ' AND m.attachment_kind = ?';
+        params.push('voice');
+      } else if (typeFilter === 'video_note') {
+        sql += ' AND m.attachment_kind = ?';
+        params.push('video_note');
+      } else if (typeFilter === 'poll') {
+        sql += ' AND m.message_type = ?';
+        params.push('poll');
+      } else if (typeFilter === 'link') {
+        sql += ' AND m.content LIKE ?';
+        params.push('%http%');
+      }
+    }
     
     sql += ' ORDER BY m.created_at DESC LIMIT ? OFFSET ?';
     params.push(limit, offset);
@@ -260,6 +360,37 @@ router.get('/group-messages', validatePagination, (req, res) => {
     if (groupId) {
       countSql = countSql.replace('m.group_id IN (SELECT group_id FROM group_members WHERE user_id = ?)', 'm.group_id = ?');
       countParams[0] = groupId;
+    }
+    if (senderId && Number.isInteger(senderId)) {
+      countSql += ' AND m.sender_id = ?';
+      countParams.push(senderId);
+    }
+    if (typeFilter !== 'all') {
+      if (typeFilter === 'text') {
+        countSql += ' AND (m.message_type = ? OR m.message_type IS NULL) AND m.attachment_path IS NULL';
+        countParams.push('text');
+      } else if (typeFilter === 'image') {
+        countSql += ' AND m.attachment_path IS NOT NULL AND (LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ? OR LOWER(m.attachment_filename) LIKE ?)';
+        countParams.push('%.jpg', '%.jpeg', '%.png', '%.gif', '%.webp');
+      } else if (typeFilter === 'video') {
+        countSql += ' AND (m.attachment_kind = ? OR m.message_type = ? OR LOWER(m.attachment_filename) LIKE ?)';
+        countParams.push('video', 'video_note', '%.mp4');
+      } else if (typeFilter === 'file') {
+        countSql += ' AND m.attachment_path IS NOT NULL AND m.attachment_kind = ?';
+        countParams.push('file');
+      } else if (typeFilter === 'voice') {
+        countSql += ' AND m.attachment_kind = ?';
+        countParams.push('voice');
+      } else if (typeFilter === 'video_note') {
+        countSql += ' AND m.attachment_kind = ?';
+        countParams.push('video_note');
+      } else if (typeFilter === 'poll') {
+        countSql += ' AND m.message_type = ?';
+        countParams.push('poll');
+      } else if (typeFilter === 'link') {
+        countSql += ' AND m.content LIKE ?';
+        countParams.push('%http%');
+      }
     }
     const total = db.prepare(countSql).get(...countParams)?.cnt || 0;
     
