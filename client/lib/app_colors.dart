@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 
 /// Цвета приложения в одном месте — меняются из одного файла.
-/// Jade #AEB8A0 — приглушённый зелёно-серый.
+/// Material Blue #2196F3 — популярный синий, как в Telegram, Messenger.
 class AppColors {
   AppColors._();
 
-  // --- Jade #AEB8A0 ---
-  static const Color jade = Color(0xFFAEB8A0);
+  // --- Material Blue #2196F3 ---
+  static const Color primaryBlue = Color(0xFF2196F3);
 
   // --- Светлая тема ---
-  static const Color lightPrimary = Color(0xFFAEB8A0);
-  static const Color lightOnPrimary = Color(0xFF1A1A1A);
-  static const Color lightPrimaryContainer = Color(0xFFE2E6DC);
-  static const Color lightOnPrimaryContainer = Color(0xFF1A1A1A);
+  static const Color lightPrimary = Color(0xFF2196F3);
+  static const Color lightOnPrimary = Color(0xFFFFFFFF);
+  static const Color lightPrimaryContainer = Color(0xFFBBDEFB);
+  static const Color lightOnPrimaryContainer = Color(0xFF0D47A1);
   static const Color lightSurface = Color(0xFFFFFFFF);
   static const Color lightOnSurface = Color(0xFF1A1A1A);
   static const Color lightSurfaceContainerHighest = Color(0xFFF0F2F5);
@@ -23,10 +23,10 @@ class AppColors {
   static const Color lightOnError = Color(0xFFFFFFFF);
 
   // --- Тёмная тема ---
-  static const Color darkPrimary = Color(0xFFB8C4AA);
-  static const Color darkOnPrimary = Color(0xFF1A1A1A);
-  static const Color darkPrimaryContainer = Color(0xFF4A5540);
-  static const Color darkOnPrimaryContainer = Color(0xFFE2E6DC);
+  static const Color darkPrimary = Color(0xFF42A5F5);
+  static const Color darkOnPrimary = Color(0xFF0D47A1);
+  static const Color darkPrimaryContainer = Color(0xFF1565C0);
+  static const Color darkOnPrimaryContainer = Color(0xFFBBDEFB);
   static const Color darkSurface = Color(0xFF1A1A1A);
   static const Color darkOnSurface = Color(0xFFE8EAED);
   static const Color darkSurfaceContainerHighest = Color(0xFF2A2D31);
