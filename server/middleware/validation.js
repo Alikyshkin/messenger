@@ -226,9 +226,9 @@ export const updateUserSchema = Joi.object({
     .label('Отображаемое имя'),
   username: Joi.string().trim().min(VALIDATION_LIMITS.USERNAME_MIN_LENGTH).max(VALIDATION_LIMITS.USERNAME_MAX_LENGTH).optional()
     .label('Имя пользователя')
-    .pattern(/^[a-z0-9_]+$/)
+    .pattern(/^[a-zA-Z0-9_]+$/)
     .messages({
-      'string.pattern.base': 'Имя пользователя может содержать только строчные буквы, цифры и подчёркивание',
+      'string.pattern.base': 'Имя пользователя может содержать только буквы, цифры и подчёркивание',
       'string.min': `Имя пользователя минимум ${VALIDATION_LIMITS.USERNAME_MIN_LENGTH} символа`,
       'string.max': `Имя пользователя максимум ${VALIDATION_LIMITS.USERNAME_MAX_LENGTH} символов`,
     }),
@@ -274,6 +274,7 @@ export const sendMessageSchema = Joi.object({
       'number.integer': 'ID получателя должно быть целым числом',
     }),
   content: Joi.string().trim().max(VALIDATION_LIMITS.MESSAGE_MAX_LENGTH).allow('').optional(),
+  files: Joi.any().optional(), // Multer добавляет req.files сюда; не stripUnknown
   type: Joi.string().valid('text', 'poll', 'missed_call', 'location').optional(),
   lat: Joi.when('type', { is: 'location', then: Joi.number().min(-90).max(90).required(), otherwise: Joi.optional() }),
   lng: Joi.when('type', { is: 'location', then: Joi.number().min(-180).max(180).required(), otherwise: Joi.optional() }),
@@ -308,7 +309,7 @@ export const sendMessageSchema = Joi.object({
 }).custom((value, helpers) => {
   // Проверка: должно быть либо content, либо файл, либо опрос, либо локация
   if (value.type === 'location' && value.lat != null && value.lng != null) return value;
-  const hasFiles = value.files?.length || helpers.state.ancestors[0]?.files?.length;
+  const hasFiles = Array.isArray(value.files) && value.files.length > 0;
   if (!value.content && value.type !== 'poll' && !hasFiles) {
     return helpers.error('any.required', { message: 'content или файл обязательны' });
   }

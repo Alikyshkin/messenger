@@ -73,8 +73,8 @@ router.patch('/:peerId/read', validateParams(peerIdParamSchema), asyncHandler(as
     );
     stmt.run(me, peerId);
   } catch (err) {
-    log.route('messages', 'PATCH /:peerId/read', 'ERROR', { peerId, me }, err.message);
-    log.error({ err, peerId, me }, 'PATCH /messages/:peerId/read - DB error');
+    log.route('messages', 'PATCH /:peerId/read', 'ERROR', { peerId, me, code: err.code }, err.message);
+    log.error({ err, peerId, me, code: err.code, message: err.message }, 'PATCH /messages/:peerId/read - DB error');
     throw err;
   }
   log.route('messages', 'PATCH /:peerId/read', 'END', { peerId, me }, 'ok');
@@ -407,15 +407,15 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
       const result = db.prepare(
         `INSERT INTO messages (sender_id, receiver_id, content, message_type, attachment_path, attachment_filename, sender_public_key) VALUES (?, ?, ?, 'poll', NULL, NULL, ?)`
       ).run(me, rid, questionText, meUser?.public_key ?? null);
-      msgId = result.lastInsertRowid;
+      msgId = Number(result.lastInsertRowid);
       const pollResult = db.prepare(
         'INSERT INTO polls (message_id, question, options, multiple) VALUES (?, ?, ?, ?)'
       ).run(msgId, questionText, JSON.stringify(options), data.multiple ? 1 : 0);
-      pollId = pollResult.lastInsertRowid;
+      pollId = Number(pollResult.lastInsertRowid);
       db.prepare('UPDATE messages SET poll_id = ? WHERE id = ?').run(pollId, msgId);
       syncMessagesFTS(msgId);
     } catch (pollErr) {
-      log.error({ err: pollErr, rid, me }, 'POST /messages - poll creation error');
+      log.error({ err: pollErr, rid, me, code: pollErr.code, message: pollErr.message }, 'POST /messages - poll creation error');
       throw pollErr;
     }
     const row = db.prepare(
