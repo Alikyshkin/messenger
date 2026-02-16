@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../widgets/user_avatar.dart';
-import '../screens/settings_screen.dart';
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
 
@@ -103,14 +103,7 @@ class _ProfileContentState extends State<ProfileContent> {
                   IconButton(
                     icon: const Icon(Icons.settings),
                     tooltip: context.tr('settings'),
-                    onPressed: () {
-                      final nav = widget.navigator ?? Navigator.of(context);
-                      nav.push(
-                        MaterialPageRoute(
-                          builder: (_) => const SettingsScreen(),
-                        ),
-                      );
-                    },
+                    onPressed: () => context.push('/settings'),
                   ),
                 ],
               ),
@@ -215,15 +208,7 @@ class _ProfileContentState extends State<ProfileContent> {
                           leading: const Icon(Icons.settings_outlined),
                           title: Text(context.tr('settings')),
                           subtitle: Text(context.tr('settings_subtitle')),
-                          onTap: () {
-                            final nav =
-                                widget.navigator ?? Navigator.of(context);
-                            nav.push(
-                              MaterialPageRoute(
-                                builder: (_) => const SettingsScreen(),
-                              ),
-                            );
-                          },
+                          onTap: () => context.push('/settings'),
                         ),
                       ],
                     ),

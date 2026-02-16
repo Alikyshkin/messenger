@@ -27,7 +27,6 @@ import '../config/version.dart' show AppVersion;
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
 import '../widgets/nav_badge.dart';
-import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final Widget? child;
@@ -618,15 +617,7 @@ class _HomeScreenState extends State<HomeScreen>
                       icon: const Icon(Icons.more_vert),
                       onSelected: (value) async {
                         if (value == 'settings') {
-                          final nav =
-                              _navigatorKey.currentState ?? Navigator.of(context);
-                          nav.push(
-                            MaterialPageRoute(
-                              builder: (_) => SettingsScreen(
-                                navigator: _navigatorKey.currentState,
-                              ),
-                            ),
-                          );
+                          context.push('/settings');
                         } else if (value == 'logout') {
                           final navigator = _navigatorKey.currentState;
                           if (navigator == null) return;
@@ -863,17 +854,7 @@ class _HomeScreenState extends State<HomeScreen>
                     icon: const Icon(Icons.settings, size: AppSizes.iconXL),
                     tooltip: context.tr('settings'),
                     isActive: false,
-                    onPressed: () {
-                      final nav =
-                          _navigatorKey.currentState ?? Navigator.of(context);
-                      nav.push(
-                        MaterialPageRoute(
-                          builder: (_) => SettingsScreen(
-                            navigator: _navigatorKey.currentState,
-                          ),
-                        ),
-                      );
-                    },
+                    onPressed: () => context.push('/settings'),
                   ),
                   const SizedBox(height: 4),
                   // Выход

@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../widgets/user_avatar.dart';
-import 'settings_screen.dart';
 
 String _friendsCountLabel(BuildContext context, int? count) {
   if (count == null) {
@@ -96,12 +95,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () {
-              // SettingsScreen пока не имеет маршрута в go_router, используем Navigator
-              Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const SettingsScreen()));
-            },
+            onPressed: () => context.push('/settings'),
           ),
         ],
       ),
@@ -195,12 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   leading: const Icon(Icons.settings_outlined),
                   title: Text(context.tr('settings')),
                   subtitle: Text(context.tr('settings_subtitle')),
-                  onTap: () {
-                    // SettingsScreen пока не имеет маршрута в go_router, используем Navigator
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                    );
-                  },
+                  onTap: () => context.push('/settings'),
                 ),
                 const Divider(height: 1),
                 ListTile(

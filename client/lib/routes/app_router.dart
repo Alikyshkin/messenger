@@ -15,6 +15,7 @@ import '../screens/media_gallery_screen.dart';
 import '../screens/forgot_password_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/phone_login_screen.dart';
+import '../screens/settings_screen.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/chat_list_refresh_service.dart';
@@ -71,6 +72,10 @@ GoRouter createAppRouter(AuthService authService) {
       GoRoute(
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) {

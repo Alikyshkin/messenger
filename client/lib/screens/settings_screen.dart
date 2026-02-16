@@ -15,9 +15,7 @@ import '../styles/app_sizes.dart';
 enum _SettingsCategory { profile, appearance, security, storage, danger }
 
 class SettingsScreen extends StatefulWidget {
-  final NavigatorState? navigator;
-
-  const SettingsScreen({super.key, this.navigator});
+  const SettingsScreen({super.key});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -922,11 +920,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void _showLanguagePicker() {
     final localeService = context.read<LocaleService>();
     final isEn = localeService.locale?.languageCode == 'en';
-    final navigator = widget.navigator;
-    final sheetContext = navigator?.context ?? context;
     showModalBottomSheet<void>(
-      context: sheetContext,
-      useRootNavigator: navigator != null ? false : true,
+      context: context,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -964,11 +959,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _deleteAccount() async {
-    final navigator = widget.navigator;
-    final dialogContext = navigator?.context ?? context;
     final confirm = await showDialog<bool>(
-      context: dialogContext,
-      useRootNavigator: navigator != null ? false : true,
+      context: context,
       builder: (ctx) => AlertDialog(
         title: Text(context.tr('delete_account_confirm_title')),
         content: Text(context.tr('delete_account_confirm_body')),
@@ -1031,15 +1023,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!mounted) {
       return;
     }
-    final navigator = widget.navigator;
-    final currentContext = context;
-    if (!mounted) {
-      return;
-    }
-    final sheetContext = navigator?.context ?? currentContext;
     showModalBottomSheet<void>(
-      context: sheetContext,
-      useRootNavigator: navigator != null ? false : true,
+      context: context,
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
