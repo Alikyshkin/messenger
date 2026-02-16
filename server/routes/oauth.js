@@ -231,7 +231,6 @@ router.post('/phone/verify', authLimiter, validate(phoneVerifySchema), asyncHand
 
   db.prepare('DELETE FROM phone_verification_codes WHERE id = ?').run(row.id);
 
-  const normalizedPhone = phone.replace(/\D/g, '');
   let user = db.prepare('SELECT id, username, display_name, email FROM users WHERE phone = ?').get(normalizedPhone);
 
   if (!user) {
