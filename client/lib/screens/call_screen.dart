@@ -9,6 +9,7 @@ import '../services/app_sound_service.dart';
 import '../services/auth_service.dart';
 import '../utils/webrtc_constants.dart';
 import '../utils/media_utils.dart';
+import '../utils/call_network_quality.dart';
 import '../widgets/call_action_button.dart';
 import '../widgets/call_control_button.dart';
 import '../widgets/call_layout_button.dart';
@@ -81,6 +82,10 @@ class _CallScreenState extends State<CallScreen> {
 
   /// Переключение между передней и задней камерой.
   bool _isFrontCamera = true;
+
+  /// Качество сети (обновляется по getStats).
+  NetworkQuality _networkQuality = NetworkQuality.unknown;
+  Timer? _statsTimer;
 
   @override
   void initState() {
@@ -411,6 +416,20 @@ class _CallScreenState extends State<CallScreen> {
     }
   }
 
+  void _startStatsPolling() {
+    _statsTimer?.cancel();
+    _statsTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      if (!mounted || _pc == null || _state != 'connected') return;
+      try {
+        final reports = await _pc!.getStats();
+        final q = CallNetworkQuality.fromStats(reports);
+        if (mounted && q != _networkQuality) {
+          setState(() => _networkQuality = q);
+        }
+      } catch (_) {}
+    });
+  }
+
   void _setupPeerConnection() {
     _pc!.onIceCandidate = (RTCIceCandidate? candidate) {
       if (candidate == null) {
@@ -669,6 +688,7 @@ class _CallScreenState extends State<CallScreen> {
             _state = 'connected';
             _isConnecting = false;
           });
+          _startStatsPolling();
         }
       } catch (e) {
         if (mounted) {
@@ -714,6 +734,7 @@ class _CallScreenState extends State<CallScreen> {
             _isConnecting =
                 false; // Соединение установлено после получения answer
           });
+          _startStatsPolling();
         }
       } catch (e) {
         debugPrint('Error handling answer signal: $e');
@@ -815,6 +836,7 @@ class _CallScreenState extends State<CallScreen> {
           _isConnecting =
               false; // Соединение установлено после получения answer
         });
+        _startStatsPolling();
       }
     } catch (e) {
       if (mounted) {
@@ -896,6 +918,7 @@ class _CallScreenState extends State<CallScreen> {
     AppSoundService.instance.setInCall(false);
     AppSoundService.instance.stopRingtone();
     _signalSub?.cancel();
+    _statsTimer?.cancel();
     _localRenderer.srcObject = null;
     _remoteRenderer.srcObject = null;
     _screenRenderer.srcObject = null;
@@ -947,6 +970,7 @@ class _CallScreenState extends State<CallScreen> {
           children: [
             _buildVideoLayout(),
             if (widget.isVideoCall) _buildOverlayTitle(),
+            if (_state == 'connected') _buildNetworkQualityIndicator(),
             // Показываем превью локального видео только для видеозвонков в режиме докладчика или обычном режиме когда есть удаленное видео
             // НЕ показываем в режиме "рядом" (там локальное видео уже в основном layout)
             if (widget.isVideoCall &&
@@ -1330,6 +1354,82 @@ class _CallScreenState extends State<CallScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildNetworkQualityIndicator() {
+    return Positioned(
+      top: widget.isVideoCall ? 52 : 8,
+      right: 16,
+      child: Material(
+        color: Colors.black54,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _networkQualityIcon,
+                color: _networkQualityColor,
+                size: 18,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                _networkQualityLabel,
+                style: TextStyle(
+                  color: _networkQualityColor,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  IconData get _networkQualityIcon {
+    switch (_networkQuality) {
+      case NetworkQuality.excellent:
+        return Icons.signal_cellular_4_bar;
+      case NetworkQuality.good:
+        return Icons.signal_cellular_alt;
+      case NetworkQuality.fair:
+        return Icons.signal_cellular_alt_2_bar;
+      case NetworkQuality.poor:
+        return Icons.signal_cellular_alt_1_bar;
+      case NetworkQuality.unknown:
+        return Icons.signal_cellular_alt;
+    }
+  }
+
+  Color get _networkQualityColor {
+    switch (_networkQuality) {
+      case NetworkQuality.excellent:
+      case NetworkQuality.good:
+        return Colors.greenAccent;
+      case NetworkQuality.fair:
+        return Colors.orange;
+      case NetworkQuality.poor:
+        return Colors.redAccent;
+      case NetworkQuality.unknown:
+        return Colors.white54;
+    }
+  }
+
+  String get _networkQualityLabel {
+    switch (_networkQuality) {
+      case NetworkQuality.excellent:
+        return 'Отлично';
+      case NetworkQuality.good:
+        return 'Хорошо';
+      case NetworkQuality.fair:
+        return 'Средне';
+      case NetworkQuality.poor:
+        return 'Плохо';
+      case NetworkQuality.unknown:
+        return '...';
+    }
   }
 
   Widget _buildOverlayTitle() {
