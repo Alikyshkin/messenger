@@ -18,6 +18,7 @@ import '../widgets/call_control_button.dart';
 import '../services/call_minimized_service.dart';
 import '../services/app_update_service.dart';
 import '../utils/page_visibility.dart';
+import '../utils/user_action_logger.dart';
 
 /// Участник группового звонка с его PeerConnection и потоком
 class _GroupCallParticipant {
@@ -532,6 +533,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   }
 
   void _acceptCall() async {
+    logUserAction('group_call_accept', {'groupId': widget.group.id});
     AppSoundService.instance.stopRingtone();
     setState(() => _state = 'connected');
 
@@ -566,11 +568,13 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   }
 
   void _rejectCall() {
+    logUserAction('group_call_reject', {'groupId': widget.group.id});
     _ws!.sendGroupCallSignal(widget.group.id, 'reject', null, true);
     _endCall();
   }
 
   void _endCall() {
+    logUserAction('group_call_end', {'groupId': widget.group.id});
     _ws!.sendGroupCallSignal(widget.group.id, 'hangup', null, true);
     // Также отправляем hangup каждому участнику индивидуально
     for (final participant in _participants.values) {
@@ -600,6 +604,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   }
 
   void _minimizeCall() {
+    logUserAction('group_call_minimize', {'groupId': widget.group.id});
     final minimizedService = context.read<CallMinimizedService>();
     // GroupCallScreen всегда видеозвонок
     minimizedService.minimizeGroupCall(widget.group, true);
@@ -622,6 +627,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   }
 
   void _toggleCamera() {
+    logUserAction('group_call_toggle_camera', {'enabled': !_cameraEnabled});
     if (_localStream == null) {
       return;
     }
@@ -632,6 +638,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
   }
 
   void _toggleMic() {
+    logUserAction('group_call_toggle_mic', {'enabled': !_micEnabled});
     if (_localStream == null) {
       return;
     }

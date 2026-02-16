@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/app_update_service.dart';
 import '../services/chat_list_refresh_service.dart';
+import '../utils/user_action_logger.dart';
 
 /// NavigatorObserver для проверки обновлений при навигации
 /// Проверяет обновления только при переходе на главный экран, чтобы не перегружать сервер
@@ -9,21 +10,21 @@ class NavigationUpdateObserver extends NavigatorObserver {
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
-    // Проверяем обновления только при переходе на главный экран
+    logUserAction('nav_push', {'route': route.settings.name ?? route.settings.toString()});
     _checkForUpdatesIfHome(route);
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPop(route, previousRoute);
-    // Проверяем обновления только при возврате на главный экран
+    logUserAction('nav_pop', {'route': route.settings.name ?? route.settings.toString()});
     _checkForUpdatesIfHome(previousRoute);
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    // Проверяем обновления только при переходе на главный экран
+    logUserAction('nav_replace', {'new': newRoute?.settings.name ?? '?', 'old': oldRoute?.settings.name ?? '?'});
     _checkForUpdatesIfHome(newRoute);
   }
 

@@ -11,6 +11,7 @@ import '../utils/app_page_route.dart';
 import '../utils/page_visibility.dart';
 import '../screens/call_screen.dart';
 import '../screens/group_call_screen.dart';
+import '../utils/user_action_logger.dart';
 
 /// Слушает входящие звонки (offer) и открывает экран звонка. Проигрывает рингтон,
 /// при неактивной вкладке показывает браузерное уведомление и пытается перевести фокус.
@@ -55,6 +56,7 @@ class _WsCallListenerState extends State<WsCallListener> {
       // Если это групповой звонок, обрабатываем отдельно
       if (signal.groupId != null) {
         try {
+          logUserAction('call_incoming_group', {'groupId': signal.groupId});
           final api = Api(auth.token);
           final group = await api.getGroup(signal.groupId!);
 
@@ -90,6 +92,7 @@ class _WsCallListenerState extends State<WsCallListener> {
       }
 
       // Обычный приватный звонок
+      logUserAction('call_incoming', {'fromUserId': signal.fromUserId, 'isVideo': signal.isVideo ?? true});
       // Загружаем информацию о пользователе
       User peer;
       try {

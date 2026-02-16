@@ -5,6 +5,7 @@ import '../widgets/user_avatar.dart';
 import '../utils/app_page_route.dart';
 import '../screens/call_screen.dart';
 import '../screens/group_call_screen.dart';
+import '../utils/user_action_logger.dart';
 
 /// Компактный вид свернутого звонка (мини-окно)
 class MinimizedCallWidget extends StatelessWidget {
@@ -174,6 +175,11 @@ class MinimizedCallWidget extends StatelessWidget {
   }
 
   void _expandCall(BuildContext context, CallMinimizedService service) {
+    logUserAction('call_expand_minimized', {
+      'isGroup': service.isGroupCall,
+      'peerId': service.peer?.id,
+      'groupId': service.group?.id,
+    });
     service.expandCall();
 
     // Навигация к экрану звонка

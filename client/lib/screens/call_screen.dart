@@ -16,6 +16,7 @@ import '../widgets/call_layout_button.dart';
 import '../services/call_minimized_service.dart';
 import '../services/app_update_service.dart';
 import '../utils/page_visibility.dart';
+import '../utils/user_action_logger.dart';
 
 /// Режим отображения видео: докладчик (большой удалённый), обычный, рядом слева-справа.
 enum CallLayout { speaker, normal, sideBySide }
@@ -267,6 +268,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _toggleCamera() {
+    logUserAction('call_toggle_camera', {'enabled': !_cameraEnabled});
     if (_localStream == null || _screenShareEnabled) {
       return;
     }
@@ -279,6 +281,7 @@ class _CallScreenState extends State<CallScreen> {
 
   /// Переключение между передней и задней камерой.
   Future<void> _switchCamera() async {
+    logUserAction('call_switch_camera');
     if (_localStream == null || _screenShareEnabled || _pc == null) {
       return;
     }
@@ -319,6 +322,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _toggleMic() {
+    logUserAction('call_toggle_mic', {'enabled': !_micEnabled});
     if (_localStream == null) {
       return;
     }
@@ -330,6 +334,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _toggleScreenShare() async {
+    logUserAction('call_toggle_screen_share', {'enabled': !_screenShareEnabled});
     if (_pc == null || _localStream == null) {
       return;
     }
@@ -765,6 +770,7 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _acceptCall() async {
+    logUserAction('call_accept', {'peerId': widget.peer.id, 'isVideo': widget.isVideoCall});
     final offerPayload = widget.initialSignal?.payload;
     if (offerPayload == null) {
       return;
@@ -852,12 +858,14 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _rejectCall() {
+    logUserAction('call_reject', {'peerId': widget.peer.id});
     // Сообщение о пропущенном звонке создается автоматически на сервере при отправке сигнала reject
     _ws!.sendCallSignal(widget.peer.id, 'reject', null, widget.isVideoCall);
     _endCall();
   }
 
   void _hangUp() {
+    logUserAction('call_hangup', {'peerId': widget.peer.id});
     _ws!.sendCallSignal(widget.peer.id, 'hangup', null, widget.isVideoCall);
     _endCall();
   }
@@ -1574,7 +1582,10 @@ class _CallScreenState extends State<CallScreen> {
           runSpacing: 8,
           children: [
             CallControlButton.participants(
-              onPressed: () => setState(() => _showPanel = !_showPanel),
+              onPressed: () {
+                logUserAction('call_toggle_panel', {'show': !_showPanel});
+                setState(() => _showPanel = !_showPanel);
+              },
               isExpanded: _showPanel,
               size: 48,
             ),
@@ -1628,6 +1639,7 @@ class _CallScreenState extends State<CallScreen> {
             children: [
               TabBar(
                 onTap: (i) {
+                  logUserAction('call_panel_tab', {'index': i, 'tab': i == 0 ? 'participants' : 'settings'});
                   setState(() => _panelTabIndex = i);
                   if (i == 1) {
                     _loadMediaDevices();

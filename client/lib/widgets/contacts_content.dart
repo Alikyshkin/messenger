@@ -17,6 +17,7 @@ import '../screens/add_contact_screen.dart';
 import '../screens/chat_screen.dart';
 import '../screens/possible_friends_screen.dart';
 import '../screens/user_profile_screen.dart';
+import '../utils/user_action_logger.dart';
 
 /// Виджет содержимого экрана контактов без Scaffold для встраивания в HomeScreen
 class ContactsContent extends StatefulWidget {
@@ -72,6 +73,7 @@ class _ContactsContentState extends State<ContactsContent> {
   }
 
   Future<void> _accept(int requestId) async {
+    logUserAction('contacts_accept_request', {'requestId': requestId});
     final auth = context.read<AuthService>();
     try {
       await Api(auth.token).acceptFriendRequest(requestId);
@@ -81,6 +83,7 @@ class _ContactsContentState extends State<ContactsContent> {
   }
 
   Future<void> _reject(int requestId) async {
+    logUserAction('contacts_reject_request', {'requestId': requestId});
     final auth = context.read<AuthService>();
     try {
       await Api(auth.token).rejectFriendRequest(requestId);
@@ -90,6 +93,7 @@ class _ContactsContentState extends State<ContactsContent> {
   }
 
   Future<void> _confirmRemove(BuildContext context, User u) async {
+    logUserAction('contacts_remove_friend', {'userId': u.id});
     final auth = context.read<AuthService>();
     final navigator = widget.navigator;
     final dialogContext = navigator?.context ?? context;

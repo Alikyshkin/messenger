@@ -27,6 +27,7 @@ import '../services/call_minimized_service.dart';
 import '../config/version.dart' show AppVersion;
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
+import '../utils/user_action_logger.dart';
 import '../widgets/nav_badge.dart';
 import 'possible_friends_screen.dart';
 import 'add_contact_screen.dart';
@@ -395,12 +396,16 @@ class _HomeScreenState extends State<HomeScreen>
           IconButton(
             icon: const Icon(Icons.search),
             tooltip: context.tr('search_in_chats'),
-            onPressed: () => context.push('/search'),
+            onPressed: () {
+              logUserAction('home_search');
+              context.push('/search');
+            },
           ),
           IconButton(
             icon: const Icon(Icons.add),
             tooltip: context.tr('new_chat'),
             onPressed: () async {
+              logUserAction('home_new_chat');
               await context.push('/start-chat');
               _load();
             },
@@ -412,6 +417,7 @@ class _HomeScreenState extends State<HomeScreen>
             icon: const Icon(Icons.people_alt_outlined),
             tooltip: context.tr('possible_friends'),
             onPressed: () async {
+              logUserAction('home_possible_friends');
               final nav = _navigatorKey.currentState ?? Navigator.of(context);
               await nav.push(
                 MaterialPageRoute(builder: (_) => const PossibleFriendsScreen()),
@@ -423,6 +429,7 @@ class _HomeScreenState extends State<HomeScreen>
             icon: const Icon(Icons.add),
             tooltip: context.tr('add_by_username'),
             onPressed: () async {
+              logUserAction('home_add_contact');
               final nav = _navigatorKey.currentState ?? Navigator.of(context);
               await nav.push(
                 MaterialPageRoute(builder: (_) => const AddContactScreen()),
@@ -436,7 +443,10 @@ class _HomeScreenState extends State<HomeScreen>
           IconButton(
             icon: const Icon(Icons.settings),
             tooltip: context.tr('settings'),
-            onPressed: () => context.push('/settings'),
+            onPressed: () {
+              logUserAction('home_settings');
+              context.push('/settings');
+            },
           ),
         ];
     }
@@ -1083,6 +1093,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   void _onTabTap(String path, _NavigationItem target) {
     if (!mounted || _currentView == target) return;
+    logUserAction('home_nav_tab', {'tab': target.name});
     final minimizedService = context.read<CallMinimizedService>();
     if (minimizedService.hasActiveCall && minimizedService.peer != null) {
       minimizedService.minimizeCall(minimizedService.peer!, minimizedService.isVideoCall);

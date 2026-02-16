@@ -10,6 +10,7 @@ import '../widgets/app_back_button.dart';
 import '../widgets/user_avatar.dart';
 import 'chat_screen.dart';
 import 'call_screen.dart';
+import '../utils/user_action_logger.dart';
 
 /// Профиль другого пользователя: отображается только количество друзей (не список).
 class UserProfileScreen extends StatefulWidget {
@@ -65,6 +66,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _addContact() async {
+    logUserAction('user_profile_add_contact', {'userId': (_user ?? widget.user).id});
     final u = _user ?? widget.user;
     final auth = context.read<AuthService>();
     try {
@@ -81,6 +83,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _removeContact() async {
+    logUserAction('user_profile_remove_contact', {'userId': (_user ?? widget.user).id});
     final u = _user ?? widget.user;
     final auth = context.read<AuthService>();
     final ok = await showDialog<bool>(
@@ -153,6 +156,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _toggleHideStatus() async {
+    logUserAction('user_profile_toggle_hide_status', {'userId': (_user ?? widget.user).id});
     final u = _user ?? widget.user;
     final auth = context.read<AuthService>();
     try {
@@ -172,6 +176,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _toggleBlock() async {
+    logUserAction('user_profile_toggle_block', {'userId': (_user ?? widget.user).id});
     final u = _user ?? widget.user;
     final auth = context.read<AuthService>();
     try {
@@ -333,6 +338,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         if (_isContact)
                           FilledButton.icon(
                             onPressed: () {
+                              logUserAction('user_profile_message', {'userId': u.id});
                               Navigator.of(context).push(
                                 AppPageRoute(builder: (_) => ChatScreen(peer: u)),
                               );
@@ -379,6 +385,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         if (_isContact && u.isBlocked != true) ...[
                           OutlinedButton.icon(
                             onPressed: () {
+                              logUserAction('user_profile_audio_call', {'userId': u.id});
                               Navigator.of(context).push(
                                 AppPageRoute(builder: (_) => CallScreen(peer: u, isIncoming: false, isVideoCall: false)),
                               );
@@ -388,6 +395,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           ),
                           OutlinedButton.icon(
                             onPressed: () {
+                              logUserAction('user_profile_video_call', {'userId': u.id});
                               Navigator.of(context).push(
                                 AppPageRoute(builder: (_) => CallScreen(peer: u, isIncoming: false, isVideoCall: true)),
                               );

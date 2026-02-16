@@ -35,6 +35,7 @@ import 'package:geolocator/geolocator.dart';
 import 'record_video_note_screen.dart';
 import 'user_profile_screen.dart';
 import 'image_preview_screen.dart';
+import '../utils/user_action_logger.dart';
 
 class ChatScreen extends StatefulWidget {
   final User peer;
@@ -375,6 +376,7 @@ class _ChatScreenState extends State<ChatScreen> {
         if (mounted) _focusNode.requestFocus();
       });
     } catch (e) {
+      logUserActionError('load_chat_messages', e, StackTrace.current);
       if (!mounted) {
         return;
       }
@@ -841,6 +843,7 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
     final content = _text.text.trim();
+    logUserAction('send_message', {'peerId': widget.peer.id, 'hasFile': _pendingAttachment != null, 'hasMulti': _pendingMultipleFiles != null});
     final replyToId = _replyingTo?.id;
     final pending = _pendingAttachment;
     final pendingMulti = _pendingMultipleFiles;
@@ -881,6 +884,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _scrollToBottom();
         _focusNode.requestFocus();
       } catch (e) {
+        logUserActionError('send_message_multifile', e);
         if (!mounted) {
           return;
         }
@@ -1001,6 +1005,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _scrollToBottom();
       _focusNode.requestFocus();
     } catch (e) {
+      logUserActionError('send_message', e);
       if (!mounted) {
         return;
       }
@@ -1053,9 +1058,8 @@ class _ChatScreenState extends State<ChatScreen> {
   static const int _maxMultipleFiles = 10;
 
   Future<void> _attachFile() async {
-    if (_sending) {
-      return;
-    }
+    if (_sending) return;
+    logUserAction('chat_attach_file');
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       withData: true,
@@ -1140,6 +1144,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendLocation() async {
     if (_sending) return;
+    logUserAction('send_location', {'peerId': widget.peer.id});
     final token = context.read<AuthService>().token;
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -1179,6 +1184,7 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       _scrollToBottom();
     } catch (e) {
+      logUserActionError('send_location', e);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка: $e')),
@@ -1188,9 +1194,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _createPoll() async {
-    if (_sending) {
-      return;
-    }
+    if (_sending) return;
+    logUserAction('chat_create_poll');
     final result = await showDialog<_PollFormResult>(
       context: context,
       builder: (_) => const _CreatePollDialog(),
@@ -1389,9 +1394,8 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _openRecordVideoNote() async {
-    if (_sending) {
-      return;
-    }
+    if (_sending) return;
+    logUserAction('chat_record_video_note');
     final result = await Navigator.of(context).push<Map<String, dynamic>>(
       AppPageRoute(
         builder: (_) => RecordVideoNoteScreen(
@@ -1478,6 +1482,7 @@ class _ChatScreenState extends State<ChatScreen> {
               icon: const Icon(Icons.person_outline),
               tooltip: 'Профиль',
               onPressed: () {
+                logUserAction('chat_open_profile', {'peerId': widget.peer.id});
                 Navigator.of(context).push(
                   AppPageRoute(
                     builder: (_) => UserProfileScreen(user: widget.peer),
@@ -1489,6 +1494,7 @@ class _ChatScreenState extends State<ChatScreen> {
               icon: const Icon(Icons.phone),
               tooltip: 'Голосовой звонок',
               onPressed: () {
+                logUserAction('chat_start_audio_call', {'peerId': widget.peer.id});
                 Navigator.of(context).push(
                   AppPageRoute(
                     builder: (_) => CallScreen(
@@ -1504,6 +1510,7 @@ class _ChatScreenState extends State<ChatScreen> {
               icon: const Icon(Icons.videocam),
               tooltip: 'Видеозвонок',
               onPressed: () {
+                logUserAction('chat_start_video_call', {'peerId': widget.peer.id});
                 Navigator.of(context).push(
                   AppPageRoute(
                     builder: (_) => CallScreen(

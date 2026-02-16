@@ -12,9 +12,11 @@ import 'services/chat_list_refresh_service.dart';
 import 'widgets/app_lifecycle_listener.dart' show AppUpdateLifecycleListener;
 import 'widgets/app_update_dialog.dart';
 import 'routes/app_router.dart';
+import 'utils/user_action_logger.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  logUserAction('app_start');
   runApp(const MessengerApp());
 }
 

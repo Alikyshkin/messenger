@@ -6,6 +6,7 @@ import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../widgets/app_back_button.dart';
 import '../utils/app_page_route.dart';
+import '../utils/user_action_logger.dart';
 import 'group_call_screen.dart';
 
 class GroupProfileScreen extends StatefulWidget {
@@ -48,6 +49,7 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
   }
 
   Future<void> _leaveGroup() async {
+    logUserAction('group_leave', {'groupId': widget.group.id});
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -156,6 +158,7 @@ class _GroupProfileScreenState extends State<GroupProfileScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             onTap: () {
+              logUserAction('group_profile_start_call', {'groupId': g.id});
               if (g.members == null || g.members!.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(

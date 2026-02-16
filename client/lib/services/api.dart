@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'package:http/http.dart' as http;
 import '../config.dart';
+import '../utils/user_action_logger.dart';
 import '../models/user.dart';
 import '../models/message.dart';
 import '../models/chat.dart';
@@ -46,7 +47,7 @@ class Api {
     return utf8.decode(r.bodyBytes, allowMalformed: true);
   }
 
-  void _checkResponse(http.Response r) {
+  void _checkResponse(http.Response r, [String? requestHint]) {
     if (r.statusCode >= 400) {
       final body = _utf8Body(r);
       String msg = body;
@@ -54,6 +55,10 @@ class Api {
         final m = jsonDecode(body) as Map<String, dynamic>;
         msg = m['error'] as String? ?? body;
       } catch (_) {}
+      logUserActionError(
+        'api_error ${requestHint ?? r.request?.url.path ?? "?"}',
+        ApiException(r.statusCode, msg),
+      );
       throw ApiException(r.statusCode, msg);
     }
   }

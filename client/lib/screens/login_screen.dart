@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/api.dart' show ApiException, AuthResponse, OAuthProviders;
 import '../services/oauth_service.dart';
 import '../styles/app_sizes.dart';
+import '../utils/user_action_logger.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -64,6 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    logUserAction('login_submit', {'username': _username.text.trim()});
     setState(() {
       _error = null;
       _loading = true;
@@ -109,6 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _oauthLogin(Future<AuthResponse?> Function() fn) async {
+    logUserAction('login_oauth');
     setState(() {
       _error = null;
       _loading = true;

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/user_action_logger.dart';
 import '../database/local_db.dart';
 import '../models/user.dart';
 import 'api.dart' show Api, ApiException, AuthResponse;
@@ -86,6 +87,7 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> clear() async {
+    logUserAction('auth_logout');
     _user = null;
     _token = '';
     final prefs = await SharedPreferences.getInstance();
@@ -111,13 +113,16 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> login(String username, String password) async {
+    logUserAction('auth_login', {'username': username});
     final api = Api('');
     final res = await api.login(username, password);
     await _save(res.user, res.token);
     await _ensureE2EEKeys();
+    logUserAction('auth_login_ok', {'userId': res.user.id});
   }
 
   Future<void> loginWithOAuth(AuthResponse res) async {
+    logUserAction('auth_login_oauth', {'userId': res.user.id});
     await _save(res.user, res.token);
     await _ensureE2EEKeys();
   }
@@ -128,11 +133,13 @@ class AuthService extends ChangeNotifier {
     String? displayName,
     String? email,
   ]) async {
+    logUserAction('auth_register', {'username': username});
     final api = Api('');
     await api.register(username, password, displayName, email);
     final res = await api.login(username, password);
     await _save(res.user, res.token);
     await _ensureE2EEKeys();
+    logUserAction('auth_register_ok', {'userId': res.user.id});
   }
 
   Future<void> logout() async {

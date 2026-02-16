@@ -11,6 +11,7 @@ import '../services/theme_service.dart';
 import '../services/chat_list_refresh_service.dart';
 import '../widgets/app_back_button.dart';
 import '../styles/app_spacing.dart';
+import '../utils/user_action_logger.dart';
 import '../styles/app_sizes.dart';
 
 enum _SettingsCategory { profile, appearance, privacy, security, storage, danger }
@@ -73,6 +74,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _savePrivacy() async {
+    logUserAction('settings_save_privacy');
     final auth = context.read<AuthService>();
     if (!auth.isLoggedIn) return;
     setState(() => _loading = true);
@@ -222,6 +224,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _saveProfile() async {
+    logUserAction('settings_save_profile');
     setState(() {
       _loading = true;
       _error = null;

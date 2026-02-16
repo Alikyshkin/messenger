@@ -5,6 +5,7 @@ import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../utils/app_page_route.dart';
+import '../utils/user_action_logger.dart';
 import '../widgets/app_back_button.dart';
 import '../widgets/user_search_widget.dart';
 import 'chat_screen.dart';
@@ -20,6 +21,7 @@ class _AddContactScreenState extends State<AddContactScreen> {
   String? _error;
 
   Future<void> _add(User u) async {
+    logUserAction('add_contact', {'username': u.username});
     setState(() => _error = null);
     try {
       final added = await Api(

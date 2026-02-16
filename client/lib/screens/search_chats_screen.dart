@@ -8,6 +8,7 @@ import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../utils/app_page_route.dart';
 import '../utils/format_date.dart';
+import '../utils/user_action_logger.dart';
 import '../widgets/app_back_button.dart';
 
 /// Экран поиска по сообщениям в чатах.
@@ -45,6 +46,7 @@ class _SearchChatsScreenState extends State<SearchChatsScreen> {
   Future<void> _search() async {
     final q = _controller.text.trim();
     if (q.length < _minQueryLength) return;
+    logUserAction('search_chats', {'query': q, 'type': _typeFilter});
 
     setState(() {
       _loading = true;

@@ -15,6 +15,7 @@ import '../widgets/user_avatar.dart';
 import '../widgets/error_state_widget.dart';
 import '../widgets/empty_state_widget.dart';
 import '../styles/app_spacing.dart';
+import '../utils/user_action_logger.dart';
 
 /// Экран списка чатов для встраивания в ShellRoute (правая часть)
 class ChatsListPage extends StatefulWidget {
@@ -101,6 +102,7 @@ class _ChatsListPageState extends State<ChatsListPage>
         _loading = false;
       });
     } catch (e) {
+      logUserActionError('load_chats', e);
       if (!mounted) return;
       setState(() {
         _error = e is ApiException ? e.message : context.tr('load_error');
@@ -268,6 +270,11 @@ class _ChatsListPageState extends State<ChatsListPage>
                                 )
                               : null,
                           onTap: () async {
+                            logUserAction('open_chat', {
+                              'type': isGroup ? 'group' : 'dm',
+                              'id': isGroup ? c.group!.id : c.peer!.id,
+                              'name': title,
+                            });
                             if (isGroup) {
                               await context.push('/group/${c.group!.id}');
                             } else {

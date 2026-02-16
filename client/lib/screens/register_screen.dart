@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/api.dart';
 import '../widgets/app_back_button.dart';
 import '../styles/app_sizes.dart';
+import '../utils/user_action_logger.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -43,6 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _submit() async {
+    logUserAction('register_submit', {'username': _username.text.trim()});
     setState(() {
       _error = null;
       _loading = true;

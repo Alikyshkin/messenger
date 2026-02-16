@@ -11,6 +11,7 @@ import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../services/ws_service.dart';
 import '../utils/app_page_route.dart';
+import '../utils/user_action_logger.dart';
 import '../widgets/app_back_button.dart';
 import 'group_profile_screen.dart';
 
@@ -213,6 +214,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   static const int _maxMultipleFiles = 10;
 
   Future<void> _sendFile() async {
+    logUserAction('group_chat_attach_file', {'groupId': widget.group.id});
     final result = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       withData: true,
@@ -282,6 +284,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     if (content.isEmpty || _sending) {
       return;
     }
+    logUserAction('send_group_message', {'groupId': widget.group.id});
     final replyToId = _replyingTo?.id;
     setState(() {
       _sending = true;
@@ -304,6 +307,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
         context.read<AuthService>().token,
       ).markGroupMessagesRead(widget.group.id, msg.id);
     } catch (e) {
+      logUserActionError('send_group_message', e);
       if (!mounted) {
         return;
       }
@@ -686,6 +690,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
 
   Future<void> _sendLocation() async {
     if (_sending) return;
+    logUserAction('send_group_location', {'groupId': widget.group.id});
     final token = context.read<AuthService>().token;
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -723,6 +728,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       });
       _scrollToBottom();
     } catch (e) {
+      logUserActionError('send_group_location', e);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка: $e')),
