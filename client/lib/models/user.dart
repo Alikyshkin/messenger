@@ -19,6 +19,9 @@ class User {
   /// Онлайн-статус пользователя
   final bool? isOnline;
 
+  /// Время последней активности (ISO 8601)
+  final String? lastSeen;
+
   User({
     required this.id,
     required this.username,
@@ -31,6 +34,7 @@ class User {
     this.phone,
     this.friendsCount,
     this.isOnline,
+    this.lastSeen,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -46,6 +50,7 @@ class User {
       phone: json['phone'] as String?,
       friendsCount: json['friends_count'] as int?,
       isOnline: json['is_online'] as bool?,
+      lastSeen: json['last_seen'] as String?,
     );
   }
 
@@ -61,6 +66,7 @@ class User {
     String? phone,
     int? friendsCount,
     bool? isOnline,
+    String? lastSeen,
   }) {
     return User(
       id: id ?? this.id,
@@ -74,6 +80,7 @@ class User {
       phone: phone ?? this.phone,
       friendsCount: friendsCount ?? this.friendsCount,
       isOnline: isOnline ?? this.isOnline,
+      lastSeen: lastSeen ?? this.lastSeen,
     );
   }
 }

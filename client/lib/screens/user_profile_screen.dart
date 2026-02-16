@@ -5,6 +5,7 @@ import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
 import '../utils/app_page_route.dart';
+import '../utils/format_last_seen.dart';
 import '../widgets/app_back_button.dart';
 import '../widgets/user_avatar.dart';
 import 'chat_screen.dart';
@@ -189,6 +190,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                   ),
                 ),
+                if (u.isOnline == true || (u.lastSeen != null && u.lastSeen!.isNotEmpty)) ...[
+                  const SizedBox(height: 4),
+                  Center(
+                    child: Text(
+                      formatLastSeen(context, u.lastSeen, u.isOnline),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: u.isOnline == true
+                            ? Colors.green
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
                 if (u.bio != null && u.bio!.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Padding(

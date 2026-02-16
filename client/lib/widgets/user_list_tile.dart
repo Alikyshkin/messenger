@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
+import '../utils/format_last_seen.dart';
 import 'user_avatar.dart';
 
 /// Унифицированный элемент списка пользователя
@@ -11,6 +13,7 @@ class UserListTile extends StatelessWidget {
   final Widget? trailing;
   final double avatarRadius;
   final bool showUsername;
+  final bool showLastSeen;
 
   const UserListTile({
     super.key,
@@ -19,6 +22,7 @@ class UserListTile extends StatelessWidget {
     this.trailing,
     this.avatarRadius = AppSizes.avatarMD,
     this.showUsername = true,
+    this.showLastSeen = false,
   });
 
   @override
@@ -39,9 +43,13 @@ class UserListTile extends StatelessWidget {
         user.displayName,
         style: const TextStyle(fontWeight: FontWeight.w500),
       ),
-      subtitle: showUsername
+      subtitle: showUsername || showLastSeen
           ? Text(
-              '@${user.username}',
+              [
+                if (showUsername) '@${user.username}',
+                if (showLastSeen && (user.isOnline == true || (user.lastSeen != null && user.lastSeen!.isNotEmpty)))
+                  formatLastSeen(context, user.lastSeen, user.isOnline),
+              ].where((s) => s.isNotEmpty).join(' • '),
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 14,

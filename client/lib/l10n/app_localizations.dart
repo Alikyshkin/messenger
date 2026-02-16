@@ -197,6 +197,13 @@ class AppLocalizations {
     'possible_friends_subtitle':
         'Контакты из телефона, зарегистрированные в мессенджере',
     'remove_friend_tooltip': 'Удалить из друзей',
+    'online': 'в сети',
+    'last_seen_just_now': 'был(а) только что',
+    'last_seen_minutes': 'был(а) %s мин. назад',
+    'last_seen_hours': 'был(а) %s ч. назад',
+    'last_seen_today': 'был(а) сегодня в %s',
+    'last_seen_yesterday': 'был(а) вчера',
+    'last_seen_long_ago': 'был(а) давно',
     'profile_tooltip': 'Профиль',
     'zero_friends': '0 друзей',
     'possible_friends_empty':
@@ -396,6 +403,13 @@ class AppLocalizations {
     'friend_requests': 'Friend requests',
     'possible_friends_subtitle': 'Contacts from your phone who use the app',
     'remove_friend_tooltip': 'Remove from friends',
+    'online': 'online',
+    'last_seen_just_now': 'last seen just now',
+    'last_seen_minutes': 'last seen %s min ago',
+    'last_seen_hours': 'last seen %s h ago',
+    'last_seen_today': 'last seen today at %s',
+    'last_seen_yesterday': 'last seen yesterday',
+    'last_seen_long_ago': 'last seen long ago',
     'profile_tooltip': 'Profile',
     'zero_friends': '0 friends',
     'possible_friends_empty':

@@ -265,6 +265,7 @@ class _ContactsContentState extends State<ContactsContent> {
                                 (u) => UserListTile(
                                   user: u,
                                   avatarRadius: AppSizes.avatarMD,
+                                  showLastSeen: true,
                                   onTap: () {
                                     final nav =
                                         widget.navigator ??
