@@ -308,7 +308,8 @@ export const sendMessageSchema = Joi.object({
 }).custom((value, helpers) => {
   // Проверка: должно быть либо content, либо файл, либо опрос, либо локация
   if (value.type === 'location' && value.lat != null && value.lng != null) return value;
-  if (!value.content && value.type !== 'poll' && !helpers.state.ancestors[0]?.files?.length) {
+  const hasFiles = value.files?.length || helpers.state.ancestors[0]?.files?.length;
+  if (!value.content && value.type !== 'poll' && !hasFiles) {
     return helpers.error('any.required', { message: 'content или файл обязательны' });
   }
   return value;
@@ -411,7 +412,8 @@ export const sendGroupMessageSchema = Joi.object({
 }).custom((value, helpers) => {
   // Проверка: должно быть либо content, либо файл, либо опрос, либо локация
   if (value.type === 'location' && value.lat != null && value.lng != null) return value;
-  if (!value.content && value.type !== 'poll' && !helpers.state.ancestors[0]?.files?.length) {
+  const hasFiles = value.files?.length || helpers.state.ancestors[0]?.files?.length;
+  if (!value.content && value.type !== 'poll' && !hasFiles) {
     return helpers.error('any.required', { message: 'content или файл обязательны' });
   }
   return value;

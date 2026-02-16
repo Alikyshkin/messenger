@@ -66,10 +66,15 @@ function getBaseUrl(req) {
 router.patch('/:peerId/read', validateParams(peerIdParamSchema), asyncHandler(async (req, res) => {
   const peerId = req.validatedParams.peerId;
   const me = req.user.userId;
-  const stmt = db.prepare(
-    'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE receiver_id = ? AND sender_id = ? AND read_at IS NULL'
-  );
-  stmt.run(me, peerId);
+  try {
+    const stmt = db.prepare(
+      'UPDATE messages SET read_at = CURRENT_TIMESTAMP WHERE receiver_id = ? AND sender_id = ? AND read_at IS NULL'
+    );
+    stmt.run(me, peerId);
+  } catch (err) {
+    log.error({ err, peerId, me }, 'PATCH /messages/:peerId/read - DB error');
+    throw err;
+  }
   res.status(204).send();
 }));
 
@@ -352,6 +357,8 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
         log.error({ path: req.path, method: req.method, error: err.message }, 'POST /messages - multer error');
         return res.status(400).json({ error: err.message || 'Ошибка загрузки файла' });
       }
+      // Передаём files в body для валидации (custom validator проверяет content || files)
+      req.body.files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
       log.info({ path: req.path, method: req.method }, 'POST /messages - multer success, calling next()');
       next();
     });
@@ -392,16 +399,22 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     const options = data.options.slice(0, 10).map(o => sanitizeText(String(o))).filter(Boolean);
     if (options.length < 2) return res.status(400).json({ error: 'Минимум 2 варианта ответа' });
     const questionText = sanitizeText(data.question);
-    const result = db.prepare(
-      `INSERT INTO messages (sender_id, receiver_id, content, message_type, attachment_path, attachment_filename, sender_public_key) VALUES (?, ?, ?, 'poll', NULL, NULL, ?)`
-    ).run(me, rid, questionText, meUser?.public_key ?? null);
-    const msgId = result.lastInsertRowid;
-    const pollResult = db.prepare(
-      'INSERT INTO polls (message_id, question, options, multiple) VALUES (?, ?, ?, ?)'
-    ).run(msgId, questionText, JSON.stringify(options), data.multiple ? 1 : 0);
-    const pollId = pollResult.lastInsertRowid;
-    db.prepare('UPDATE messages SET poll_id = ? WHERE id = ?').run(pollId, msgId);
-    syncMessagesFTS(msgId);
+    let msgId; let pollId;
+    try {
+      const result = db.prepare(
+        `INSERT INTO messages (sender_id, receiver_id, content, message_type, attachment_path, attachment_filename, sender_public_key) VALUES (?, ?, ?, 'poll', NULL, NULL, ?)`
+      ).run(me, rid, questionText, meUser?.public_key ?? null);
+      msgId = result.lastInsertRowid;
+      const pollResult = db.prepare(
+        'INSERT INTO polls (message_id, question, options, multiple) VALUES (?, ?, ?, ?)'
+      ).run(msgId, questionText, JSON.stringify(options), data.multiple ? 1 : 0);
+      pollId = pollResult.lastInsertRowid;
+      db.prepare('UPDATE messages SET poll_id = ? WHERE id = ?').run(pollId, msgId);
+      syncMessagesFTS(msgId);
+    } catch (pollErr) {
+      log.error({ err: pollErr, rid, me }, 'POST /messages - poll creation error');
+      throw pollErr;
+    }
     const row = db.prepare(
       'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, sender_public_key FROM messages WHERE id = ?'
     ).get(msgId);
