@@ -29,6 +29,7 @@ class CallControlButton extends StatelessWidget {
     required VoidCallback? onPressed,
     required bool isEnabled,
     String? tooltip,
+    double? size,
   }) {
     return CallControlButton(
       onPressed: onPressed,
@@ -37,6 +38,7 @@ class CallControlButton extends StatelessWidget {
       tooltip:
           tooltip ?? (isEnabled ? 'Выключить микрофон' : 'Включить микрофон'),
       isEnabled: isEnabled,
+      size: size,
     );
   }
 
@@ -45,6 +47,7 @@ class CallControlButton extends StatelessWidget {
     required VoidCallback? onPressed,
     required bool isEnabled,
     String? tooltip,
+    double? size,
   }) {
     return CallControlButton(
       onPressed: onPressed,
@@ -52,6 +55,7 @@ class CallControlButton extends StatelessWidget {
       disabledIcon: Icons.videocam_off,
       tooltip: tooltip ?? (isEnabled ? 'Выключить камеру' : 'Включить камеру'),
       isEnabled: isEnabled,
+      size: size,
     );
   }
 
@@ -60,6 +64,7 @@ class CallControlButton extends StatelessWidget {
     required VoidCallback? onPressed,
     required bool isEnabled,
     String? tooltip,
+    double? size,
   }) {
     return CallControlButton(
       onPressed: onPressed,
@@ -70,6 +75,7 @@ class CallControlButton extends StatelessWidget {
           (isEnabled ? 'Остановить демонстрацию' : 'Демонстрация экрана'),
       isEnabled: isEnabled,
       enabledColor: Colors.orange.shade700,
+      size: size,
     );
   }
 
@@ -77,12 +83,14 @@ class CallControlButton extends StatelessWidget {
   factory CallControlButton.switchCamera({
     required VoidCallback? onPressed,
     String? tooltip,
+    double? size,
   }) {
     return CallControlButton(
       onPressed: onPressed,
       icon: Icons.flip_camera_ios,
       tooltip: tooltip ?? 'Переключить камеру',
       isEnabled: true,
+      size: size,
     );
   }
 
@@ -91,6 +99,7 @@ class CallControlButton extends StatelessWidget {
     required VoidCallback? onPressed,
     required bool isExpanded,
     String? tooltip,
+    double? size,
   }) {
     return CallControlButton(
       onPressed: onPressed,
@@ -98,6 +107,7 @@ class CallControlButton extends StatelessWidget {
       tooltip: tooltip ?? (isExpanded ? 'Скрыть' : 'Участники и настройки'),
       isEnabled: true,
       enabledColor: Colors.blue.shade700,
+      size: size,
     );
   }
 
