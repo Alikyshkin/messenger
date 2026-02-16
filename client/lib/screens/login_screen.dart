@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
@@ -22,6 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _passwordVisible = false;
   String? _error;
   OAuthProviders _providers = OAuthProviders(google: false, vk: false, telegram: false, phone: false);
+  StreamSubscription<AuthResponse?>? _googleAuthSub;
 
   @override
   void initState() {
@@ -29,10 +32,32 @@ class _LoginScreenState extends State<LoginScreen> {
     OAuthService.getProviders().then((p) {
       if (mounted) setState(() => _providers = p);
     });
+    if (kIsWeb) {
+      _googleAuthSub = OAuthService.googleAuthStream.listen((res) async {
+        if (!mounted || res == null) return;
+        setState(() => _loading = true);
+        try {
+          await context.read<AuthService>().loginWithOAuth(res);
+          if (!mounted) return;
+          context.go('/');
+        } on ApiException catch (e) {
+          if (mounted) setState(() {
+            _error = e.message;
+            _loading = false;
+          });
+        } catch (_) {
+          if (mounted) setState(() {
+            _error = context.tr('connection_error');
+            _loading = false;
+          });
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    _googleAuthSub?.cancel();
     _username.dispose();
     _password.dispose();
     super.dispose();
@@ -69,6 +94,18 @@ class _LoginScreenState extends State<LoginScreen> {
         _loading = false;
       });
     }
+  }
+
+  Widget _buildGoogleButton() {
+    final webButton = OAuthService.getGoogleSignInButton();
+    if (kIsWeb && webButton != null) {
+      return SizedBox(height: 40, child: webButton);
+    }
+    return _OAuthButton(
+      icon: Icons.g_mobiledata_rounded,
+      label: 'Google',
+      onPressed: _loading ? null : () => _oauthLogin(OAuthService.signInWithGoogle),
+    );
   }
 
   Future<void> _oauthLogin(Future<AuthResponse?> Function() fn) async {
@@ -242,11 +279,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 alignment: WrapAlignment.center,
                                 children: [
                                   if (_providers.google)
-                                    _OAuthButton(
-                                      icon: Icons.g_mobiledata_rounded,
-                                      label: 'Google',
-                                      onPressed: _loading ? null : () => _oauthLogin(OAuthService.signInWithGoogle),
-                                    ),
+                                    _buildGoogleButton(),
                                   if (_providers.vk)
                                     _OAuthButton(
                                       icon: Icons.tag,

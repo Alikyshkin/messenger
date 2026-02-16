@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_login_vk/flutter_login_vk.dart';
 import 'api.dart';
@@ -62,4 +63,7 @@ class OAuthServiceImpl {
   static Future<AuthResponse> verifyPhoneCode(String phone, String code) async {
     return await _api.verifyPhoneCode(phone, code);
   }
+
+  static Widget? getGoogleSignInButton() => null;
+  static Stream<AuthResponse?> get googleAuthStream => const Stream.empty();
 }
