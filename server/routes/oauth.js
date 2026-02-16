@@ -37,6 +37,12 @@ function formatUser(user) {
   };
 }
 
+function signInAndRespond(user, provider, req, res) {
+  const token = signToken(user.id, user.username);
+  auditLog(AUDIT_EVENTS.LOGIN, user.id, { provider, ip: req.ip });
+  res.json({ user: formatUser(user), token });
+}
+
 function findOrCreateOAuthUser(provider, providerId, displayName, email) {
   const col = `${provider}_id`;
   let user = db.prepare(`SELECT id, username, display_name, email FROM users WHERE ${col} = ?`).get(providerId);
@@ -91,13 +97,9 @@ router.post('/google', authLimiter, validate(googleAuthSchema), asyncHandler(asy
   const googleId = String(payload.sub);
   const displayName = payload.name || payload.email?.split('@')[0] || `user_${googleId}`;
   const email = payload.email || null;
-  const avatarUrl = payload.picture || null;
 
   const user = findOrCreateOAuthUser('google', googleId, displayName, email);
-
-  const token = signToken(user.id, user.username);
-  auditLog(AUDIT_EVENTS.LOGIN, user.id, { provider: 'google', ip: req.ip });
-  res.json({ user: formatUser(user), token });
+  signInAndRespond(user, 'google', req, res);
 }));
 
 // --- VK ---
@@ -122,13 +124,9 @@ router.post('/vk', authLimiter, validate(vkAuthSchema), asyncHandler(async (req,
 
   const vkUser = vkData.response[0];
   const displayName = [vkUser.first_name, vkUser.last_name].filter(Boolean).join(' ') || `vk_${vkId}`;
-  const avatarUrl = vkUser.photo_100 || null;
 
   const user = findOrCreateOAuthUser('vk', vkId, displayName, null);
-
-  const token = signToken(user.id, user.username);
-  auditLog(AUDIT_EVENTS.LOGIN, user.id, { provider: 'vk', ip: req.ip });
-  res.json({ user: formatUser(user), token });
+  signInAndRespond(user, 'vk', req, res);
 }));
 
 // --- Telegram ---
@@ -169,10 +167,7 @@ router.post('/telegram', authLimiter, validate(telegramAuthSchema), asyncHandler
   const displayName = [first_name, last_name].filter(Boolean).join(' ') || tgUsername || `tg_${telegramId}`;
 
   const user = findOrCreateOAuthUser('telegram', telegramId, displayName, null);
-
-  const token = signToken(user.id, user.username);
-  auditLog(AUDIT_EVENTS.LOGIN, user.id, { provider: 'telegram', ip: req.ip });
-  res.json({ user: formatUser(user), token });
+  signInAndRespond(user, 'telegram', req, res);
 }));
 
 // --- Телефон: отправка кода ---
@@ -242,9 +237,7 @@ router.post('/phone/verify', authLimiter, validate(phoneVerifySchema), asyncHand
       .get(result.lastInsertRowid);
   }
 
-  const token = signToken(user.id, user.username);
-  auditLog(AUDIT_EVENTS.LOGIN, user.id, { provider: 'phone', ip: req.ip });
-  res.json({ user: formatUser(user), token });
+  signInAndRespond(user, 'phone', req, res);
 }));
 
 // Эндпоинт для проверки доступных методов входа (клиент может скрыть ненастроенные)
