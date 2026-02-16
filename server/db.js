@@ -115,6 +115,50 @@ try { db.exec('ALTER TABLE users ADD COLUMN google_id TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN vk_id TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN telegram_id TEXT'); } catch (_) {}
 
+// Fallback: таблицы из миграций 011–013 (если миграции не применились)
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS message_deleted_for (
+      user_id INTEGER NOT NULL,
+      message_id INTEGER NOT NULL,
+      deleted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (user_id, message_id),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_message_deleted_for_user ON message_deleted_for(user_id);
+  `);
+} catch (_) {}
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS blocked_users (
+      blocker_id INTEGER NOT NULL,
+      blocked_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (blocker_id, blocked_id),
+      FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (blocked_id) REFERENCES users(id) ON DELETE CASCADE,
+      CHECK (blocker_id != blocked_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_blocked_users_blocker ON blocked_users(blocker_id);
+    CREATE INDEX IF NOT EXISTS idx_blocked_users_blocked ON blocked_users(blocked_id);
+  `);
+} catch (_) {}
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_privacy (
+      user_id INTEGER PRIMARY KEY,
+      who_can_see_status TEXT DEFAULT 'contacts',
+      who_can_message TEXT DEFAULT 'contacts',
+      who_can_call TEXT DEFAULT 'contacts',
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      CHECK (who_can_see_status IN ('all', 'contacts', 'nobody')),
+      CHECK (who_can_message IN ('all', 'contacts', 'nobody')),
+      CHECK (who_can_call IN ('all', 'contacts', 'nobody'))
+    );
+  `);
+} catch (_) {}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
