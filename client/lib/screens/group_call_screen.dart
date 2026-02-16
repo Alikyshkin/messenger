@@ -17,6 +17,7 @@ import '../widgets/call_action_button.dart';
 import '../widgets/call_control_button.dart';
 import '../services/call_minimized_service.dart';
 import '../services/app_update_service.dart';
+import '../utils/page_visibility.dart';
 
 /// Участник группового звонка с его PeerConnection и потоком
 class _GroupCallParticipant {
@@ -642,6 +643,7 @@ class _GroupCallScreenState extends State<GroupCallScreen> {
 
   @override
   void dispose() {
+    resetTabTitle();
     _cleanup();
     super.dispose();
   }

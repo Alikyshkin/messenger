@@ -59,6 +59,7 @@ class _WsCallListenerState extends State<WsCallListener> {
           final group = await api.getGroup(signal.groupId!);
 
           AppSoundService.instance.playRingtone();
+          setTabTitle('📞 Входящий видеозвонок: ${group.name}');
 
           if (!isPageVisible) {
             await requestNotificationPermission();
@@ -104,10 +105,15 @@ class _WsCallListenerState extends State<WsCallListener> {
       }
 
       AppSoundService.instance.playRingtone();
+      final isVideoCall = signal.isVideoCall ?? true;
+      setTabTitle(
+        isVideoCall
+            ? '📞 Входящий видеозвонок: ${peer.displayName}'
+            : '📞 Входящий звонок: ${peer.displayName}',
+      );
 
       if (!isPageVisible) {
         await requestNotificationPermission();
-        final isVideoCall = signal.isVideoCall ?? true;
         await showPageNotification(
           title: isVideoCall ? 'Входящий видеозвонок' : 'Входящий звонок',
           body: peer.displayName,

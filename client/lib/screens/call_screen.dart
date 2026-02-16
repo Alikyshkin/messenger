@@ -14,6 +14,7 @@ import '../widgets/call_control_button.dart';
 import '../widgets/call_layout_button.dart';
 import '../services/call_minimized_service.dart';
 import '../services/app_update_service.dart';
+import '../utils/page_visibility.dart';
 
 /// Режим отображения видео: докладчик (большой удалённый), обычный, рядом слева-справа.
 enum CallLayout { speaker, normal, sideBySide }
@@ -891,6 +892,7 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
+    resetTabTitle();
     AppSoundService.instance.setInCall(false);
     AppSoundService.instance.stopRingtone();
     _signalSub?.cancel();
