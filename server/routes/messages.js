@@ -17,6 +17,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { ALLOWED_REACTION_EMOJIS, FILE_LIMITS, ALLOWED_FILE_TYPES } from '../config/constants.js';
 import { syncMessagesFTS } from '../utils/ftsSync.js';
 import { log } from '../utils/logger.js';
+import { isCommunicationBlocked } from '../utils/blocked.js';
 const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getMessageReactions(messageId) {
   const rows = db.prepare('SELECT user_id, emoji FROM message_reactions WHERE message_id = ?').all(messageId);
@@ -171,6 +172,9 @@ router.get('/:peerId', validateParams(peerIdParamSchema), asyncHandler(async (re
   const limit = Math.min(parseInt(req.query.limit, 10) || 100, 200);
   const before = req.query.before ? parseInt(req.query.before, 10) : null;
   const me = req.user.userId;
+  if (isCommunicationBlocked(me, peerId)) {
+    return res.status(403).json({ error: 'Нет доступа к чату' });
+  }
   const baseUrl = getBaseUrl(req);
 
   let query = `
@@ -364,11 +368,14 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   const data = req.validated;
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
   const rid = data.receiver_id;
+  const me = req.user.userId;
+  if (isCommunicationBlocked(me, rid)) {
+    return res.status(403).json({ error: 'Невозможно отправить сообщение этому пользователю' });
+  }
   const isPoll = data.type === 'poll' && data.question && Array.isArray(data.options) && data.options.length >= 2;
   const isMissedCall = data.type === 'missed_call';
   const text = data.content ? sanitizeText(data.content) : '';
   if (!isPoll && !isMissedCall && !text && files.length === 0) return res.status(400).json({ error: 'content или файл обязательны' });
-  const me = req.user.userId;
   const meUser = db.prepare('SELECT public_key FROM users WHERE id = ?').get(me);
   const baseUrl = getBaseUrl(req);
   const replyToId = data.reply_to_id || null;

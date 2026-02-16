@@ -13,7 +13,11 @@ router.get('/', validatePagination, async (req, res) => {
   const { limit = 50, offset = 0 } = req.pagination;
   const userId = req.user.userId;
   
-  const total = db.prepare('SELECT COUNT(*) as cnt FROM contacts WHERE user_id = ?').get(userId)?.cnt || 0;
+  const total = db.prepare(`
+    SELECT COUNT(*) as cnt FROM contacts c
+    WHERE c.user_id = ?
+      AND NOT EXISTS (SELECT 1 FROM blocked_users b WHERE b.blocker_id = ? AND b.blocked_id = c.contact_id)
+  `).get(userId, userId)?.cnt || 0;
   
   const baseUrl = config.baseUrl || `${req.protocol}://${req.get('host') || 'localhost:3000'}`;
   const rows = db.prepare(`
@@ -21,9 +25,10 @@ router.get('/', validatePagination, async (req, res) => {
     FROM contacts c
     JOIN users u ON u.id = c.contact_id
     WHERE c.user_id = ?
+      AND NOT EXISTS (SELECT 1 FROM blocked_users b WHERE b.blocker_id = ? AND b.blocked_id = c.contact_id)
     ORDER BY u.display_name, u.username
     LIMIT ? OFFSET ?
-  `).all(userId, limit, offset);
+  `).all(userId, userId, limit, offset);
   
   res.json({
     data: rows.map(r => ({

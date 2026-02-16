@@ -236,6 +236,22 @@ class Api {
     return User.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
   }
 
+  Future<void> blockUser(int userId) async {
+    final r = await http.post(
+      Uri.parse('$base/users/$userId/block'),
+      headers: _headers,
+    );
+    _checkResponse(r);
+  }
+
+  Future<void> unblockUser(int userId) async {
+    final r = await http.delete(
+      Uri.parse('$base/users/$userId/block'),
+      headers: _headers,
+    );
+    _checkResponse(r);
+  }
+
   Future<List<User>> searchUsers(String q) async {
     final r = await http.get(
       Uri.parse('$base/users/search').replace(queryParameters: {'q': q}),

@@ -22,6 +22,9 @@ class User {
   /// Время последней активности (ISO 8601)
   final String? lastSeen;
 
+  /// Заблокирован ли этот пользователь текущим (видно только при просмотре чужого профиля)
+  final bool? isBlocked;
+
   User({
     required this.id,
     required this.username,
@@ -35,6 +38,7 @@ class User {
     this.friendsCount,
     this.isOnline,
     this.lastSeen,
+    this.isBlocked,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -51,6 +55,7 @@ class User {
       friendsCount: json['friends_count'] as int?,
       isOnline: json['is_online'] as bool?,
       lastSeen: json['last_seen'] as String?,
+      isBlocked: json['is_blocked'] as bool?,
     );
   }
 
@@ -67,6 +72,7 @@ class User {
     int? friendsCount,
     bool? isOnline,
     String? lastSeen,
+    bool? isBlocked,
   }) {
     return User(
       id: id ?? this.id,
@@ -81,6 +87,7 @@ class User {
       friendsCount: friendsCount ?? this.friendsCount,
       isOnline: isOnline ?? this.isOnline,
       lastSeen: lastSeen ?? this.lastSeen,
+      isBlocked: isBlocked ?? this.isBlocked,
     );
   }
 }

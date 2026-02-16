@@ -102,9 +102,30 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     return '$day ${months[month - 1]} $year';
   }
 
+  Future<void> _toggleBlock() async {
+    final u = _user ?? widget.user;
+    final auth = context.read<AuthService>();
+    try {
+      if (u.isBlocked == true) {
+        await Api(auth.token).unblockUser(u.id);
+      } else {
+        await Api(auth.token).blockUser(u.id);
+      }
+      if (!mounted) return;
+      setState(() => _user = u.copyWith(isBlocked: !(u.isBlocked ?? false)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is ApiException ? e.message : context.tr('connection_error'))),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final u = _user ?? widget.user;
+    final myId = context.read<AuthService>().user?.id;
+    final isOwnProfile = myId != null && myId == u.id;
     if (_error != null) {
       return Scaffold(
         appBar: AppBar(
@@ -131,15 +152,22 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         leading: const AppBackButton(),
         title: Text(u.displayName),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.message),
-            tooltip: context.tr('write'),
-            onPressed: () {
-              Navigator.of(context).pushReplacement(
-                AppPageRoute(builder: (_) => ChatScreen(peer: u)),
-              );
-            },
-          ),
+          if (!isOwnProfile)
+            IconButton(
+              icon: Icon(u.isBlocked == true ? Icons.block : Icons.block_outlined),
+              tooltip: u.isBlocked == true ? context.tr('unblock_user') : context.tr('block_user'),
+              onPressed: _toggleBlock,
+            ),
+          if (!isOwnProfile && u.isBlocked != true)
+            IconButton(
+              icon: const Icon(Icons.message),
+              tooltip: context.tr('write'),
+              onPressed: () {
+                Navigator.of(context).pushReplacement(
+                  AppPageRoute(builder: (_) => ChatScreen(peer: u)),
+                );
+              },
+            ),
         ],
       ),
       body: _loading
@@ -243,18 +271,35 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   subtitle: Text(_friendsCountLabel(context, u.friendsCount)),
                 ),
                 const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).pushReplacement(
-                        AppPageRoute(builder: (_) => ChatScreen(peer: u)),
-                      );
-                    },
-                    icon: const Icon(Icons.message),
-                    label: Text(context.tr('write')),
+                if (!isOwnProfile) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: u.isBlocked == true
+                        ? OutlinedButton.icon(
+                            onPressed: _toggleBlock,
+                            icon: const Icon(Icons.block_outlined),
+                            label: Text(context.tr('unblock_user')),
+                          )
+                        : FilledButton.icon(
+                            onPressed: () {
+                              Navigator.of(context).pushReplacement(
+                                AppPageRoute(builder: (_) => ChatScreen(peer: u)),
+                              );
+                            },
+                            icon: const Icon(Icons.message),
+                            label: Text(context.tr('write')),
+                          ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: OutlinedButton.icon(
+                      onPressed: _toggleBlock,
+                      icon: Icon(u.isBlocked == true ? Icons.block_outlined : Icons.block, size: 18),
+                      label: Text(u.isBlocked == true ? context.tr('unblock_user') : context.tr('block_user')),
+                    ),
+                  ),
+                ],
               ],
             ),
     );

@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import { verifyToken } from './auth.js';
 import { clients, broadcastToUser } from './realtime.js';
 import db from './db.js';
+import { isCommunicationBlocked } from './utils/blocked.js';
 import { apiLimiter } from './middleware/rateLimit.js';
 import { log } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
@@ -491,6 +492,12 @@ wss.on('connection', (ws, req) => {
         const groupId = data.groupId != null ? Number(data.groupId) : null;
         if (groupId != null && (!Number.isInteger(groupId) || groupId <= 0)) {
           log.warn('Invalid call_signal: invalid groupId', { userId, groupId });
+          return;
+        }
+        
+        // Для личных звонков проверяем блокировку
+        if (groupId == null && isCommunicationBlocked(userId, toId)) {
+          log.warn('call_signal blocked: users have blocked each other', { userId, toId });
           return;
         }
         

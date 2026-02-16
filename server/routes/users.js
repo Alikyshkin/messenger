@@ -7,6 +7,7 @@ import { mkdirSync, existsSync, unlinkSync } from 'fs';
 import fs from 'fs';
 import db from '../db.js';
 import { authMiddleware } from '../auth.js';
+import { isBlockedByMe } from '../utils/blocked.js';
 import { validate, updateUserSchema, validateParams, idParamSchema } from '../middleware/validation.js';
 import { validateFile } from '../middleware/fileValidation.js';
 import { FILE_LIMITS, ALLOWED_FILE_TYPES, SEARCH_CONFIG } from '../config/constants.js';
@@ -250,6 +251,51 @@ router.post('/find-by-phones', validate(findUsersByPhonesSchema), asyncHandler(a
   res.json(matched.map(r => userToJson(r, baseUrl)));
 }));
 
+/** Список заблокированных пользователей */
+router.get('/blocked', (req, res) => {
+  const me = req.user.userId;
+  const baseUrl = getBaseUrl(req);
+  const rows = db.prepare(`
+    SELECT u.id, u.username, u.display_name, u.avatar_path, u.is_online, u.last_seen
+    FROM blocked_users b
+    JOIN users u ON u.id = b.blocked_id
+    WHERE b.blocker_id = ?
+    ORDER BY b.created_at DESC
+  `).all(me);
+  res.json(rows.map(r => ({
+    ...userToJson(r, baseUrl),
+    is_online: !!(r.is_online),
+    last_seen: r.last_seen || null,
+  })));
+});
+
+/** Заблокировать пользователя */
+router.post('/:id/block', validateParams(idParamSchema), (req, res) => {
+  const blockedId = req.validatedParams.id;
+  const me = req.user.userId;
+  if (blockedId === me) return res.status(400).json({ error: 'Нельзя заблокировать самого себя' });
+  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(blockedId);
+  if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+  try {
+    db.prepare('INSERT INTO blocked_users (blocker_id, blocked_id) VALUES (?, ?)').run(me, blockedId);
+  } catch (e) {
+    if (e.code === 'SQLITE_CONSTRAINT_PRIMARYKEY') {
+      return res.status(409).json({ error: 'Пользователь уже заблокирован' });
+    }
+    throw e;
+  }
+  res.status(204).send();
+});
+
+/** Разблокировать пользователя */
+router.delete('/:id/block', validateParams(idParamSchema), (req, res) => {
+  const blockedId = req.validatedParams.id;
+  const me = req.user.userId;
+  const result = db.prepare('DELETE FROM blocked_users WHERE blocker_id = ? AND blocked_id = ?').run(me, blockedId);
+  if (result.changes === 0) return res.status(404).json({ error: 'Пользователь не был заблокирован' });
+  res.status(204).send();
+});
+
 router.get('/search', (req, res) => {
   const q = (req.query.q || '').trim();
   if (q.length < SEARCH_CONFIG.MIN_QUERY_LENGTH) return res.json([]);
@@ -266,6 +312,7 @@ router.get('/search', (req, res) => {
 /** Публичный профиль: только то, что могут видеть все (без email). Количество друзей — только число, не список. */
 router.get('/:id', validateParams(idParamSchema), (req, res) => {
   const id = req.validatedParams.id;
+  const me = req.user.userId;
   const user = db.prepare(
     'SELECT id, username, display_name, bio, avatar_path, created_at, public_key, birthday, is_online, last_seen FROM users WHERE id = ?'
   ).get(id);
@@ -275,6 +322,9 @@ router.get('/:id', validateParams(idParamSchema), (req, res) => {
   const json = userToJson(user, getBaseUrl(req));
   json.is_online = !!(user.is_online);
   json.last_seen = user.last_seen || null;
+  if (me !== id) {
+    json.is_blocked = isBlockedByMe(me, id);
+  }
   res.json(json);
 });
 

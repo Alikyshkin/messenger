@@ -206,6 +206,8 @@ class AppLocalizations {
     'last_seen_long_ago': 'был(а) давно',
     'delete_for_me': 'Удалить для себя',
     'delete_for_all': 'Удалить для всех',
+    'block_user': 'Заблокировать',
+    'unblock_user': 'Разблокировать',
     'profile_tooltip': 'Профиль',
     'zero_friends': '0 друзей',
     'possible_friends_empty':
@@ -414,6 +416,8 @@ class AppLocalizations {
     'last_seen_long_ago': 'last seen long ago',
     'delete_for_me': 'Delete for me',
     'delete_for_all': 'Delete for everyone',
+    'block_user': 'Block',
+    'unblock_user': 'Unblock',
     'profile_tooltip': 'Profile',
     'zero_friends': '0 friends',
     'possible_friends_empty':

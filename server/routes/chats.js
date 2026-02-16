@@ -53,22 +53,26 @@ router.get('/', validatePagination, (req, res) => {
   const baseUrl = getBaseUrl(req);
   const { limit = 50, offset = 0 } = req.pagination;
   
-  // 1-1 чаты
+  // 1-1 чаты (исключаем заблокированных)
   const lastIds = db.prepare(`
     SELECT MAX(id) as mid, 
       CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END AS peer_id
     FROM messages
-    WHERE sender_id = ? OR receiver_id = ?
+    WHERE (sender_id = ? OR receiver_id = ?)
+      AND CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END NOT IN
+        (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
     GROUP BY peer_id
     ORDER BY mid DESC
     LIMIT ? OFFSET ?
-  `).all(me, me, me, limit, offset);
+  `).all(me, me, me, me, me, limit, offset);
   
   const totalChats = db.prepare(`
     SELECT COUNT(DISTINCT CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END) as cnt
     FROM messages
-    WHERE sender_id = ? OR receiver_id = ?
-  `).get(me, me, me)?.cnt || 0;
+    WHERE (sender_id = ? OR receiver_id = ?)
+      AND CASE WHEN sender_id = ? THEN receiver_id ELSE sender_id END NOT IN
+        (SELECT blocked_id FROM blocked_users WHERE blocker_id = ?)
+  `).get(me, me, me, me, me)?.cnt || 0;
   const unreadCounts = db.prepare(`
     SELECT sender_id AS peer_id, COUNT(*) AS cnt
     FROM messages
