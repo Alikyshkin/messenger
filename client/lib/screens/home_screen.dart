@@ -43,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   List<ChatPreview> _chats = [];
   Set<String> _mutedChatKeys = {};
+  Map<String, String> _pinnedChats = {};
   bool _loading = true;
   String? _error;
   StreamSubscription? _newMessageSub;
@@ -168,10 +169,12 @@ class _HomeScreenState extends State<HomeScreen>
     // Local-first: сразу показываем кэш из локальной БД
     final cached = await LocalDb.getChats();
     final muted = await LocalDb.getMutedChatKeys();
+    final pinned = await LocalDb.getPinnedChats();
     if (cached.isNotEmpty && mounted) {
       setState(() {
-        _chats = cached;
+        _chats = _sortChats(cached, pinned);
         _mutedChatKeys = muted;
+        _pinnedChats = pinned;
       });
     }
     try {
@@ -180,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen>
       if (!mounted) return;
 
       final muted = await LocalDb.getMutedChatKeys();
-      if (mounted) setState(() => _mutedChatKeys = muted);
+      final pinned = await LocalDb.getPinnedChats();
       // Фильтруем скрытые чаты
       final filteredList = <ChatPreview>[];
       for (final chat in list) {
@@ -204,7 +207,9 @@ class _HomeScreenState extends State<HomeScreen>
       );
 
       setState(() {
-        _chats = filteredList;
+        _chats = _sortChats(filteredList, pinned);
+        _mutedChatKeys = muted;
+        _pinnedChats = pinned;
         _loading = false;
         _totalUnreadCount = totalUnread;
       });
@@ -331,6 +336,36 @@ class _HomeScreenState extends State<HomeScreen>
         scaffoldMessenger.showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     }
+  }
+
+  List<ChatPreview> _sortChats(List<ChatPreview> chats, Map<String, String> pinned) {
+    if (pinned.isEmpty) {
+      return chats;
+    }
+    final pinnedKeys = pinned.keys.toSet();
+    final pinnedList = <ChatPreview>[];
+    final unpinnedList = <ChatPreview>[];
+    for (final c in chats) {
+      final key = c.isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}';
+      if (pinnedKeys.contains(key)) {
+        pinnedList.add(c);
+      } else {
+        unpinnedList.add(c);
+      }
+    }
+    pinnedList.sort((a, b) {
+      final keyA = a.isGroup ? 'g_${a.group!.id}' : 'p_${a.peer!.id}';
+      final keyB = b.isGroup ? 'g_${b.group!.id}' : 'p_${b.peer!.id}';
+      final atA = pinned[keyA] ?? '';
+      final atB = pinned[keyB] ?? '';
+      return atB.compareTo(atA);
+    });
+    unpinnedList.sort((a, b) {
+      final atA = a.lastMessage?.createdAt ?? '';
+      final atB = b.lastMessage?.createdAt ?? '';
+      return atB.compareTo(atA);
+    });
+    return [...pinnedList, ...unpinnedList];
   }
 
   String _previewContent(BuildContext context, String content) {
@@ -525,6 +560,15 @@ class _HomeScreenState extends State<HomeScreen>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
+                              if (_pinnedChats.containsKey(isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}'))
+                                Padding(
+                                  padding: const EdgeInsets.only(right: 4),
+                                  child: Icon(
+                                    Icons.push_pin,
+                                    size: 14,
+                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
                               if (_mutedChatKeys.contains(isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}'))
                                 Padding(
                                   padding: const EdgeInsets.only(right: 4),
@@ -589,8 +633,8 @@ class _HomeScreenState extends State<HomeScreen>
                               minHeight: 32,
                             ),
                             onSelected: (value) async {
+                              final key = isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}';
                               if (value == 'mute') {
-                                final key = isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}';
                                 await LocalDb.setChatMuted(
                                   peerId: isGroup ? null : c.peer!.id,
                                   groupId: isGroup ? c.group!.id : null,
@@ -598,13 +642,32 @@ class _HomeScreenState extends State<HomeScreen>
                                 );
                                 if (mounted) setState(() => _mutedChatKeys = {..._mutedChatKeys, key});
                               } else if (value == 'unmute') {
-                                final key = isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}';
                                 await LocalDb.setChatMuted(
                                   peerId: isGroup ? null : c.peer!.id,
                                   groupId: isGroup ? c.group!.id : null,
                                   muted: false,
                                 );
                                 if (mounted) setState(() => _mutedChatKeys = {..._mutedChatKeys}..remove(key));
+                              } else if (value == 'pin') {
+                                await LocalDb.setChatPinned(
+                                  peerId: isGroup ? null : c.peer!.id,
+                                  groupId: isGroup ? c.group!.id : null,
+                                  pinned: true,
+                                );
+                                if (mounted) setState(() {
+                                  _pinnedChats = {..._pinnedChats, key: DateTime.now().toIso8601String()};
+                                  _chats = _sortChats(List.from(_chats), _pinnedChats);
+                                });
+                              } else if (value == 'unpin') {
+                                await LocalDb.setChatPinned(
+                                  peerId: isGroup ? null : c.peer!.id,
+                                  groupId: isGroup ? c.group!.id : null,
+                                  pinned: false,
+                                );
+                                if (mounted) setState(() {
+                                  _pinnedChats = Map.from(_pinnedChats)..remove(key);
+                                  _chats = _sortChats(List.from(_chats), _pinnedChats);
+                                });
                               } else if (value == 'delete') {
                                 _confirmDeleteChat(context, c, isGroup);
                               }
@@ -612,7 +675,18 @@ class _HomeScreenState extends State<HomeScreen>
                             itemBuilder: (ctx) {
                               final chatKey = isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}';
                               final isMuted = _mutedChatKeys.contains(chatKey);
+                              final isPinned = _pinnedChats.containsKey(chatKey);
                               return [
+                                PopupMenuItem(
+                                  value: isPinned ? 'unpin' : 'pin',
+                                  child: Row(
+                                    children: [
+                                      Icon(isPinned ? Icons.push_pin : Icons.push_pin_outlined, size: 20),
+                                      const SizedBox(width: 12),
+                                      Text(isPinned ? context.tr('unpin_chat') : context.tr('pin_chat')),
+                                    ],
+                                  ),
+                                ),
                                 PopupMenuItem(
                                   value: isMuted ? 'unmute' : 'mute',
                                   child: Row(

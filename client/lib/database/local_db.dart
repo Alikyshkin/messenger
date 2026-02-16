@@ -13,7 +13,7 @@ class LocalDb {
   static Database? _db;
   static bool _failed = false;
   static const _dbName = 'messenger_local.db';
-  static const _version = 7;
+  static const _version = 8;
 
   static Future<Database?> _getDb() async {
     if (_db != null) {
@@ -161,6 +161,16 @@ class LocalDb {
               ''');
             } catch (_) {}
           }
+          if (oldVersion < 8) {
+            try {
+              await db.execute('''
+                CREATE TABLE pinned_chats (
+                  chat_key TEXT PRIMARY KEY,
+                  pinned_at TEXT NOT NULL
+                )
+              ''');
+            } catch (_) {}
+          }
         },
       );
       return _db;
@@ -188,6 +198,7 @@ class LocalDb {
     await db.delete('messages');
     await db.delete('outbox');
     await db.delete('muted_chats');
+    await db.delete('pinned_chats');
   }
 
   // --- Chats ---
@@ -435,6 +446,32 @@ class LocalDb {
     } else {
       await db.delete('muted_chats', where: 'chat_key = ?', whereArgs: [key]);
     }
+  }
+
+  static String _pinnedKey({int? peerId, int? groupId}) {
+    if (groupId != null) return 'g_$groupId';
+    return 'p_${peerId ?? 0}';
+  }
+
+  /// Закрепить/открепить чат.
+  static Future<void> setChatPinned({int? peerId, int? groupId, required bool pinned}) async {
+    final db = await _getDb();
+    if (db == null) return;
+    final key = _pinnedKey(peerId: peerId, groupId: groupId);
+    if (pinned) {
+      final now = DateTime.now().toIso8601String();
+      await db.insert('pinned_chats', {'chat_key': key, 'pinned_at': now}, conflictAlgorithm: ConflictAlgorithm.replace);
+    } else {
+      await db.delete('pinned_chats', where: 'chat_key = ?', whereArgs: [key]);
+    }
+  }
+
+  /// Ключи закреплённых чатов с временем (для сортировки).
+  static Future<Map<String, String>> getPinnedChats() async {
+    final db = await _getDb();
+    if (db == null) return {};
+    final rows = await db.query('pinned_chats');
+    return Map.fromEntries(rows.map((r) => MapEntry(r['chat_key'] as String, r['pinned_at'] as String)));
   }
 
   /// Список ключей заглушенных чатов (для проверки при новом сообщении).

@@ -210,6 +210,8 @@ class AppLocalizations {
     'unblock_user': 'Разблокировать',
     'mute_chat': 'Отключить уведомления',
     'unmute_chat': 'Включить уведомления',
+    'pin_chat': 'Закрепить',
+    'unpin_chat': 'Открепить',
     'profile_tooltip': 'Профиль',
     'zero_friends': '0 друзей',
     'possible_friends_empty':
@@ -422,6 +424,8 @@ class AppLocalizations {
     'unblock_user': 'Unblock',
     'mute_chat': 'Mute notifications',
     'unmute_chat': 'Unmute notifications',
+    'pin_chat': 'Pin',
+    'unpin_chat': 'Unpin',
     'profile_tooltip': 'Profile',
     'zero_friends': '0 friends',
     'possible_friends_empty':
