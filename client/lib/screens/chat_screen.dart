@@ -254,18 +254,17 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
     final peerId = widget.peer.id;
-    // Сразу помечаем прочитанными и обновляем локальный кэш — счётчик должен исчезнуть
-    Api(auth.token)
-        .markMessagesRead(peerId)
-        .then((_) async {
-          await LocalDb.clearChatUnread(peerId);
-          if (mounted) {
-            try {
-              context.read<ChatListRefreshService>().requestRefresh();
-            } catch (_) {}
-          }
-        })
-        .catchError((_) {});
+    // Сразу помечаем прочитанными и обновляем локальный кэш — счётчик должен исчезнуть.
+    // Важно: await, чтобы при возврате в список сервер уже вернул unread_count = 0.
+    try {
+      await Api(auth.token).markMessagesRead(peerId);
+      await LocalDb.clearChatUnread(peerId);
+      if (mounted) {
+        try {
+          context.read<ChatListRefreshService>().requestRefresh();
+        } catch (_) {}
+      }
+    } catch (_) {}
     setState(() {
       _loading = true;
       _error = null;
