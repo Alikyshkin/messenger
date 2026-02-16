@@ -80,9 +80,9 @@ router.post('/messages', asyncHandler(async (req, res) => {
   
   const syncDate = new Date(lastSyncTime);
   
-  // Получаем новые сообщения после lastSyncTime
+  // Личные сообщения
   let query = `
-    SELECT id, sender_id, receiver_id, content, created_at, read_at, 
+    SELECT id, sender_id, receiver_id, NULL as group_id, content, created_at, read_at, 
            attachment_path, attachment_filename, message_type, attachment_kind,
            attachment_duration_sec, attachment_encrypted
     FROM messages
@@ -98,21 +98,47 @@ router.post('/messages', asyncHandler(async (req, res) => {
     params.push(...peerIds, ...peerIds);
   }
   
-  query += ' ORDER BY created_at ASC LIMIT 1000';
+  query += ' ORDER BY created_at ASC LIMIT 500';
   
-  const messages = db.prepare(query).all(...params);
+  const personalMessages = db.prepare(query).all(...params);
   
-  // Получаем обновления реакций
-  const reactionUpdates = db.prepare(`
-    SELECT mr.message_id, mr.emoji, mr.user_id
-    FROM message_reactions mr
-    JOIN messages m ON m.id = mr.message_id
-    WHERE (m.sender_id = ? OR m.receiver_id = ?)
-      AND mr.message_id IN (
-        SELECT id FROM messages 
-        WHERE (sender_id = ? OR receiver_id = ?) AND created_at > ?
-      )
-  `).all(userId, userId, userId, userId, syncDate.toISOString());
+  // Групповые сообщения
+  const groupMessages = db.prepare(`
+    SELECT gm.id, gm.sender_id, NULL as receiver_id, gm.group_id, gm.content, gm.created_at, gm.read_at,
+           gm.attachment_path, gm.attachment_filename, gm.message_type, gm.attachment_kind,
+           gm.attachment_duration_sec, gm.attachment_encrypted
+    FROM group_messages gm
+    JOIN group_members gmem ON gmem.group_id = gm.group_id AND gmem.user_id = ?
+    WHERE gm.created_at > ?
+    ORDER BY gm.created_at ASC
+    LIMIT 500
+  `).all(userId, syncDate.toISOString());
+  
+  const messages = [...personalMessages, ...groupMessages].sort(
+    (a, b) => new Date(a.created_at) - new Date(b.created_at)
+  ).slice(0, 1000);
+  
+  // Получаем обновления реакций (личные + групповые)
+  const personalMsgIds = personalMessages.map(m => m.id);
+  const groupMsgIds = groupMessages.map(m => m.id);
+  let reactionUpdates = [];
+  if (personalMsgIds.length > 0) {
+    const ph = personalMsgIds.map(() => '?').join(',');
+    reactionUpdates = db.prepare(`
+      SELECT mr.message_id, mr.emoji, mr.user_id
+      FROM message_reactions mr
+      WHERE mr.message_id IN (${ph})
+    `).all(...personalMsgIds);
+  }
+  if (groupMsgIds.length > 0) {
+    const ph = groupMsgIds.map(() => '?').join(',');
+    const gr = db.prepare(`
+      SELECT gmr.group_message_id as message_id, gmr.emoji, gmr.user_id
+      FROM group_message_reactions gmr
+      WHERE gmr.group_message_id IN (${ph})
+    `).all(...groupMsgIds);
+    reactionUpdates = [...reactionUpdates, ...gr];
+  }
   
   // Группируем реакции по message_id
   const reactionsByMessage = {};
@@ -134,6 +160,7 @@ router.post('/messages', asyncHandler(async (req, res) => {
     id: m.id,
     senderId: m.sender_id,
     receiverId: m.receiver_id,
+    groupId: m.group_id ?? null,
     content: m.content,
     createdAt: m.created_at,
     readAt: m.read_at,
