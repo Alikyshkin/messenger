@@ -635,19 +635,33 @@ router.delete('/:messageId', validateParams(messageIdParamSchema), asyncHandler(
   }
   
   // Удаление для всех - используем транзакцию для атомарности
+  // Порядок важен: сначала удаляем зависимые записи, потом само сообщение
   try {
     const transaction = db.transaction(() => {
-      db.prepare('DELETE FROM messages WHERE id = ?').run(Number(messageId));
-      db.prepare('DELETE FROM message_reactions WHERE message_id = ?').run(Number(messageId));
-      db.prepare('DELETE FROM message_deleted_for WHERE message_id = ?').run(Number(messageId));
-      const poll = db.prepare('SELECT id FROM polls WHERE message_id = ?').get(Number(messageId));
-      if (poll) {
-        db.prepare('DELETE FROM poll_votes WHERE poll_id = ?').run(Number(poll.id));
-        db.prepare('DELETE FROM polls WHERE id = ?').run(Number(poll.id));
+      // Сначала удаляем голоса в опросах, если есть опрос (до удаления опроса)
+      const poll = db.prepare('SELECT id FROM polls WHERE message_id = ?').get(messageId);
+      if (poll && poll.id != null) {
+        const pollId = Number(poll.id);
+        if (!isNaN(pollId) && pollId > 0) {
+          db.prepare('DELETE FROM poll_votes WHERE poll_id = ?').run(pollId);
+          db.prepare('DELETE FROM polls WHERE id = ?').run(pollId);
+        }
       }
+      // Удаляем реакции (CASCADE должен удалить автоматически, но делаем явно для надежности)
+      db.prepare('DELETE FROM message_reactions WHERE message_id = ?').run(messageId);
+      // Удаляем записи о скрытии сообщения
+      db.prepare('DELETE FROM message_deleted_for WHERE message_id = ?').run(messageId);
+      // Удаляем из FTS индекса (может не существовать)
       try {
-        db.prepare('DELETE FROM messages_fts WHERE rowid = ?').run(Number(messageId));
-      } catch (_) {}
+        db.prepare('DELETE FROM messages_fts WHERE rowid = ?').run(messageId);
+      } catch (ftsErr) {
+        // Игнорируем ошибки FTS
+      }
+      // В конце удаляем само сообщение (CASCADE удалит связанные записи автоматически)
+      const deleteResult = db.prepare('DELETE FROM messages WHERE id = ?').run(messageId);
+      if (deleteResult.changes === 0) {
+        throw new Error('Message not found or already deleted');
+      }
     });
     transaction();
   } catch (err) {
@@ -655,10 +669,18 @@ router.delete('/:messageId', validateParams(messageIdParamSchema), asyncHandler(
     throw err;
   }
   
-  const otherUserId = Number(message.sender_id) === Number(me) ? Number(message.receiver_id) : Number(message.sender_id);
-  const peerIdForOther = Number(me); // для получателя peer в этом чате — тот, кто удалил (отправитель)
-  const { notifyMessageDeleted } = await import('../realtime.js');
-  notifyMessageDeleted(otherUserId, Number(messageId), peerIdForOther);
+  // Уведомляем другого пользователя о удалении (если это не групповое сообщение)
+  try {
+    const otherUserId = Number(message.sender_id) === me ? Number(message.receiver_id) : Number(message.sender_id);
+    const peerIdForOther = me; // для получателя peer в этом чате — тот, кто удалил (отправитель)
+    if (otherUserId && otherUserId > 0) {
+      const { notifyMessageDeleted } = await import('../realtime.js');
+      notifyMessageDeleted(otherUserId, messageId, peerIdForOther);
+    }
+  } catch (notifyErr) {
+    // Логируем ошибку уведомления, но не прерываем выполнение
+    log.warn({ err: notifyErr, messageId, me }, 'DELETE /messages/:messageId - notification error (non-critical)');
+  }
   
   res.status(204).send();
 }));

@@ -19,6 +19,8 @@ try {
 }
 
 const db = new Database(dbPath);
+// Включаем поддержку внешних ключей (по умолчанию выключена в SQLite)
+db.pragma('foreign_keys = ON');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (

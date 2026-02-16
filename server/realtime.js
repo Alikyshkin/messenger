@@ -2,12 +2,25 @@
 export const clients = new Map();
 
 export function broadcastToUser(userId, data) {
+  if (!userId || typeof userId !== 'number' || userId <= 0) {
+    return; // Невалидный userId
+  }
   const set = clients.get(userId);
   if (!set) return;
-  const msg = JSON.stringify(data);
-  set.forEach(ws => {
-    if (ws.readyState === 1) ws.send(msg);
-  });
+  try {
+    const msg = JSON.stringify(data);
+    set.forEach(ws => {
+      if (ws.readyState === 1) {
+        try {
+          ws.send(msg);
+        } catch (err) {
+          // Игнорируем ошибки отправки отдельным клиентам
+        }
+      }
+    });
+  } catch (err) {
+    // Игнорируем ошибки сериализации
+  }
 }
 
 export function notifyNewMessage(message) {
