@@ -378,8 +378,9 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
   }
   const isPoll = data.type === 'poll' && data.question && Array.isArray(data.options) && data.options.length >= 2;
   const isMissedCall = data.type === 'missed_call';
+  const isLocation = data.type === 'location' && typeof data.lat === 'number' && typeof data.lng === 'number';
   const text = data.content ? sanitizeText(data.content) : '';
-  if (!isPoll && !isMissedCall && !text && files.length === 0) return res.status(400).json({ error: 'content или файл обязательны' });
+  if (!isPoll && !isMissedCall && !isLocation && !text && files.length === 0) return res.status(400).json({ error: 'content или файл обязательны' });
   const meUser = db.prepare('SELECT public_key FROM users WHERE id = ?').get(me);
   const baseUrl = getBaseUrl(req);
   const replyToId = data.reply_to_id || null;
@@ -426,6 +427,39 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
         options: options.map((text, i) => ({ text, votes: 0, voted: false })),
         multiple: !!(data.multiple),
       },
+      reactions: [],
+    };
+    notifyNewMessage(payload);
+    return res.status(201).json(payload);
+  }
+
+  if (isLocation) {
+    const locationContent = JSON.stringify({
+      lat: data.lat,
+      lng: data.lng,
+      label: data.location_label ? sanitizeText(data.location_label).slice(0, 256) : null,
+    });
+    const result = db.prepare(
+      `INSERT INTO messages (sender_id, receiver_id, content, message_type, sender_public_key) VALUES (?, ?, ?, 'location', ?)`
+    ).run(me, rid, locationContent, meUser?.public_key ?? null);
+    const msgId = result.lastInsertRowid;
+    syncMessagesFTS(msgId);
+    const row = db.prepare(
+      'SELECT id, sender_id, receiver_id, content, created_at, read_at, attachment_path, attachment_filename, message_type, poll_id, sender_public_key FROM messages WHERE id = ?'
+    ).get(msgId);
+    const payload = {
+      id: row.id,
+      sender_id: row.sender_id,
+      receiver_id: row.receiver_id,
+      content: locationContent,
+      created_at: row.created_at,
+      read_at: row.read_at,
+      is_mine: true,
+      attachment_url: null,
+      attachment_filename: null,
+      message_type: 'location',
+      poll_id: null,
+      sender_public_key: row.sender_public_key ?? meUser?.public_key ?? null,
       reactions: [],
     };
     notifyNewMessage(payload);

@@ -31,6 +31,7 @@ import '../widgets/voice_message_bubble.dart';
 import '../widgets/video_note_bubble.dart';
 import '../widgets/user_avatar.dart';
 import 'call_screen.dart';
+import 'package:geolocator/geolocator.dart';
 import 'record_video_note_screen.dart';
 import 'user_profile_screen.dart';
 import 'image_preview_screen.dart';
@@ -1137,6 +1138,55 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  Future<void> _sendLocation() async {
+    if (_sending) return;
+    final token = context.read<AuthService>().token;
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Геолокация отключена')),
+      );
+      return;
+    }
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Нет доступа к геолокации')),
+      );
+      return;
+    }
+    setState(() => _sending = true);
+    try {
+      final pos = await Geolocator.getCurrentPosition();
+      final api = Api(token);
+      final msg = await api.sendMessageWithLocation(
+        widget.peer.id,
+        pos.latitude,
+        pos.longitude,
+      );
+      if (!mounted) return;
+      await LocalDb.upsertMessage(msg, widget.peer.id);
+      await LocalDb.updateChatLastMessage(widget.peer.id, msg);
+      setState(() {
+        _messages.add(msg);
+        _sending = false;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка: $e')),
+      );
+      setState(() => _sending = false);
+    }
+  }
+
   Future<void> _createPoll() async {
     if (_sending) {
       return;
@@ -1787,6 +1837,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                   )
                                 else if (m.isVideoNote)
                                   _buildVideoNoteBubble(m)
+                                else if (m.isLocation)
+                                  _buildLocationBubble(m)
                                 else ...[
                                   if (m.content.isNotEmpty &&
                                       !_isFilePlaceholderContent(m))
@@ -2157,6 +2209,9 @@ class _ChatScreenState extends State<ChatScreen> {
                       case 'video':
                         _openRecordVideoNote();
                         break;
+                      case 'location':
+                        _sendLocation();
+                        break;
                     }
                   },
                   itemBuilder: (context) => [
@@ -2187,6 +2242,16 @@ class _ChatScreenState extends State<ChatScreen> {
                           Icon(Icons.videocam_rounded),
                           SizedBox(width: 12),
                           Text('Видеокружок'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'location',
+                      child: Row(
+                        children: [
+                          Icon(Icons.location_on_outlined),
+                          SizedBox(width: 12),
+                          Text('Геолокация'),
                         ],
                       ),
                     ),
@@ -2281,6 +2346,59 @@ class _ChatScreenState extends State<ChatScreen> {
           : null,
       durationSec: m.attachmentDurationSec,
       isMine: m.isMine,
+    );
+  }
+
+  Widget _buildLocationBubble(Message m) {
+    final loc = m.locationData;
+    if (loc == null) {
+      return Text(
+        '📍 Геолокация',
+        style: TextStyle(
+          color: m.isMine
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).colorScheme.onSurface,
+        ),
+      );
+    }
+    final url =
+        'https://www.google.com/maps?q=${loc.lat},${loc.lng}';
+    final textColor = m.isMine
+        ? Theme.of(context).colorScheme.onPrimary
+        : Theme.of(context).colorScheme.onSurface;
+    return InkWell(
+      onTap: () => launchUrl(
+            Uri.parse(url),
+            mode: LaunchMode.externalApplication,
+          ),
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.location_on, color: textColor, size: 24),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                loc.label ?? '${loc.lat.toStringAsFixed(4)}, ${loc.lng.toStringAsFixed(4)}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: textColor,
+                ),
+              ),
+              Text(
+                'Открыть на карте',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: textColor.withValues(alpha: 0.7),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

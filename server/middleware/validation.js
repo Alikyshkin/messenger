@@ -274,7 +274,10 @@ export const sendMessageSchema = Joi.object({
       'number.integer': 'ID получателя должно быть целым числом',
     }),
   content: Joi.string().trim().max(VALIDATION_LIMITS.MESSAGE_MAX_LENGTH).allow('').optional(),
-  type: Joi.string().valid('text', 'poll', 'missed_call').optional(),
+  type: Joi.string().valid('text', 'poll', 'missed_call', 'location').optional(),
+  lat: Joi.when('type', { is: 'location', then: Joi.number().min(-90).max(90).required(), otherwise: Joi.optional() }),
+  lng: Joi.when('type', { is: 'location', then: Joi.number().min(-180).max(180).required(), otherwise: Joi.optional() }),
+  location_label: Joi.when('type', { is: 'location', then: Joi.string().trim().max(256).optional(), otherwise: Joi.optional() }),
   question: Joi.when('type', {
     is: 'poll',
     then: Joi.string().trim().min(1).max(VALIDATION_LIMITS.POLL_QUESTION_MAX_LENGTH).required(),
@@ -303,8 +306,9 @@ export const sendMessageSchema = Joi.object({
     otherwise: Joi.optional(),
   }),
 }).custom((value, helpers) => {
-  // Проверка: должно быть либо content, либо файл, либо опрос
-  if (!value.content && !value.type && !helpers.state.ancestors[0]?.files?.length) {
+  // Проверка: должно быть либо content, либо файл, либо опрос, либо локация
+  if (value.type === 'location' && value.lat != null && value.lng != null) return value;
+  if (!value.content && value.type !== 'poll' && !helpers.state.ancestors[0]?.files?.length) {
     return helpers.error('any.required', { message: 'content или файл обязательны' });
   }
   return value;
@@ -360,8 +364,11 @@ export const addGroupMemberSchema = Joi.object({
 export const sendGroupMessageSchema = Joi.object({
   content: Joi.string().trim().max(VALIDATION_LIMITS.MESSAGE_MAX_LENGTH).allow('').optional()
     .label('Содержание сообщения'),
-  type: Joi.string().valid('text', 'poll').optional()
+  type: Joi.string().valid('text', 'poll', 'location').optional()
     .label('Тип сообщения'),
+  lat: Joi.when('type', { is: 'location', then: Joi.number().min(-90).max(90).required(), otherwise: Joi.optional() }),
+  lng: Joi.when('type', { is: 'location', then: Joi.number().min(-180).max(180).required(), otherwise: Joi.optional() }),
+  location_label: Joi.when('type', { is: 'location', then: Joi.string().trim().max(256).optional(), otherwise: Joi.optional() }),
   question: Joi.when('type', {
     is: 'poll',
     then: Joi.string().trim().min(1).max(VALIDATION_LIMITS.POLL_QUESTION_MAX_LENGTH).required()
@@ -402,8 +409,9 @@ export const sendGroupMessageSchema = Joi.object({
     otherwise: Joi.optional(),
   }),
 }).custom((value, helpers) => {
-  // Проверка: должно быть либо content, либо файл, либо опрос
-  if (!value.content && !value.type && !helpers.state.ancestors[0]?.files?.length) {
+  // Проверка: должно быть либо content, либо файл, либо опрос, либо локация
+  if (value.type === 'location' && value.lat != null && value.lng != null) return value;
+  if (!value.content && value.type !== 'poll' && !helpers.state.ancestors[0]?.files?.length) {
     return helpers.error('any.required', { message: 'content или файл обязательны' });
   }
   return value;

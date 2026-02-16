@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class MessageReaction {
   final String emoji;
   final List<int> userIds;
@@ -168,6 +170,30 @@ class Message {
   bool get isVoice => attachmentKind == 'voice' && attachmentUrl != null;
   bool get isVideoNote =>
       attachmentKind == 'video_note' && attachmentUrl != null;
+  bool get isLocation => messageType == 'location';
+
+  /// Парсит content как JSON для location-сообщений. Возвращает null, если не location или невалидный JSON.
+  ({double lat, double lng, String? label})? get locationData =>
+      Message.parseLocationContent(content);
+
+  /// Парсит content как JSON для location-сообщений.
+  static ({double lat, double lng, String? label})? parseLocationContent(
+      String content) {
+    if (content.isEmpty || !content.startsWith('{')) return null;
+    try {
+      final m = jsonDecode(content) as Map<String, dynamic>;
+      final lat = (m['lat'] as num?)?.toDouble();
+      final lng = (m['lng'] as num?)?.toDouble();
+      if (lat == null || lng == null) return null;
+      return (
+        lat: lat,
+        lng: lng,
+        label: m['label'] as String?,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 class PollData {

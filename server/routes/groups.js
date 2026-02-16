@@ -496,8 +496,9 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
   const data = req.validated;
   const files = req.files && Array.isArray(req.files) ? req.files : (req.file ? [req.file] : []);
   const isPoll = data.type === 'poll' && data.question && Array.isArray(data.options) && data.options.length >= 2;
+  const isLocation = data.type === 'location' && typeof data.lat === 'number' && typeof data.lng === 'number';
   const text = data.content ? sanitizeText(data.content) : '';
-  if (!isPoll && !text && files.length === 0) return res.status(400).json({ error: 'content или файл обязательны' });
+  if (!isPoll && !isLocation && !text && files.length === 0) return res.status(400).json({ error: 'content или файл обязательны' });
   const replyToId = data.reply_to_id || null;
   const isFwd = data.is_forwarded || false;
   const fwdFromId = data.forward_from_sender_id || null;
@@ -541,6 +542,44 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
         options: options.map((text, i) => ({ text, votes: 0, voted: false })),
         multiple: !!multiple,
       },
+      reply_to_id: null,
+      is_forwarded: false,
+      forward_from_sender_id: null,
+      forward_from_display_name: null,
+      reactions: [],
+    };
+    const memberIds = getGroupMemberIds(groupId);
+    notifyNewGroupMessage(memberIds, me, payload);
+    return res.status(201).json(payload);
+  }
+
+  if (isLocation) {
+    const locationContent = JSON.stringify({
+      lat: data.lat,
+      lng: data.lng,
+      label: data.location_label ? sanitizeText(data.location_label).slice(0, 256) : null,
+    });
+    const insMsg = db.prepare(
+      `INSERT INTO group_messages (group_id, sender_id, content, message_type) VALUES (?, ?, ?, 'location')`,
+    ).run(groupId, me, locationContent);
+    const msgId = insMsg.lastInsertRowid;
+    syncGroupMessagesFTS(msgId);
+    const row = db.prepare(
+      'SELECT id, group_id, sender_id, content, created_at, message_type FROM group_messages WHERE id = ?',
+    ).get(msgId);
+    const sender = db.prepare('SELECT public_key, display_name, username FROM users WHERE id = ?').get(me);
+    const payload = {
+      id: row.id,
+      group_id: row.group_id,
+      sender_id: row.sender_id,
+      sender_display_name: sender?.display_name || sender?.username || '?',
+      content: locationContent,
+      created_at: row.created_at,
+      is_mine: true,
+      attachment_url: null,
+      attachment_filename: null,
+      message_type: 'location',
+      poll_id: null,
       reply_to_id: null,
       is_forwarded: false,
       forward_from_sender_id: null,

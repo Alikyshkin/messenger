@@ -51,5 +51,7 @@
 	<string>Камера для видеозвонков (опционально)</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Доступ к контактам для поиска друзей, зарегистрированных в мессенджере</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Геолокация нужна для отправки местоположения в чат</string>
 </dict>
 </plist>

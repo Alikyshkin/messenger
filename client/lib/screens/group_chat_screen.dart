@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../l10n/app_localizations.dart';
 import '../models/group.dart';
 import '../models/message.dart';
@@ -464,6 +466,11 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                   tooltip: 'Фото или файл',
                   onPressed: _sending ? null : _sendFile,
                 ),
+                IconButton(
+                  icon: const Icon(Icons.location_on_outlined),
+                  tooltip: 'Геолокация',
+                  onPressed: _sending ? null : _sendLocation,
+                ),
                 Expanded(
                   child: TextField(
                     controller: _text,
@@ -677,13 +684,96 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     }
   }
 
+  Future<void> _sendLocation() async {
+    if (_sending) return;
+    final token = context.read<AuthService>().token;
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Геолокация отключена')),
+      );
+      return;
+    }
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Нет доступа к геолокации')),
+      );
+      return;
+    }
+    setState(() => _sending = true);
+    try {
+      final pos = await Geolocator.getCurrentPosition();
+      final api = Api(token);
+      final msg = await api.sendGroupMessageWithLocation(
+        widget.group.id,
+        pos.latitude,
+        pos.longitude,
+      );
+      if (!mounted) return;
+      setState(() {
+        _messages.add(msg);
+        _sending = false;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e is ApiException ? e.message : 'Ошибка: $e')),
+      );
+      setState(() => _sending = false);
+    }
+  }
+
+  Widget _buildLocationContent(Message m) {
+    final loc = m.locationData;
+    if (loc == null) {
+      return Text('📍 Геолокация', style: Theme.of(context).textTheme.bodyLarge);
+    }
+    final url = 'https://www.google.com/maps?q=${loc.lat},${loc.lng}';
+    final textColor = m.isMine
+        ? Theme.of(context).colorScheme.onPrimaryContainer
+        : Theme.of(context).colorScheme.onSurface;
+    return InkWell(
+      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      borderRadius: BorderRadius.circular(8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.location_on, color: textColor, size: 24),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                loc.label ?? '${loc.lat.toStringAsFixed(4)}, ${loc.lng.toStringAsFixed(4)}',
+                style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
+              ),
+              Text(
+                'Открыть на карте',
+                style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.7)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildGroupMessageContent(Message m) {
     final align = m.isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     return Column(
       crossAxisAlignment: align,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(m.content, style: Theme.of(context).textTheme.bodyLarge),
+        if (m.isLocation) _buildLocationContent(m) else Text(m.content, style: Theme.of(context).textTheme.bodyLarge),
         if (m.reactions.isNotEmpty) ...[
           const SizedBox(height: 6),
           Wrap(

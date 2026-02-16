@@ -621,6 +621,30 @@ class Api {
     }
   }
 
+  Future<Message> sendMessageWithLocation(
+    int receiverId,
+    double lat,
+    double lng, {
+    String? label,
+  }) async {
+    final body = <String, dynamic>{
+      'receiver_id': receiverId,
+      'type': 'location',
+      'lat': lat,
+      'lng': lng,
+    };
+    if (label != null && label.isNotEmpty) {
+      body['location_label'] = label;
+    }
+    final r = await http.post(
+      Uri.parse('$base/messages'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    _checkResponse(r);
+    return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+  }
+
   Future<Message> sendMissedCallMessage(int receiverId) async {
     final body = <String, dynamic>{
       'receiver_id': receiverId,
@@ -1035,6 +1059,29 @@ class Api {
       if (forwardFromDisplayName != null) {
         body['forward_from_display_name'] = forwardFromDisplayName;
       }
+    }
+    final r = await http.post(
+      Uri.parse('$base/groups/$groupId/messages'),
+      headers: _headers,
+      body: jsonEncode(body),
+    );
+    _checkResponse(r);
+    return Message.fromJson(jsonDecode(_utf8Body(r)) as Map<String, dynamic>);
+  }
+
+  Future<Message> sendGroupMessageWithLocation(
+    int groupId,
+    double lat,
+    double lng, {
+    String? label,
+  }) async {
+    final body = <String, dynamic>{
+      'type': 'location',
+      'lat': lat,
+      'lng': lng,
+    };
+    if (label != null && label.isNotEmpty) {
+      body['location_label'] = label;
     }
     final r = await http.post(
       Uri.parse('$base/groups/$groupId/messages'),
