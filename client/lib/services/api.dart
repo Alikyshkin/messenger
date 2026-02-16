@@ -85,21 +85,21 @@ class Api {
     String? email,
   ]) async {
     return _logged('POST', '/auth/register', () async {
-    final r = await http.post(
-      Uri.parse('$base/auth/register'),
-      headers: _headers,
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-        if (displayName != null && displayName.isNotEmpty)
-          'displayName': displayName,
-        if (email != null && email.trim().isNotEmpty)
-          'email': email.trim().toLowerCase(),
-      }),
-    );
-    _checkResponse(r, '/auth/register');
-    final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
-    return User.fromJson(data['user'] as Map<String, dynamic>);
+      final r = await http.post(
+        Uri.parse('$base/auth/register'),
+        headers: _headers,
+        body: jsonEncode({
+          'username': username,
+          'password': password,
+          if (displayName != null && displayName.isNotEmpty)
+            'displayName': displayName,
+          if (email != null && email.trim().isNotEmpty)
+            'email': email.trim().toLowerCase(),
+        }),
+      );
+      _checkResponse(r, '/auth/register');
+      final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+      return User.fromJson(data['user'] as Map<String, dynamic>);
     });
   }
 
@@ -615,37 +615,37 @@ class Api {
           body['forward_from_sender_id'] = forwardFromSenderId;
         }
         if (forwardFromDisplayName != null) {
-        body['forward_from_display_name'] = forwardFromDisplayName;
-      }
-    }
-    http.Response? r;
-    try {
-      r = await http.post(
-        Uri.parse('$base/messages'),
-        headers: _headers,
-        body: jsonEncode(body),
-      );
-      _checkResponse(r);
-      final json = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
-      return Message.fromJson(json);
-    } catch (e) {
-      // Если это ошибка парсинга, но запрос был успешным (201), значит сообщение отправлено
-      if (r != null && r.statusCode == 201) {
-        // Пытаемся распарсить ответ еще раз с более мягкой обработкой
-        try {
-          final json = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
-          return Message.fromJson(json);
-        } catch (_) {
-          // Если все равно не получается, выбрасываем ошибку парсинга
-          throw ApiException(
-            500,
-            'Ошибка парсинга ответа сервера: ${e.toString()}',
-          );
+          body['forward_from_display_name'] = forwardFromDisplayName;
         }
       }
-      // Для всех остальных ошибок пробрасываем дальше
-      rethrow;
-    }
+      http.Response? r;
+      try {
+        r = await http.post(
+          Uri.parse('$base/messages'),
+          headers: _headers,
+          body: jsonEncode(body),
+        );
+        _checkResponse(r);
+        final json = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+        return Message.fromJson(json);
+      } catch (e) {
+        // Если это ошибка парсинга, но запрос был успешным (201), значит сообщение отправлено
+        if (r != null && r.statusCode == 201) {
+          // Пытаемся распарсить ответ еще раз с более мягкой обработкой
+          try {
+            final json = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
+            return Message.fromJson(json);
+          } catch (_) {
+            // Если все равно не получается, выбрасываем ошибку парсинга
+            throw ApiException(
+              500,
+              'Ошибка парсинга ответа сервера: ${e.toString()}',
+            );
+          }
+        }
+        // Для всех остальных ошибок пробрасываем дальше
+        rethrow;
+      }
     });
   }
 
@@ -726,26 +726,27 @@ class Api {
     }
     return _logged('POST', '/messages (multiple files)', () async {
       final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['receiver_id'] = receiverId.toString();
-    request.fields['content'] = content;
-    if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
-    for (final f in files) {
-      request.files.add(
-        http.MultipartFile.fromBytes('file', f.bytes, filename: f.filename),
-      );
-    }
-    final streamed = await request.send();
-    final r = await http.Response.fromStream(streamed);
-    _checkResponse(r);
-    final data = jsonDecode(_utf8Body(r));
-    if (data is Map<String, dynamic> && data['messages'] != null) {
-      final list = data['messages'] as List<dynamic>;
-      return list
-          .map((e) => Message.fromJson(e as Map<String, dynamic>))
-          .toList();
-    }
-    return [Message.fromJson(data as Map<String, dynamic>)];
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['receiver_id'] = receiverId.toString();
+      request.fields['content'] = content;
+      if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
+      for (final f in files) {
+        request.files.add(
+          http.MultipartFile.fromBytes('file', f.bytes, filename: f.filename),
+        );
+      }
+      final streamed = await request.send();
+      final r = await http.Response.fromStream(streamed);
+      _checkResponse(r);
+      final data = jsonDecode(_utf8Body(r));
+      if (data is Map<String, dynamic> && data['messages'] != null) {
+        final list = data['messages'] as List<dynamic>;
+        return list
+            .map((e) => Message.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [Message.fromJson(data as Map<String, dynamic>)];
+    });
   }
 
   Future<Message> sendVoiceMessage(
@@ -757,15 +758,15 @@ class Api {
   }) async {
     return _logged('POST', '/messages (voice)', () async {
       final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['receiver_id'] = receiverId.toString();
-    request.fields['content'] = '';
-    request.fields['attachment_kind'] = 'voice';
-    request.fields['attachment_duration_sec'] = durationSec.toString();
-    if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
-    request.files.add(
-      http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
-    );
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['receiver_id'] = receiverId.toString();
+      request.fields['content'] = '';
+      request.fields['attachment_kind'] = 'voice';
+      request.fields['attachment_duration_sec'] = durationSec.toString();
+      if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
+      request.files.add(
+        http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
+      );
       final streamed = await request.send();
       final r = await http.Response.fromStream(streamed);
       _checkResponse(r);
@@ -782,15 +783,15 @@ class Api {
   }) async {
     return _logged('POST', '/messages (video_note)', () async {
       final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
-    request.headers['Authorization'] = 'Bearer $token';
-    request.fields['receiver_id'] = receiverId.toString();
-    request.fields['content'] = '';
-    request.fields['attachment_kind'] = 'video_note';
-    request.fields['attachment_duration_sec'] = durationSec.toString();
-    if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
-    request.files.add(
-      http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
-    );
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['receiver_id'] = receiverId.toString();
+      request.fields['content'] = '';
+      request.fields['attachment_kind'] = 'video_note';
+      request.fields['attachment_duration_sec'] = durationSec.toString();
+      if (attachmentEncrypted) request.fields['attachment_encrypted'] = 'true';
+      request.files.add(
+        http.MultipartFile.fromBytes('file', fileBytes, filename: filename),
+      );
       final streamed = await request.send();
       final r = await http.Response.fromStream(streamed);
       _checkResponse(r);

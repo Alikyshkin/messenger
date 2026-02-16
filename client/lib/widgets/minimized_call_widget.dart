@@ -23,7 +23,7 @@ class MinimizedCallWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    if (!service.isMinimized) {
+    if (service == null || !service.isMinimized) {
       return const SizedBox.shrink();
     }
 
@@ -49,7 +49,7 @@ class MinimizedCallWidget extends StatelessWidget {
           message: 'Нажмите для возврата к звонку',
           child: InkWell(
             borderRadius: BorderRadius.circular(12),
-            onTap: () => _expandCall(context, service),
+            onTap: () => _expandCall(context, service!),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
@@ -172,7 +172,7 @@ class MinimizedCallWidget extends StatelessWidget {
                   iconSize: 24,
                   onPressed: () {
                     // Завершаем звонок через сервис
-                    service.endCall();
+                    service?.endCall();
                     // Навигация обрабатывается в экранах звонков
                   },
                   tooltip: 'Завершить звонок',
