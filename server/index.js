@@ -35,12 +35,11 @@ import syncRoutes from './routes/sync.js';
 import versionRoutes from './routes/version.js';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './utils/swagger.js';
-import { metricsMiddleware, getMetrics, metrics } from './utils/metrics.js';
+import metricsRegister, { getMetrics, metrics } from './utils/metrics.js';
 import { initCache } from './utils/cache.js';
 import { initFCM } from './utils/pushNotifications.js';
 import { securityHeaders } from './middleware/security.js';
 import { csrfProtect, getCsrfToken } from './middleware/csrf.js';
-import { auditMiddleware } from './utils/auditLog.js';
 import { getAllCircuitBreakerStates } from './utils/circuitBreaker.js';
 import { apiVersioning, validateApiVersion } from './middleware/apiVersioning.js';
 
@@ -120,7 +119,7 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+  exposedHeaders: ['Content-Length'],
   maxAge: 86400, // 24 часа
 }));
 
@@ -242,9 +241,9 @@ app.get('/api-docs.json', (req, res) => {
 // Prometheus метрики endpoint
 app.get('/metrics', async (req, res) => {
   try {
-    res.set('Content-Type', register.contentType);
-    const metrics = await getMetrics();
-    res.end(metrics);
+    res.set('Content-Type', metricsRegister.contentType);
+    const body = await getMetrics();
+    res.end(body);
   } catch (error) {
     log.error({ error }, 'Ошибка при получении метрик');
     res.status(500).end();
