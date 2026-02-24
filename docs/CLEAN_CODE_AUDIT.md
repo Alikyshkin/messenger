@@ -25,11 +25,11 @@
 
 ## Средний приоритет
 
-- [ ] **Интеграционный тест не входит в основной test** — `test:integration` есть отдельно, но в скрипт `test` в package.json не входит. Добавить вызов интеграционных тестов в `test` или явно запускать `test:integration` в CI.
+- [x] **Интеграционный тест не входит в основной test** — `test:integration` есть отдельно, но в скрипт `test` в package.json не входит. Добавить вызов интеграционных тестов в `test` или явно запускать `test:integration` в CI.
 - [ ] **Роуты без тестов** — роуты `export`, `gdpr`, `media`, `sync`, `version`, `polls`, `push`, `oauth`, `groups` (частично) без интеграционных/e2e-тестов. Добавить хотя бы smoke: регистрация, логин, основные запросы.
 - [x] **Утилиты без юнит-тестов** — `server/utils/`: `sanitizeLogs.js`, `dataRetention.js`, `queryOptimizer.js`, `accountLockout.js`, `blocked.js`, `privacy.js`, `cipher.js`. Покрыть юнит-тестами чистые функции.
 - [ ] **Middleware без тестов** — `validation.js`, `sanitize.js`, `fileValidation.js`, `pagination.js`, `apiVersioning.js`, `csrf.js`. Добавить тесты на граничных входных данных.
-- [ ] **Унификация тестов** — два набора: `__tests__/` (Jest + supertest) и `tests/` (node:test). Унифицировать: один test runner (предпочтительно Node.js Test Runner), одна структура папок; перенести сценарии из Jest в `tests/`, затем удалить `jest.config.js` и папку `__tests__`.
+- [x] **Унификация тестов** — два набора: `__tests__/` (Jest + supertest) и `tests/` (node:test). Унифицировать: один test runner (предпочтительно Node.js Test Runner), одна структура папок; перенести сценарии из Jest в `tests/`, затем удалить `jest.config.js` и папку `__tests__`.
 - [ ] **Константы** — порты в Playwright и др. захардкожены. Вынести в `config/constants.js` или переменные окружения (например `PLAYWRIGHT_TEST_PORT`) и использовать везде оттуда.
 - [x] **Логика в index.js** — много логики WebSocket и health в одном файле. Вынести обработчики WebSocket-сообщений в отдельный модуль (например `server/wsHandlers.js`), health/ready — в `server/health.js` или короткие вызовы утилит.
 

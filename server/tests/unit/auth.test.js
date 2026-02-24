@@ -45,6 +45,12 @@ describe('Auth', () => {
     assert.strictEqual(data.user.email, 'test@example.com');
   });
 
+  it('POST /auth/register — возвращает 409 при дублировании username', async () => {
+    await register(baseUrl, { username: 'dupuser', password: 'pass123' });
+    const { status } = await register(baseUrl, { username: 'dupuser', password: 'other456' });
+    assert.strictEqual(status, 409);
+  });
+
   it('POST /auth/register — отклоняет короткий username', async () => {
     const { status } = await register(baseUrl, { username: 'ab', password: 'pass123' });
     assert.strictEqual(status, 400);

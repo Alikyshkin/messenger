@@ -11,7 +11,7 @@
     "migrate": "node scripts/migrate.js",
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "npm run test:node && npm run test:jest",
+    "test": "npm run test:node",
     "test:smoke": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/smoke/smoke.test.js",
     "test:e2e": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/e2e/chat_e2e.test.js",
     "test:playwright:e2e": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret npx playwright test --config=playwright.e2e.config.js",
@@ -24,8 +24,7 @@
     "audit:fix": "npm audit fix",
     "outdated": "npm outdated",
     "test:integration": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/integration/messages-integration.test.js",
-    "test:node": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/auth.test.js tests/unit/api.test.js tests/unit/websocket.test.js tests/unit/sanitizeLogs.test.js tests/unit/cipher.test.js tests/e2e/chat_e2e.test.js tests/smoke/smoke.test.js",
-    "test:jest": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --experimental-vm-modules node_modules/jest/bin/jest.js __tests__"
+    "test:node": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/auth.test.js tests/unit/api.test.js tests/unit/websocket.test.js tests/unit/validation.test.js tests/unit/sanitizeLogs.test.js tests/unit/cipher.test.js tests/integration/messages-integration.test.js tests/e2e/chat_e2e.test.js tests/smoke/smoke.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
@@ -60,8 +59,6 @@
     "@eslint/js": "^9.15.0",
     "@playwright/test": "^1.49.0",
     "eslint": "^9.15.0",
-    "globals": "^15.12.0",
-    "jest": "^30.2.0",
-    "supertest": "^7.2.2"
+    "globals": "^15.12.0"
   }
 }
