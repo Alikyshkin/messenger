@@ -16,10 +16,10 @@ Cross-platform messenger (Node.js/Express backend + Flutter/Dart client). See `R
 ### Important gotchas
 
 - **`.env` file required**: Copy `server/.env.example` to `server/.env` before first run. The `JWT_SECRET` value from `.env.example` works for local development.
-- **In-memory test DB bug**: The default `npm test` command uses `MESSENGER_DB_PATH=:memory:` which causes a `SqliteError: no such column: email` because the migration runner and `db.js` open separate in-memory databases. To work around this, use a file-based temp path: `NODE_ENV=test MESSENGER_DB_PATH=/tmp/test-messenger.db JWT_SECRET=test-secret node --test tests/auth.test.js tests/api.test.js tests/websocket.test.js tests/e2e/chat_e2e.test.js tests/smoke/smoke.test.js`. Delete the temp DB between runs with `rm -f /tmp/test-messenger.db`.
-- **Pre-existing test failures**: Several tests fail due to password validation changes and messaging privacy checks that the tests don't account for. This is a codebase issue, not an environment issue.
 - **Friend requests workflow**: `POST /contacts` sends a friend request (not a direct add). The recipient must call `POST /contacts/requests/:id/accept` before users appear as mutual contacts and can message each other.
 - **Privacy defaults**: New users default to `who_can_message: 'contacts'`, so messaging requires mutual contact status.
+- **Password requirements**: Registration requires min 8 chars + zxcvbn score >= 2. Use passwords like `Str0ngP@ss!` in tests.
+- **Rate limiting**: Disabled in `NODE_ENV=test`. In development, `registerLimiter` allows 3 registrations/hour/IP.
 - **SQLite database**: Embedded via `better-sqlite3`; no external database service needed. Data stored in `server/messenger.db` (auto-created on first run).
 - **Redis/FCM/SMTP**: All optional. Server starts and works fully without them.
 
