@@ -382,30 +382,32 @@ function applyMigration(db, migration) {
 }
 
 /**
+ * Применить все неприменённые миграции к уже открытому подключению (не закрывает db).
+ * Используется для :memory: чтобы миграции и приложение работали с одной БД.
+ */
+export function runMigrationsOnDb(db) {
+  ensureMigrationsTable(db);
+  const applied = getAppliedMigrations(db);
+  const files = getMigrationFiles();
+  const pending = files.filter(f => !applied.has(f.version));
+  if (pending.length === 0) {
+    log.info('Все миграции уже применены');
+    return;
+  }
+  log.info(`Найдено ${pending.length} неприменённых миграций`);
+  for (const migration of pending) {
+    applyMigration(db, migration);
+  }
+  log.info('Все миграции применены успешно');
+}
+
+/**
  * Применить все неприменённые миграции
  */
 export function runMigrations(dbPath) {
   const db = new Database(dbPath);
-  
   try {
-    ensureMigrationsTable(db);
-    const applied = getAppliedMigrations(db);
-    const files = getMigrationFiles();
-    
-    const pending = files.filter(f => !applied.has(f.version));
-    
-    if (pending.length === 0) {
-      log.info('Все миграции уже применены');
-      return;
-    }
-    
-    log.info(`Найдено ${pending.length} неприменённых миграций`);
-    
-    for (const migration of pending) {
-      applyMigration(db, migration);
-    }
-    
-    log.info('Все миграции применены успешно');
+    runMigrationsOnDb(db);
   } catch (error) {
     log.error({ error }, 'Ошибка при применении миграций');
     throw error;
