@@ -19,14 +19,45 @@ before(async () => {
       res();
     });
   });
-  const r1 = await register(baseUrl, { username: 'apiuser1', password: 'pass123' });
-  const r2 = await register(baseUrl, { username: 'apiuser2', password: 'pass456' });
+  const r1 = await register(baseUrl, { username: 'apiuser1', password: 'Str0ngP@ss!' });
+  const r2 = await register(baseUrl, { username: 'apiuser2', password: 'Str0ngP@ss!' });
   assert.strictEqual(r1.status, 201, 'register user1: ' + JSON.stringify(r1.data));
   assert.strictEqual(r2.status, 201, 'register user2: ' + JSON.stringify(r2.data));
   token1 = r1.data.token;
   token2 = r2.data.token;
   userId1 = r1.data.user.id;
   userId2 = r2.data.user.id;
+
+  // Устанавливаем взаимные контакты (заявки в друзья + принятие)
+  const req1 = await fetchJson(baseUrl, '/contacts', {
+    method: 'POST',
+    headers: authHeaders(token1),
+    body: JSON.stringify({ username: 'apiuser2' }),
+  });
+  const req2 = await fetchJson(baseUrl, '/contacts', {
+    method: 'POST',
+    headers: authHeaders(token2),
+    body: JSON.stringify({ username: 'apiuser1' }),
+  });
+  // Принимаем заявки (req1 -> incoming для user2, req2 -> incoming для user1)
+  const incoming2 = await fetchJson(baseUrl, '/contacts/requests/incoming', {
+    headers: authHeaders(token2),
+  });
+  for (const r of incoming2.data) {
+    await fetchJson(baseUrl, `/contacts/requests/${r.id}/accept`, {
+      method: 'POST',
+      headers: authHeaders(token2),
+    });
+  }
+  const incoming1 = await fetchJson(baseUrl, '/contacts/requests/incoming', {
+    headers: authHeaders(token1),
+  });
+  for (const r of incoming1.data) {
+    await fetchJson(baseUrl, `/contacts/requests/${r.id}/accept`, {
+      method: 'POST',
+      headers: authHeaders(token1),
+    });
+  }
 });
 
 after(() => server.close());
@@ -35,7 +66,7 @@ describe('Health', () => {
   it('GET /health returns ok', async () => {
     const { status, data } = await fetchJson(baseUrl, '/health');
     assert.strictEqual(status, 200);
-    assert.strictEqual(data.ok, true);
+    assert.strictEqual(data.status, 'healthy');
   });
 });
 

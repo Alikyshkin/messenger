@@ -55,7 +55,14 @@ export function handleHealth(db, req, res) {
       });
     }
 
-    const stats = statSync(process.env.MESSENGER_DB_PATH || join(__dirname, 'messenger.db'));
+    const currentDbPath = process.env.MESSENGER_DB_PATH || join(__dirname, 'messenger.db');
+    let dbSize = 0;
+    if (currentDbPath !== ':memory:') {
+      try {
+        const stats = statSync(currentDbPath);
+        dbSize = stats.size;
+      } catch (_) { /* файл ещё не создан */ }
+    }
     const memUsage = process.memoryUsage();
     const memUsageMB = {
       rss: Math.round(memUsage.rss / 1024 / 1024),
@@ -68,7 +75,7 @@ export function handleHealth(db, req, res) {
       status: 'healthy',
       timestamp: new Date().toISOString(),
       uptime: Math.round(process.uptime()),
-      database: { status: 'connected', size: stats.size },
+      database: { status: 'connected', size: dbSize },
       memory: memUsageMB,
       version: process.env.npm_package_version || '1.0.0',
     });

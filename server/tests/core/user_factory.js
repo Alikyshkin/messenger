@@ -57,14 +57,46 @@ export async function loginUser(baseUrl, username, password) {
 
 /**
  * Создаёт двух пользователей для тестов чата (отправитель и получатель).
+ * Устанавливает взаимные контакты для корректной работы сообщений и звонков.
  */
 export async function createChatPair(baseUrl) {
   const [u1, u2] = await Promise.all([
     createUser(baseUrl),
     createUser(baseUrl),
   ]);
-  return {
-    user1: { token: u1.data.token, user: u1.data.user, username: u1.data.username, password: u1.data.password },
-    user2: { token: u2.data.token, user: u2.data.user, username: u2.data.username, password: u2.data.password },
-  };
+  const user1 = { token: u1.data.token, user: u1.data.user, username: u1.data.username, password: u1.data.password };
+  const user2 = { token: u2.data.token, user: u2.data.user, username: u2.data.username, password: u2.data.password };
+
+  const { fetchJson, authHeaders } = await import('../helpers.js');
+
+  await fetchJson(baseUrl, '/contacts', {
+    method: 'POST',
+    headers: authHeaders(user1.token),
+    body: JSON.stringify({ username: user2.username }),
+  });
+  await fetchJson(baseUrl, '/contacts', {
+    method: 'POST',
+    headers: authHeaders(user2.token),
+    body: JSON.stringify({ username: user1.username }),
+  });
+  const incoming2 = await fetchJson(baseUrl, '/contacts/requests/incoming', {
+    headers: authHeaders(user2.token),
+  });
+  for (const r of incoming2.data) {
+    await fetchJson(baseUrl, `/contacts/requests/${r.id}/accept`, {
+      method: 'POST',
+      headers: authHeaders(user2.token),
+    });
+  }
+  const incoming1 = await fetchJson(baseUrl, '/contacts/requests/incoming', {
+    headers: authHeaders(user1.token),
+  });
+  for (const r of incoming1.data) {
+    await fetchJson(baseUrl, `/contacts/requests/${r.id}/accept`, {
+      method: 'POST',
+      headers: authHeaders(user1.token),
+    });
+  }
+
+  return { user1, user2 };
 }

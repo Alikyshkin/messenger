@@ -300,18 +300,30 @@ process.on('unhandledRejection', (reason, promise) => {
 
 app.use(errorHandler);
 
-const wss = new WebSocketServer({ server, path: '/ws' });
+const wss = new WebSocketServer({
+  server,
+  path: '/ws',
+  verifyClient: (info, cb) => {
+    try {
+      const url = new URL(info.req.url || '', `http://${info.req.headers.host}`);
+      const token = url.searchParams.get('token');
+      const payload = token ? verifyToken(token) : null;
+      if (!payload) {
+        cb(false, 401, 'Unauthorized');
+        return;
+      }
+      info.req._wsPayload = payload;
+      cb(true);
+    } catch (_) {
+      cb(false, 401, 'Unauthorized');
+    }
+  },
+});
 
 wss.on('connection', (ws, req) => {
   // Обновляем метрику подключений WebSocket
   metrics.websocket.connections.inc();
-  const url = new URL(req.url || '', `http://${req.headers.host}`);
-  const token = url.searchParams.get('token');
-  const payload = token ? verifyToken(token) : null;
-  if (!payload) {
-    ws.close(4001, 'Unauthorized');
-    return;
-  }
+  const payload = req._wsPayload;
   const userId = payload.userId;
   if (!clients.has(userId)) clients.set(userId, new Set());
   const userClients = clients.get(userId);

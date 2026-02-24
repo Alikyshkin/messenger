@@ -24,14 +24,45 @@ before(async () => {
     });
   });
   
-  const r1 = await register(baseUrl, { username: 'wsuser1', password: 'pass123' });
-  const r2 = await register(baseUrl, { username: 'wsuser2', password: 'pass456' });
+  const r1 = await register(baseUrl, { username: 'wsuser1', password: 'Str0ngP@ss!' });
+  const r2 = await register(baseUrl, { username: 'wsuser2', password: 'Str0ngP@ss!' });
   assert.strictEqual(r1.status, 201);
   assert.strictEqual(r2.status, 201);
   token1 = r1.data.token;
   token2 = r2.data.token;
   userId1 = r1.data.user.id;
   userId2 = r2.data.user.id;
+
+  // Устанавливаем взаимные контакты для корректной работы звонков
+  const { fetchJson, authHeaders } = await import('../helpers.js');
+  await fetchJson(baseUrl, '/contacts', {
+    method: 'POST',
+    headers: authHeaders(token1),
+    body: JSON.stringify({ username: 'wsuser2' }),
+  });
+  await fetchJson(baseUrl, '/contacts', {
+    method: 'POST',
+    headers: authHeaders(token2),
+    body: JSON.stringify({ username: 'wsuser1' }),
+  });
+  const incoming2 = await fetchJson(baseUrl, '/contacts/requests/incoming', {
+    headers: authHeaders(token2),
+  });
+  for (const r of incoming2.data) {
+    await fetchJson(baseUrl, `/contacts/requests/${r.id}/accept`, {
+      method: 'POST',
+      headers: authHeaders(token2),
+    });
+  }
+  const incoming1 = await fetchJson(baseUrl, '/contacts/requests/incoming', {
+    headers: authHeaders(token1),
+  });
+  for (const r of incoming1.data) {
+    await fetchJson(baseUrl, `/contacts/requests/${r.id}/accept`, {
+      method: 'POST',
+      headers: authHeaders(token1),
+    });
+  }
 });
 
 after(() => server.close());
@@ -78,29 +109,34 @@ describe('WebSocket', () => {
 
   it('должен валидировать call_signal сообщения', async () => {
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(`${wsUrl}?token=${token1}`);
+      const ws1 = new WebSocket(`${wsUrl}?token=${token1}`);
+      const ws2 = new WebSocket(`${wsUrl}?token=${token2}`);
       let messageReceived = false;
-      
-      ws.on('open', () => {
+
+      Promise.all([
+        new Promise((r) => ws1.on('open', r)),
+        new Promise((r) => ws2.on('open', r)),
+      ]).then(() => {
         // Отправляем невалидное сообщение без type
-        ws.send(JSON.stringify({ toUserId: userId2, signal: 'offer' }));
-        
+        ws1.send(JSON.stringify({ toUserId: userId2, signal: 'offer' }));
+
         // Отправляем невалидное сообщение без toUserId
-        ws.send(JSON.stringify({ type: 'call_signal', signal: 'offer' }));
-        
+        ws1.send(JSON.stringify({ type: 'call_signal', signal: 'offer' }));
+
         // Отправляем невалидное сообщение с невалидным toUserId
-        ws.send(JSON.stringify({ type: 'call_signal', toUserId: -1, signal: 'offer' }));
-        
+        ws1.send(JSON.stringify({ type: 'call_signal', toUserId: -1, signal: 'offer' }));
+
         // Отправляем валидное сообщение
-        ws.send(JSON.stringify({ 
-          type: 'call_signal', 
-          toUserId: userId2, 
+        ws1.send(JSON.stringify({
+          type: 'call_signal',
+          toUserId: userId2,
           signal: 'offer',
           payload: { sdp: 'test', type: 'offer' }
         }));
-        
+
         setTimeout(() => {
-          ws.close();
+          ws1.close();
+          ws2.close();
           if (!messageReceived) {
             reject(new Error('Валидное сообщение должно быть обработано'));
           } else {
@@ -108,15 +144,16 @@ describe('WebSocket', () => {
           }
         }, 500);
       });
-      
-      ws.on('message', (data) => {
+
+      ws2.on('message', (data) => {
         const message = JSON.parse(data.toString());
         if (message.type === 'call_signal' && message.fromUserId === userId1) {
           messageReceived = true;
         }
       });
-      
-      ws.on('error', reject);
+
+      ws1.on('error', reject);
+      ws2.on('error', reject);
     });
   });
 

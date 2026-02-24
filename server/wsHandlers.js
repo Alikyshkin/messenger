@@ -84,18 +84,18 @@ async function handleCallSignal(data, userId, req) {
 
   if (data.signal === 'reject') {
     try {
-      const senderExists = db.prepare('SELECT id FROM users WHERE id = ?').get(toId);
-      const receiverExists = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+      const senderExists = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+      const receiverExists = db.prepare('SELECT id FROM users WHERE id = ?').get(toId);
       if (!senderExists || !receiverExists) {
-        log.warn('Cannot create missed call message: user not found', { senderId: toId, receiverId: userId });
+        log.warn('Cannot create missed call message: user not found', { senderId: userId, receiverId: toId });
         return;
       }
 
       const { syncMessagesFTS } = await import('./utils/ftsSync.js');
-      const senderUser = db.prepare('SELECT public_key FROM users WHERE id = ?').get(toId);
+      const senderUser = db.prepare('SELECT public_key FROM users WHERE id = ?').get(userId);
       const result = db.prepare(
         `INSERT INTO messages (sender_id, receiver_id, content, message_type, sender_public_key) VALUES (?, ?, ?, ?, ?)`
-      ).run(toId, userId, 'Пропущенный звонок', 'missed_call', senderUser?.public_key ?? null);
+      ).run(userId, toId, 'Пропущенный звонок', 'missed_call', senderUser?.public_key ?? null);
       const msgId = result.lastInsertRowid;
       syncMessagesFTS(msgId);
       const row = db.prepare(
@@ -134,8 +134,8 @@ async function handleCallSignal(data, userId, req) {
         forward_from_sender_id: null,
         forward_from_display_name: null,
       };
-      const { notifyNewMessage } = await import('./realtime.js');
-      notifyNewMessage(payload);
+      broadcastToUser(payload.sender_id, { type: 'new_message', ...payload, is_mine: true });
+      broadcastToUser(payload.receiver_id, { type: 'new_message', ...payload, is_mine: false });
     } catch (e) {
       log.error('Ошибка при создании сообщения о пропущенном звонке', e);
     }
