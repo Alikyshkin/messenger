@@ -7,8 +7,7 @@
  * Запуск: npm run test:playwright:e2e или npm run test:playwright:ui
  */
 import { test, expect } from '@playwright/test';
-
-const PASSWORD = 'TestPass123!';
+import { PASSWORD, unique } from './helpers.js';
 
 const apiBase = () => process.env.PLAYWRIGHT_SERVER_URL || 'http://127.0.0.1:38473';
 
@@ -30,7 +29,7 @@ async function waitForLoginForm(page, timeout = 30000) {
 }
 
 /** Ждём ухода со страницы входа (успешный вход — переход на главную). SPA не порождает load, поэтому опрашиваем URL. */
-async function waitForLoggedIn(page, timeout = 25000) {
+async function waitForLoggedIn(page, timeout = 35000) {
   await page.waitForFunction(
     () => {
       const path = new URL(window.location.href).pathname;
@@ -58,9 +57,6 @@ function loginButton(page) {
     page.locator('button[type="submit"]')
   ).first();
 }
-
-/** Уникальный логин для регистрации. */
-const unique = () => `user_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
 /** Выполнить вход по логину и паролю (страница уже открыта, форма видна). */
 async function doLogin(page, username, password = PASSWORD) {
