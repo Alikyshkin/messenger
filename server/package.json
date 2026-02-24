@@ -24,7 +24,7 @@
     "audit:fix": "npm audit fix",
     "outdated": "npm outdated",
     "test:integration": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/integration/messages-integration.test.js",
-    "test:node": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/auth.test.js tests/unit/api.test.js tests/unit/websocket.test.js tests/e2e/chat_e2e.test.js tests/smoke/smoke.test.js",
+    "test:node": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/auth.test.js tests/unit/api.test.js tests/unit/websocket.test.js tests/unit/sanitizeLogs.test.js tests/unit/cipher.test.js tests/e2e/chat_e2e.test.js tests/smoke/smoke.test.js",
     "test:jest": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --experimental-vm-modules node_modules/jest/bin/jest.js __tests__"
   },
   "dependencies": {
