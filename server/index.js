@@ -5,7 +5,7 @@ import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
-import { mkdirSync, existsSync, statSync } from 'fs';
+import { mkdirSync, existsSync, statSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { verifyToken } from './auth.js';
@@ -50,25 +50,11 @@ if (!existsSync(uploadsDir)) mkdirSync(uploadsDir, { recursive: true });
 if (!existsSync(publicDir)) mkdirSync(publicDir, { recursive: true });
 
 const app = express();
-// Включаем trust proxy только если приложение работает за reverse proxy (Docker, nginx и т.д.)
-// Это нужно для правильной работы rate limiting и определения IP адресов
-// Используем переменную окружения TRUST_PROXY или определяем автоматически по наличию X-Forwarded-For
-// Если TRUST_PROXY не установлен, проверяем наличие заголовка X-Forwarded-For в первом запросе
-const trustProxyEnv = process.env.TRUST_PROXY;
-if (trustProxyEnv === 'true' || trustProxyEnv === '1') {
-  // Явно включено через переменную окружения
+// Trust proxy: только при явном TRUST_PROXY=true (за nginx и т.д.)
+if (process.env.TRUST_PROXY === 'true') {
   app.set('trust proxy', 1);
-} else if (trustProxyEnv === 'false' || trustProxyEnv === '0') {
-  // Явно отключено через переменную окружения
-  app.set('trust proxy', false);
 } else {
-  // Автоматическое определение: если приложение работает в Docker или за прокси,
-  // обычно есть переменная окружения или заголовки X-Forwarded-For
-  // По умолчанию отключаем для локальной разработки, включаем в production если есть признаки прокси
-  const isProduction = config.nodeEnv === 'production';
-  const hasDockerEnv = process.env.DOCKER_CONTAINER === 'true' || process.env.KUBERNETES_SERVICE_HOST;
-  // Включаем только если явно указано или есть признаки работы за прокси
-  app.set('trust proxy', isProduction && hasDockerEnv);
+  app.set('trust proxy', false);
 }
 const server = createServer(app);
 
@@ -346,65 +332,21 @@ app.use(express.static(publicDir, {
   },
 }));
 
+// Шаблон страницы сброса пароля (читается при старте)
+const resetPasswordTemplatePath = join(__dirname, 'templates', 'reset-password.html');
+const resetPasswordTemplate = existsSync(resetPasswordTemplatePath)
+  ? readFileSync(resetPasswordTemplatePath, 'utf8')
+  : null;
+
 // Обработчик для сброса пароля (должен быть до SPA fallback)
 app.get('/reset-password', (req, res) => {
-  const token = req.query.token || '';
+  const token = (req.query.token || '').replace(/"/g, '&quot;');
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.send(`
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Сброс пароля</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 400px; margin: 2rem auto; padding: 1rem; }
-    h1 { font-size: 1.25rem; }
-    input { width: 100%; padding: 0.5rem; margin: 0.5rem 0; box-sizing: border-box; }
-    button { padding: 0.6rem 1.2rem; margin-top: 0.5rem; cursor: pointer; }
-    .error { color: #c00; font-size: 0.9rem; }
-    .success { color: #080; font-size: 0.9rem; }
-  </style>
-</head>
-<body>
-  <h1>Новый пароль</h1>
-  <form id="form" method="post" action="/auth/reset-password">
-    <input type="hidden" name="token" value="${token.replace(/"/g, '&quot;')}">
-    <label>Новый пароль (мин. 6 символов)</label>
-    <input type="password" name="newPassword" required minlength="6" autocomplete="new-password">
-    <label>Повторите пароль</label>
-    <input type="password" id="confirm" required minlength="6" autocomplete="new-password">
-    <div id="msg" class="error"></div>
-    <button type="submit">Сохранить пароль</button>
-  </form>
-  <script>
-    var form = document.getElementById('form');
-    var confirm = document.getElementById('confirm');
-    var msg = document.getElementById('msg');
-    form.addEventListener('submit', function(e) {
-      if (document.querySelector('input[name="newPassword"]').value !== confirm.value) {
-        e.preventDefault();
-        msg.textContent = 'Пароли не совпадают';
-        return;
-      }
-      msg.textContent = '';
-    });
-    form.addEventListener('submit', function(e) {
-      if (e.defaultPrevented) return;
-      e.preventDefault();
-      var fd = new FormData(form);
-      fetch(form.action, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: fd.get('token'), newPassword: fd.get('newPassword') }) })
-        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
-        .then(function(_) {
-          if (_.ok) { msg.className = 'success'; msg.textContent = 'Пароль изменён. Можете войти в приложение.'; form.reset(); }
-          else { msg.className = 'error'; msg.textContent = _.d.error || 'Ошибка'; }
-        })
-        .catch(function() { msg.className = 'error'; msg.textContent = 'Ошибка сети'; });
-    });
-  </script>
-</body>
-</html>
-  `);
+  if (resetPasswordTemplate) {
+    res.send(resetPasswordTemplate.replace('{{TOKEN}}', token));
+  } else {
+    res.status(500).send('Reset password template not found.');
+  }
 });
 
 // Fallback для SPA роутинга - отдаём index.html для всех путей, кроме API
