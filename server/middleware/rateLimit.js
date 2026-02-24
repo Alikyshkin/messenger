@@ -1,5 +1,7 @@
 import rateLimit from 'express-rate-limit';
 
+const skipInTest = () => process.env.NODE_ENV === 'test';
+
 // Общий лимит для всех API запросов
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 минут
@@ -7,6 +9,7 @@ export const apiLimiter = rateLimit({
   message: { error: 'Слишком много запросов, попробуйте позже' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipInTest,
 });
 
 // Строгий лимит для аутентификации (защита от брутфорса)
@@ -17,6 +20,7 @@ export const authLimiter = rateLimit({
   skipSuccessfulRequests: true, // не считать успешные запросы
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipInTest,
 });
 
 // Лимит для отправки сообщений (защита от спама)
@@ -26,6 +30,7 @@ export const messageLimiter = rateLimit({
   message: { error: 'Слишком много сообщений, подождите немного' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipInTest,
 });
 
 // Лимит для регистрации
@@ -35,6 +40,7 @@ export const registerLimiter = rateLimit({
   message: { error: 'Слишком много попыток регистрации, попробуйте позже' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipInTest,
 });
 
 // Лимит для сброса пароля
@@ -44,6 +50,7 @@ export const passwordResetLimiter = rateLimit({
   message: { error: 'Слишком много запросов на сброс пароля, попробуйте позже' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipInTest,
 });
 
 // Лимит для загрузки файлов
@@ -53,4 +60,5 @@ export const uploadLimiter = rateLimit({
   message: { error: 'Слишком много загрузок, подождите немного' },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: skipInTest,
 });
