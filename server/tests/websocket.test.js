@@ -109,29 +109,34 @@ describe('WebSocket', () => {
 
   it('должен валидировать call_signal сообщения', async () => {
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(`${wsUrl}?token=${token1}`);
+      const ws1 = new WebSocket(`${wsUrl}?token=${token1}`);
+      const ws2 = new WebSocket(`${wsUrl}?token=${token2}`);
       let messageReceived = false;
-      
-      ws.on('open', () => {
+
+      Promise.all([
+        new Promise((r) => ws1.on('open', r)),
+        new Promise((r) => ws2.on('open', r)),
+      ]).then(() => {
         // Отправляем невалидное сообщение без type
-        ws.send(JSON.stringify({ toUserId: userId2, signal: 'offer' }));
-        
+        ws1.send(JSON.stringify({ toUserId: userId2, signal: 'offer' }));
+
         // Отправляем невалидное сообщение без toUserId
-        ws.send(JSON.stringify({ type: 'call_signal', signal: 'offer' }));
-        
+        ws1.send(JSON.stringify({ type: 'call_signal', signal: 'offer' }));
+
         // Отправляем невалидное сообщение с невалидным toUserId
-        ws.send(JSON.stringify({ type: 'call_signal', toUserId: -1, signal: 'offer' }));
-        
+        ws1.send(JSON.stringify({ type: 'call_signal', toUserId: -1, signal: 'offer' }));
+
         // Отправляем валидное сообщение
-        ws.send(JSON.stringify({ 
-          type: 'call_signal', 
-          toUserId: userId2, 
+        ws1.send(JSON.stringify({
+          type: 'call_signal',
+          toUserId: userId2,
           signal: 'offer',
           payload: { sdp: 'test', type: 'offer' }
         }));
-        
+
         setTimeout(() => {
-          ws.close();
+          ws1.close();
+          ws2.close();
           if (!messageReceived) {
             reject(new Error('Валидное сообщение должно быть обработано'));
           } else {
@@ -139,15 +144,16 @@ describe('WebSocket', () => {
           }
         }, 500);
       });
-      
-      ws.on('message', (data) => {
+
+      ws2.on('message', (data) => {
         const message = JSON.parse(data.toString());
         if (message.type === 'call_signal' && message.fromUserId === userId1) {
           messageReceived = true;
         }
       });
-      
-      ws.on('error', reject);
+
+      ws1.on('error', reject);
+      ws2.on('error', reject);
     });
   });
 

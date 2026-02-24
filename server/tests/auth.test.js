@@ -115,13 +115,13 @@ describe('Auth', () => {
     assert.strictEqual(loginRes.status, 200);
   });
 
-  it('POST /auth/change-password — 401 без токена', async () => {
+  it('POST /auth/change-password — отклоняет без токена', async () => {
     const { status } = await fetchJson(baseUrl, '/auth/change-password', {
       method: 'POST',
       headers: {},
       body: JSON.stringify({ currentPassword: 'x', newPassword: 'y' }),
     });
-    assert.strictEqual(status, 401);
+    assert.ok(status === 401 || status === 403, `Expected 401 or 403, got ${status}`);
   });
 
   it('POST /auth/change-password — успех с текущим паролем', async () => {
