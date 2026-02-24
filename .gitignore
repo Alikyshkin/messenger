@@ -4,6 +4,10 @@ server/messenger.db
 server/node_modules
 server/uploads
 server/public
+server/.playwright-server.json
+server/test-results
+server/playwright-report
+server/blob-report
 data
 
 # Client

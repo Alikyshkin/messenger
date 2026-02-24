@@ -4,8 +4,8 @@
 import { describe, it, before, after } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { WebSocket } from 'ws';
-import { server } from '../index.js';
-import { register, login } from './helpers.js';
+import { server } from '../../index.js';
+import { register, login } from '../helpers.js';
 
 let baseUrl;
 let wsUrl;
@@ -34,7 +34,7 @@ before(async () => {
   userId2 = r2.data.user.id;
 
   // Устанавливаем взаимные контакты для корректной работы звонков
-  const { fetchJson, authHeaders } = await import('./helpers.js');
+  const { fetchJson, authHeaders } = await import('../helpers.js');
   await fetchJson(baseUrl, '/contacts', {
     method: 'POST',
     headers: authHeaders(token1),

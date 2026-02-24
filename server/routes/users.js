@@ -13,6 +13,7 @@ import { validate, updateUserSchema, updatePrivacySchema, addHideFromSchema, val
 import { validateFile } from '../middleware/fileValidation.js';
 import { FILE_LIMITS, ALLOWED_FILE_TYPES, SEARCH_CONFIG } from '../config/constants.js';
 import { get, set, del, CacheKeys } from '../utils/cache.js';
+import { deleteUserCascade } from '../utils/userDeletion.js';
 import config from '../config/index.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
 import Joi from 'joi';
@@ -248,29 +249,7 @@ router.post('/me/avatar', avatarUpload.single('avatar'), async (req, res) => {
 router.delete('/me', (req, res) => {
   const me = req.user.userId;
   try {
-    db.prepare('DELETE FROM poll_votes WHERE user_id = ?').run(me);
-    const msgIds = db.prepare('SELECT id FROM messages WHERE sender_id = ? OR receiver_id = ?').all(me, me).map(r => r.id);
-    if (msgIds.length > 0) {
-      const placeholders = msgIds.map(() => '?').join(',');
-      const pollIds = db.prepare(`SELECT id FROM polls WHERE message_id IN (${placeholders})`).all(...msgIds).map(r => r.id);
-      if (pollIds.length > 0) {
-        const pollPlaceholders = pollIds.map(() => '?').join(',');
-        db.prepare(`DELETE FROM poll_votes WHERE poll_id IN (${pollPlaceholders})`).run(...pollIds);
-        db.prepare(`DELETE FROM polls WHERE id IN (${pollPlaceholders})`).run(...pollIds);
-      }
-    }
-    db.prepare('DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?').run(me, me);
-    db.prepare('DELETE FROM contacts WHERE user_id = ? OR contact_id = ?').run(me, me);
-    db.prepare('DELETE FROM friend_requests WHERE from_user_id = ? OR to_user_id = ?').run(me, me);
-    db.prepare('DELETE FROM password_reset_tokens WHERE user_id = ?').run(me);
-    const row = db.prepare('SELECT avatar_path FROM users WHERE id = ?').get(me);
-    if (row?.avatar_path) {
-      const fullPath = path.join(avatarsDir, row.avatar_path);
-      if (existsSync(fullPath)) {
-        try { unlinkSync(fullPath); } catch (_) {}
-      }
-    }
-    db.prepare('DELETE FROM users WHERE id = ?').run(me);
+    deleteUserCascade(db, me, { avatarsDir });
   } catch (e) {
     return res.status(500).json({ error: 'Не удалось удалить аккаунт' });
   }

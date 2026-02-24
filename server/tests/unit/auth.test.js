@@ -5,9 +5,9 @@
 import { describe, it, before, after } from 'node:test';
 import { strict as assert } from 'node:assert';
 import crypto from 'crypto';
-import db from '../db.js';
-import { app, server } from '../index.js';
-import { fetchJson, register, login, authHeaders } from './helpers.js';
+import db from '../../db.js';
+import { app, server } from '../../index.js';
+import { fetchJson, register, login, authHeaders } from '../helpers.js';
 
 let baseUrl;
 
@@ -43,6 +43,12 @@ describe('Auth', () => {
     });
     assert.strictEqual(status, 201);
     assert.strictEqual(data.user.email, 'test@example.com');
+  });
+
+  it('POST /auth/register — возвращает 409 при дублировании username', async () => {
+    await register(baseUrl, { username: 'dupuser', password: 'Str0ngP@ss!' });
+    const { status } = await register(baseUrl, { username: 'dupuser', password: 'An0therStr0ng!' });
+    assert.strictEqual(status, 409);
   });
 
   it('POST /auth/register — отклоняет короткий username', async () => {

@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'app_colors.dart';
 import 'services/auth_service.dart';
 import 'services/locale_service.dart';
@@ -16,6 +19,11 @@ import 'utils/user_action_logger.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Роутинг по пути (/login, /, /profile…) для веба — как в Playwright E2E и при развёртывании за одним доменом.
+  if (kIsWeb) {
+    usePathUrlStrategy();
+    SemanticsBinding.instance.ensureSemantics();
+  }
   logUserAction('app_start');
   runApp(const MessengerApp());
 }

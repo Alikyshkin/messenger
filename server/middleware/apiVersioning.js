@@ -1,42 +1,28 @@
 /**
  * API Versioning Middleware
- * Поддержка версионирования API для обратной совместимости
+ * Поддержка версионирования API для обратной совместимости.
+ * Маршруты не используют префикс /api/v1; версия задаётся заголовком Accept или query-параметром.
  */
 
-const API_VERSION = 'v1';
 const DEFAULT_VERSION = 'v1';
 
 /**
- * Middleware для извлечения версии API из заголовка или URL
+ * Middleware для извлечения версии API из заголовка Accept или query-параметра
  */
 export function apiVersioning(req, res, next) {
-  // Проверяем заголовок Accept: application/vnd.api+json;version=1
   const acceptHeader = req.get('Accept') || '';
   const versionMatch = acceptHeader.match(/version=(\d+)/);
-  
-  // Или из URL: /api/v1/users
-  const urlMatch = req.path.match(/^\/api\/v(\d+)\//);
-  
-  // Или из query параметра: ?api_version=1
   const queryVersion = req.query.api_version;
-  
+
   let version = DEFAULT_VERSION;
-  
   if (versionMatch) {
     version = `v${versionMatch[1]}`;
-  } else if (urlMatch) {
-    version = `v${urlMatch[1]}`;
-    // Удаляем версию из пути для дальнейшей обработки
-    req.url = req.url.replace(`/api/${version}`, '/api');
-    req.path = req.path.replace(`/api/${version}`, '/api');
   } else if (queryVersion) {
     version = `v${queryVersion}`;
   }
-  
-  // Всегда устанавливаем версию API (по умолчанию v1 для всех путей)
+
   req.apiVersion = version;
   res.setHeader('X-API-Version', version);
-  
   next();
 }
 

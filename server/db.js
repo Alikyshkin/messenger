@@ -2,23 +2,32 @@ import Database from 'better-sqlite3';
 import { mkdirSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { runMigrations } from './migrations/index.js';
+import { runMigrations, runMigrationsOnDb } from './migrations/index.js';
 import { log } from './utils/logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dbPath = process.env.MESSENGER_DB_PATH || join(__dirname, 'messenger.db');
 const dbDir = dirname(dbPath);
-if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
+if (dbPath !== ':memory:' && !existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
 
-// Применяем миграции перед созданием подключения
-try {
-  runMigrations(dbPath);
-} catch (error) {
-  log.error({ error }, 'Ошибка при применении миграций');
-  // Продолжаем выполнение для обратной совместимости
+let db;
+if (dbPath === ':memory:') {
+  db = new Database(dbPath);
+  try {
+    runMigrationsOnDb(db);
+  } catch (error) {
+    log.error({ error }, 'Ошибка при применении миграций');
+    throw error;
+  }
+} else {
+  try {
+    runMigrations(dbPath);
+  } catch (error) {
+    log.error({ error }, 'Ошибка при применении миграций');
+    // Продолжаем выполнение для обратной совместимости
+  }
+  db = new Database(dbPath);
 }
-
-const db = new Database(dbPath);
 // Включаем поддержку внешних ключей (по умолчанию выключена в SQLite)
 db.pragma('foreign_keys = ON');
 
@@ -70,6 +79,11 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_contacts_user ON contacts(user_id);
   CREATE INDEX IF NOT EXISTS idx_contacts_contact ON contacts(contact_id);
 `);
+try {
+  const userCols = db.prepare("SELECT name FROM pragma_table_info('users')").all().map((r) => r.name);
+  if (userCols.includes('email')) db.exec('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL');
+  if (userCols.includes('phone')) db.exec('CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone) WHERE phone IS NOT NULL');
+} catch (_) {}
 
 // Заявки в друзья: после одобрения добавляем в contacts обе стороны
 try {
