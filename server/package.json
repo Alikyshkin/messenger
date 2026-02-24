@@ -11,7 +11,7 @@
     "migrate": "node scripts/migrate.js",
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/auth.test.js tests/unit/api.test.js tests/unit/websocket.test.js tests/integration/messages-integration.test.js tests/e2e/chat_e2e.test.js tests/smoke/smoke.test.js",
+    "test": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/auth.test.js tests/unit/api.test.js tests/unit/websocket.test.js tests/e2e/chat_e2e.test.js tests/smoke/smoke.test.js",
     "test:smoke": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/smoke/smoke.test.js",
     "test:e2e": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/e2e/chat_e2e.test.js",
     "test:playwright": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret npx playwright test --config=playwright.e2e.config.js",
@@ -24,7 +24,8 @@
     "lint:fix": "eslint . --fix",
     "audit": "npm audit --audit-level=moderate",
     "audit:fix": "npm audit fix",
-    "outdated": "npm outdated"
+    "outdated": "npm outdated",
+    "test:integration": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/integration/messages-integration.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

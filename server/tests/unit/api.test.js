@@ -3,8 +3,8 @@
  */
 import { describe, it, before, after } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { server } from '../index.js';
-import { fetchJson, register, login, authHeaders } from './helpers.js';
+import { server } from '../../index.js';
+import { fetchJson, register, login, authHeaders } from '../helpers.js';
 
 let baseUrl;
 let token1;

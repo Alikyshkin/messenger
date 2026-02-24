@@ -1,15 +1,26 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { fetchJson, authHeaders } from './helpers.js';
+import { server } from '../../index.js';
+import { fetchJson, authHeaders } from '../helpers.js';
 
-const baseUrl = process.env.TEST_BASE_URL || 'http://localhost:3000';
+let baseUrl;
 
 describe('POST /messages - Integration Tests', () => {
   let token1, token2, userId1, userId2;
 
   before(async () => {
+    if (process.env.TEST_BASE_URL) {
+      baseUrl = process.env.TEST_BASE_URL;
+    } else {
+      await new Promise((res) => {
+        server.listen(0, '127.0.0.1', () => {
+          baseUrl = `http://127.0.0.1:${server.address().port}`;
+          res();
+        });
+      });
+    }
     // Создаем двух пользователей для тестирования
-    const user1 = await fetchJson(baseUrl, '/auth/register', {
+    const r1 = await fetchJson(baseUrl, '/auth/register', {
       method: 'POST',
       body: JSON.stringify({
         username: `test_user_${Date.now()}_1`,
@@ -17,10 +28,10 @@ describe('POST /messages - Integration Tests', () => {
         display_name: 'Test User 1',
       }),
     });
-    token1 = user1.token;
-    userId1 = user1.user.id;
+    token1 = r1.data.token;
+    userId1 = r1.data.user.id;
 
-    const user2 = await fetchJson(baseUrl, '/auth/register', {
+    const r2 = await fetchJson(baseUrl, '/auth/register', {
       method: 'POST',
       body: JSON.stringify({
         username: `test_user_${Date.now()}_2`,
@@ -28,8 +39,12 @@ describe('POST /messages - Integration Tests', () => {
         display_name: 'Test User 2',
       }),
     });
-    token2 = user2.token;
-    userId2 = user2.user.id;
+    token2 = r2.data.token;
+    userId2 = r2.data.user.id;
+  });
+
+  after(() => {
+    if (!process.env.TEST_BASE_URL) server.close();
   });
 
   it('должен успешно отправить текстовое сообщение', async () => {

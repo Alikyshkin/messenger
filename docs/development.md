@@ -88,8 +88,11 @@ flutter test --coverage
 ### Структура тестов
 
 **Сервер:**
-- `server/tests/` - unit и integration тесты
-- `server/tests/integration/` - интеграционные тесты API
+- `server/tests/unit/` — unit-тесты (auth, api, websocket)
+- `server/tests/integration/` — интеграционные тесты API
+- `server/tests/e2e/` — E2E (node:test)
+- `server/tests/playwright/` — UI E2E (Playwright)
+- `server/tests/smoke/` — smoke-тесты
 
 **Клиент:**
 - `client/test/` - unit-тесты

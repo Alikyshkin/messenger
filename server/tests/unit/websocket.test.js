@@ -4,8 +4,8 @@
 import { describe, it, before, after } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { WebSocket } from 'ws';
-import { server } from '../index.js';
-import { register, login } from './helpers.js';
+import { server } from '../../index.js';
+import { register, login } from '../helpers.js';
 
 let baseUrl;
 let wsUrl;
