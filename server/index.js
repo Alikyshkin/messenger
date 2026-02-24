@@ -284,8 +284,14 @@ app.get('/health', (req, res) => {
     }
 
     // Проверка дискового пространства (упрощённая)
-    const stats = statSync(process.env.MESSENGER_DB_PATH || join(__dirname, 'messenger.db'));
-    const dbSize = stats.size;
+    const currentDbPath = process.env.MESSENGER_DB_PATH || join(__dirname, 'messenger.db');
+    let dbSize = 0;
+    if (currentDbPath !== ':memory:') {
+      try {
+        const stats = statSync(currentDbPath);
+        dbSize = stats.size;
+      } catch (_) { /* файл ещё не создан */ }
+    }
 
     // Проверка памяти (упрощённая)
     const memUsage = process.memoryUsage();

@@ -32,8 +32,6 @@ db.exec(`
   );
   
   CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
-  CREATE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL;
-  CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone) WHERE phone IS NOT NULL;
 
   CREATE TABLE IF NOT EXISTS contacts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,6 +111,8 @@ try { db.exec('ALTER TABLE users ADD COLUMN birthday TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN phone TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN last_seen DATETIME'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN is_online INTEGER DEFAULT 0'); } catch (_) {}
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE email IS NOT NULL'); } catch (_) {}
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_users_phone ON users(phone) WHERE phone IS NOT NULL'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN sender_public_key TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN google_id TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN vk_id TEXT'); } catch (_) {}
