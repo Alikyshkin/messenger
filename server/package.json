@@ -11,10 +11,17 @@
     "migrate": "node scripts/migrate.js",
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "test": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/auth.test.js tests/api.test.js tests/websocket.test.js tests/e2e/chat_e2e.test.js tests/smoke/smoke.test.js",
+    "test": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/auth.test.js tests/unit/api.test.js tests/unit/websocket.test.js tests/integration/messages-integration.test.js tests/e2e/chat_e2e.test.js tests/smoke/smoke.test.js",
     "test:smoke": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/smoke/smoke.test.js",
     "test:e2e": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/e2e/chat_e2e.test.js",
-    "lint": "echo '⚠️ Lint не настроен. Добавьте ESLint для проверки кода.'",
+    "test:playwright": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret npx playwright test --config=playwright.e2e.config.js",
+    "test:playwright:ui": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret npx playwright test --config=playwright.e2e.config.js --ui",
+    "test:playwright:api": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret npx playwright test --config=playwright.config.js",
+    "test:playwright:e2e": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret npx playwright test --config=playwright.e2e.config.js",
+    "test:playwright:e2e:ui": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret npx playwright test --config=playwright.e2e.config.js --ui",
+    "playwright:install": "npx playwright install",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "audit": "npm audit --audit-level=moderate",
     "audit:fix": "npm audit fix",
     "outdated": "npm outdated"
@@ -49,6 +56,10 @@
     "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "@playwright/test": "^1.49.0",
+    "eslint": "^9.15.0",
+    "globals": "^15.12.0",
     "jest": "^30.2.0",
     "supertest": "^7.2.2"
   }
