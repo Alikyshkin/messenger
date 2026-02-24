@@ -24,7 +24,7 @@ class AppSizes {
   static const double iconLG = 24.0;
   static const double iconXL = 28.0;
   static const double iconXXL = 32.0;
-  static const double iconXXXL = 48.0;
+  static const double iconSizeExtraLarge = 48.0;
 
   // Радиусы аватаров
   static const double avatarXS = 16.0;

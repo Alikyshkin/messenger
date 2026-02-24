@@ -620,7 +620,9 @@ wss.on('connection', (ws, req) => {
           });
         });
       }
-    } catch (_) {}
+    } catch (err) {
+      log.warn('WebSocket message handler error', err, { userId });
+    }
   });
 
   ws.on('close', () => {
