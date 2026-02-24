@@ -34,7 +34,7 @@ let server;
 
 beforeAll(async () => {
   const module = await import('../index.js');
-  app = module.default;
+  app = module.app;
   server = module.server;
 });
 

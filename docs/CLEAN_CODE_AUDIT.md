@@ -6,8 +6,8 @@
 
 ## Критично
 
-- [ ] **Jest-тесты не запускаются из npm test** — в `test` не входят файлы из `__tests__/`. Либо добавить запуск Jest в скрипт `test`, либо перевести тесты на Node.js Test Runner и перенести в `tests/`.
-- [ ] **Некорректный импорт app в Jest-тестах** — в `server/__tests__/auth.test.js`, `messages.test.js`: заменить `app = module.default` на `app = module.app; server = module.server`, т.к. `index.js` экспортирует `{ app, server }`, а не default.
+- [x] **Jest-тесты не запускаются из npm test** — в `test` не входят файлы из `__tests__/`. Либо добавить запуск Jest в скрипт `test`, либо перевести тесты на Node.js Test Runner и перенести в `tests/`.
+- [x] **Некорректный импорт app в Jest-тестах** — в `server/__tests__/auth.test.js`, `messages.test.js`: заменить `app = module.default` на `app = module.app; server = module.server`, т.к. `index.js` экспортирует `{ app, server }`, а не default.
 
 ---
 
