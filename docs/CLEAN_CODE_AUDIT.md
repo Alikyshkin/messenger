@@ -31,7 +31,7 @@
 - [ ] **Middleware без тестов** — `validation.js`, `sanitize.js`, `fileValidation.js`, `pagination.js`, `apiVersioning.js`, `csrf.js`. Добавить тесты на граничных входных данных.
 - [ ] **Унификация тестов** — два набора: `__tests__/` (Jest + supertest) и `tests/` (node:test). Унифицировать: один test runner (предпочтительно Node.js Test Runner), одна структура папок; перенести сценарии из Jest в `tests/`, затем удалить `jest.config.js` и папку `__tests__`.
 - [ ] **Константы** — порты в Playwright и др. захардкожены. Вынести в `config/constants.js` или переменные окружения (например `PLAYWRIGHT_TEST_PORT`) и использовать везде оттуда.
-- [ ] **Логика в index.js** — много логики WebSocket и health в одном файле. Вынести обработчики WebSocket-сообщений в отдельный модуль (например `server/wsHandlers.js`), health/ready — в `server/health.js` или короткие вызовы утилит.
+- [x] **Логика в index.js** — много логики WebSocket и health в одном файле. Вынести обработчики WebSocket-сообщений в отдельный модуль (например `server/wsHandlers.js`), health/ready — в `server/health.js` или короткие вызовы утилит.
 
 ---
 
