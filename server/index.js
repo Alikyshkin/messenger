@@ -17,6 +17,7 @@ import { apiLimiter } from './middleware/rateLimit.js';
 import { log } from './utils/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import config from './config/index.js';
+import { checkDatabase } from './health.js';
 
 import authRoutes from './routes/auth.js';
 import oauthRoutes from './routes/oauth.js';
@@ -258,9 +259,9 @@ app.get('/health', (req, res) => {
   }
   
   try {
-    // Проверка базы данных
-    const dbCheck = db.prepare('SELECT 1').get();
-    if (!dbCheck) {
+    const dbResult = checkDatabase(db);
+    if (!dbResult.ok) {
+      if (dbResult.error) log.error('Health check DB error', dbResult.error);
       return res.status(503).json({
         status: 'unhealthy',
         database: 'unavailable',
@@ -303,17 +304,12 @@ app.get('/health', (req, res) => {
 
 // Readiness check (для Kubernetes/Docker)
 app.get('/ready', (req, res) => {
-  try {
-    // Проверка базы данных
-    const dbCheck = db.prepare('SELECT 1').get();
-    if (!dbCheck) {
-      return res.status(503).json({ ready: false, reason: 'database' });
-    }
-    res.json({ ready: true });
-  } catch (error) {
-    log.error('Readiness check failed', error);
-    res.status(503).json({ ready: false, reason: 'database' });
+  const dbResult = checkDatabase(db);
+  if (!dbResult.ok) {
+    if (dbResult.error) log.error('Readiness check failed', dbResult.error);
+    return res.status(503).json({ ready: false, reason: 'database' });
   }
+  res.json({ ready: true });
 });
 
 // Liveness check (для Kubernetes/Docker)

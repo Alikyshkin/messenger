@@ -14,8 +14,8 @@
 ## Высокий приоритет
 
 - [x] **API versioning не используется** — маршруты без префикса `/api/v1`, а `apiVersioning.js` проверяет именно его. Либо ввести префикс `/api/v1` для маршрутов, либо упростить/удалить middleware.
-- [ ] **Дублирование npm-скриптов Playwright** — `test:playwright` и `test:playwright:e2e` делают одно и то же. Оставить один скрипт для E2E, лишний удалить или развести по конфигам.
-- [ ] **Проверка БД в /health и /ready** — вынести `db.prepare('SELECT 1').get()` и обработку ошибок в общую функцию `checkDatabase(db)` (например в `server/health.js`), возвращающую `{ ok, error? }`, и использовать в обоих эндпоинтах.
+- [x] **Дублирование npm-скриптов Playwright** — `test:playwright` и `test:playwright:e2e` делают одно и то же. Оставить один скрипт для E2E, лишний удалить или развести по конфигам.
+- [x] **Проверка БД в /health и /ready** — вынести `db.prepare('SELECT 1').get()` и обработку ошибок в общую функцию `checkDatabase(db)` (например в `server/health.js`), возвращающую `{ ok, error? }`, и использовать в обоих эндпоинтах.
 - [ ] **Паттерн «контакты пользователя»** — в `server/index.js` в двух местах (ws on connection и on close) повторяется `db.prepare('SELECT contact_id FROM contacts WHERE user_id = ?').all(userId).map(r => r.contact_id)`. Вынести в функцию `getContactIds(db, userId)` и вызывать в обоих местах.
 - [ ] **Получение display_name пользователя** — во многих местах (index.js WebSocket, routes/groups.js, messages.js, export.js и др.) повторяется запрос `SELECT display_name, username FROM users WHERE id = ?` и `user?.display_name || user?.username || 'User'`. Вынести в утилиту `getUserDisplayName(db, userId)` (например в `server/utils/users.js`) и использовать везде.
 - [ ] **Хелперы auth/unique в Playwright** — в `server/tests/playwright/messenger.spec.js` и `messenger.e2e.spec.js` дублируются `unique()`, `PASSWORD`, логика регистрации/логина. Вынести в общий модуль `tests/playwright/helpers.js`: `unique()`, `PASSWORD`, `auth(request)`, при необходимости общие селекторы/ожидания.
