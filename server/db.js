@@ -121,7 +121,23 @@ try { db.exec('ALTER TABLE messages ADD COLUMN is_forwarded INTEGER'); } catch (
 try { db.exec('ALTER TABLE messages ADD COLUMN forward_from_sender_id INTEGER'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN forward_from_display_name TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE groups ADD COLUMN avatar_path TEXT'); } catch (_) {}
-try { db.exec('ALTER TABLE group_read ADD COLUMN last_read_message_id INTEGER DEFAULT 0'); } catch (_) {}
+// Если group_read создана миграцией с другой структурой, перестраиваем
+try {
+  const grCols = db.prepare("SELECT name FROM pragma_table_info('group_read')").all().map(c => c.name);
+  if (!grCols.includes('last_read_message_id')) {
+    db.exec('DROP TABLE IF EXISTS group_read');
+    db.exec(`
+      CREATE TABLE group_read (
+        group_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        last_read_message_id INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (group_id, user_id),
+        FOREIGN KEY (group_id) REFERENCES groups(id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      )
+    `);
+  }
+} catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN email TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN birthday TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN phone TEXT'); } catch (_) {}
