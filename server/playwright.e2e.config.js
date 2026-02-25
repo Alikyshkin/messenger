@@ -26,7 +26,7 @@ export default defineConfig({
   webServer: {
     command: `node scripts/start-client-and-server.js`,
     url: `http://127.0.0.1:${clientPort}`,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120000,
   },
   projects: [
