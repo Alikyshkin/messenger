@@ -461,22 +461,29 @@ test.describe('11. Блокировка', () => {
 // ═══════════════════════════════════════════════
 
 test.describe('12. Групповые чаты', () => {
-  test('создание группы, отправка и чтение сообщений', async ({}) => {
-    const api = apiBase();
-    const hdr = (t) => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${t}` });
+  test('создание группы, отправка и чтение сообщений', async ({ page }) => {
+    const u1 = unique(), u2 = unique();
+    const r1Res = await page.request.post(`${apiBase()}/auth/register`, { data: { username: u1, password: PASSWORD } });
+    const r1 = await r1Res.json();
+    const r2Res = await page.request.post(`${apiBase()}/auth/register`, { data: { username: u2, password: PASSWORD } });
+    const r2 = await r2Res.json();
 
-    const r1 = await (await fetch(`${api}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: unique(), password: PASSWORD }) })).json();
-    const r2 = await (await fetch(`${api}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: unique(), password: PASSWORD }) })).json();
-
-    const createRes = await fetch(`${api}/groups`, { method: 'POST', headers: hdr(r1.token), body: JSON.stringify({ name: 'Тестовая группа', member_ids: [r2.user.id] }) });
-    expect(createRes.status).toBe(201);
+    const createRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: { Authorization: `Bearer ${r1.token}` },
+      data: { name: 'Тест', member_ids: [r2.user.id] },
+    });
+    expect(createRes.status()).toBe(201);
     const group = await createRes.json();
 
-    const msgRes = await fetch(`${api}/groups/${group.id}/messages`, { method: 'POST', headers: hdr(r1.token), body: JSON.stringify({ content: 'Привет группа!' }) });
-    expect(msgRes.status).toBe(201);
+    const msgRes = await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: { Authorization: `Bearer ${r1.token}` },
+      data: { content: 'Привет группа!' },
+    });
+    expect(msgRes.status()).toBe(201);
 
-    const getRes = await fetch(`${api}/groups/${group.id}/messages`, { headers: hdr(r2.token) });
-    expect(getRes.status).toBe(200);
+    const getRes = await page.request.get(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: { Authorization: `Bearer ${r2.token}` },
+    });
     const msgs = await getRes.json();
     const list = msgs.data ?? msgs;
     expect(list.some((m) => m.content === 'Привет группа!')).toBeTruthy();
