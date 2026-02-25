@@ -1,21 +1,25 @@
 /**
  * Запуск сервера и Flutter web-клиента для Playwright E2E.
  * Сервер — на PLAYWRIGHT_TEST_PORT (по умолчанию 38473).
- * Клиент — на PLAYWRIGHT_CLIENT_PORT (по умолчанию 8765), API_BASE_URL указывает на сервер.
- * Процесс живёт до SIGINT/SIGTERM, затем завершает оба дочерних процесса.
+ * Клиент — на PLAYWRIGHT_CLIENT_PORT (по умолчанию 8765).
+ *
+ * Клиент подаётся из предварительно собранного build/web (flutter build web).
+ * Если build/web не существует, запускает flutter run -d web-server (медленнее).
  */
 import { spawn } from 'child_process';
-import { join, dirname } from 'path';
+import { createServer } from 'http';
+import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
+import { readFileSync, existsSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const serverDir = join(__dirname, '..');
 const clientDir = join(serverDir, '..', 'client');
+const buildDir = join(clientDir, 'build', 'web');
 
 const SERVER_PORT = parseInt(process.env.PLAYWRIGHT_TEST_PORT || '38473', 10);
 const CLIENT_PORT = parseInt(process.env.PLAYWRIGHT_CLIENT_PORT || '8765', 10);
 const SERVER_URL = `http://127.0.0.1:${SERVER_PORT}`;
-const CLIENT_URL = `http://127.0.0.1:${CLIENT_PORT}`;
 
 function waitForUrl(url, label, maxAttempts = 60, intervalMs = 1000) {
   return new Promise((resolve, reject) => {
@@ -42,6 +46,47 @@ function log(msg) {
   console.log(`[${ts}] ${msg}`);
 }
 
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.js': 'application/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.otf': 'font/otf',
+  '.wasm': 'application/wasm',
+};
+
+function servePrebuiltClient() {
+  return new Promise((resolve) => {
+    const httpServer = createServer((req, res) => {
+      let filePath = join(buildDir, req.url === '/' ? 'index.html' : req.url);
+      if (!existsSync(filePath) || filePath.indexOf(buildDir) !== 0) {
+        filePath = join(buildDir, 'index.html');
+      }
+      try {
+        const data = readFileSync(filePath);
+        const ext = extname(filePath);
+        res.writeHead(200, { 'Content-Type': MIME_TYPES[ext] || 'application/octet-stream' });
+        res.end(data);
+      } catch {
+        res.writeHead(404);
+        res.end('Not found');
+      }
+    });
+    httpServer.listen(CLIENT_PORT, '127.0.0.1', () => {
+      log(`Клиент (pre-built) запущен на http://127.0.0.1:${CLIENT_PORT}`);
+      resolve(httpServer);
+    });
+  });
+}
+
 async function main() {
   process.env.NODE_ENV = 'test';
   process.env.MESSENGER_DB_PATH = ':memory:';
@@ -66,52 +111,44 @@ async function main() {
   await waitForUrl(`${SERVER_URL}/ready`, 'Сервер');
   log('Сервер готов.');
 
-  const apiBaseUrl = SERVER_URL;
-  const flutterProc = spawn(
-    'flutter',
-    [
-      'run',
-      '-d',
-      'web-server',
-      '--web-port',
-      String(CLIENT_PORT),
-      '--dart-define',
-      `API_BASE_URL=${apiBaseUrl}`,
-    ],
-    {
-      cwd: clientDir,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      env: { ...process.env },
-    }
-  );
-  flutterProc.stdout?.on('data', (d) => process.stdout.write(d));
-  flutterProc.stderr?.on('data', (d) => process.stderr.write(d));
-  flutterProc.on('error', (err) => {
-    log(`Flutter не запустился: ${err.message}. Убедитесь, что Flutter установлен и в PATH.`);
-    serverProc.kill('SIGTERM');
-    process.exit(1);
-  });
+  let clientServer;
+  let flutterProc;
 
-  log(`Ожидание готовности клиента ${CLIENT_URL} ...`);
-  await waitForUrl(CLIENT_URL, 'Клиент', 90, 2000);
-  log('Клиент готов. Можно запускать тесты (baseURL = ' + CLIENT_URL + ').');
+  if (existsSync(buildDir)) {
+    log('Найден pre-built клиент, запускаем статический сервер...');
+    clientServer = await servePrebuiltClient();
+  } else {
+    log('Pre-built клиент не найден, запускаем flutter run...');
+    const apiBaseUrl = SERVER_URL;
+    flutterProc = spawn(
+      'flutter',
+      ['run', '-d', 'web-server', '--web-port', String(CLIENT_PORT), '--dart-define', `API_BASE_URL=${apiBaseUrl}`],
+      { cwd: clientDir, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env } }
+    );
+    flutterProc.stdout?.on('data', (d) => process.stdout.write(d));
+    flutterProc.stderr?.on('data', (d) => process.stderr.write(d));
+    flutterProc.on('error', (err) => {
+      log(`Flutter не запустился: ${err.message}`);
+      serverProc.kill('SIGTERM');
+      process.exit(1);
+    });
+
+    log(`Ожидание готовности клиента http://127.0.0.1:${CLIENT_PORT} ...`);
+    await waitForUrl(`http://127.0.0.1:${CLIENT_PORT}`, 'Клиент', 90, 2000);
+  }
+
+  log(`Клиент готов. baseURL = http://127.0.0.1:${CLIENT_PORT}`);
 
   const killAll = (signal = 'SIGTERM') => {
-    log('Завершение сервера и клиента...');
+    log('Завершение...');
     serverProc.kill(signal);
-    flutterProc.kill(signal);
+    if (flutterProc) flutterProc.kill(signal);
+    if (clientServer) clientServer.close();
   };
 
-  process.on('SIGINT', () => {
-    killAll();
-    process.exit(0);
-  });
-  process.on('SIGTERM', () => {
-    killAll();
-    process.exit(0);
-  });
+  process.on('SIGINT', () => { killAll(); process.exit(0); });
+  process.on('SIGTERM', () => { killAll(); process.exit(0); });
 
-  // Держим процесс живым до SIGINT/SIGTERM (Playwright сам завершит команду после тестов)
   await new Promise(() => {});
 }
 
