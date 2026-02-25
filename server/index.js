@@ -84,8 +84,8 @@ app.use(cors({
     // Разрешаем запросы без origin (например, мобильные приложения, Postman)
     if (!origin) return callback(null, true);
     
-    // В development разрешаем все origins
-    if (config.nodeEnv === 'development') {
+    // В development и test разрешаем все origins
+    if (config.nodeEnv === 'development' || config.nodeEnv === 'test') {
       return callback(null, true);
     }
     
