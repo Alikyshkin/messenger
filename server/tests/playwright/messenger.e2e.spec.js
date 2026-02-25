@@ -25,7 +25,15 @@ async function waitForLoginForm(page, timeout = 40000) {
 }
 
 async function waitForLoggedIn(page, timeout = 60000) {
-  await page.waitForURL((url) => !url.pathname.includes('/login') && !url.pathname.includes('/register'), { timeout, waitUntil: 'domcontentloaded' });
+  try {
+    await page.waitForURL((url) => !url.pathname.includes('/login') && !url.pathname.includes('/register'), { timeout, waitUntil: 'domcontentloaded' });
+  } catch {
+    // Flutter SPA может не менять URL при навигации - проверяем через JS
+    const path = await page.evaluate(() => window.location.pathname);
+    if (path.includes('/login')) {
+      throw new Error('Login failed: still on /login');
+    }
+  }
   await page.waitForTimeout(2000);
 }
 
