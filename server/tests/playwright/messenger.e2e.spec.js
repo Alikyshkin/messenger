@@ -24,18 +24,10 @@ async function waitForLoginForm(page, timeout = 40000) {
   await expect(form).toBeVisible({ timeout });
 }
 
-async function waitForLoggedIn(page, timeout = 50000) {
-  // Flutter SPA: после логина URL меняется на / и появляется контент главного экрана.
-  // Ждём ухода с /login ИЛИ появления элементов главного экрана.
-  await Promise.race([
-    page.waitForFunction(
-      () => !window.location.pathname.includes('/login'),
-      { timeout }
-    ).catch(() => {}),
-    page.waitForTimeout(timeout),
-  ]);
-  // Дополнительно ждём рендеринга
-  await page.waitForTimeout(3000);
+async function waitForLoggedIn(page, timeout = 30000) {
+  // После успешного логина Flutter переходит с /login на /
+  await page.waitForURL((url) => !url.pathname.includes('/login') && !url.pathname.includes('/register'), { timeout });
+  await page.waitForTimeout(2000);
 }
 
 function usernameInput(page) {
