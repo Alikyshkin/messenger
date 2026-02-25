@@ -52,7 +52,10 @@ class CallMinimizedService extends ChangeNotifier {
 
   /// Свернуть индивидуальный звонок
   void minimizeCall(User peer, bool isVideoCall) {
-    logAction('call_minimized_service', 'minimizeCall', 'done', {'peerId': peer.id, 'isVideo': isVideoCall});
+    logAction('call_minimized_service', 'minimizeCall', 'done', {
+      'peerId': peer.id,
+      'isVideo': isVideoCall,
+    });
     _state = MinimizedCallState(
       isMinimized: true,
       peer: peer,
@@ -75,7 +78,10 @@ class CallMinimizedService extends ChangeNotifier {
 
   /// Развернуть звонок
   void expandCall() {
-    logAction('call_minimized_service', 'expandCall', 'done', {'peerId': peer?.id, 'groupId': group?.id});
+    logAction('call_minimized_service', 'expandCall', 'done', {
+      'peerId': peer?.id,
+      'groupId': group?.id,
+    });
     _state = MinimizedCallState(isMinimized: false);
     notifyListeners();
   }

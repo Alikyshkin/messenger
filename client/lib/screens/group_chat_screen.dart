@@ -49,6 +49,7 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       _drainIncoming(ws);
       setState(() {});
     }
+
     _wsUnsub = () => ws.removeListener(onUpdate);
     ws.addListener(onUpdate);
     _drainIncoming(ws);
@@ -447,20 +448,25 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
                 if (names.isEmpty) return const SizedBox.shrink();
                 final text = names.length == 1
                     ? context.tr('typing').replaceFirst('%s', names.first)
-                    : context.tr('typing_plural').replaceFirst('%s', names.join(', '));
+                    : context
+                          .tr('typing_plural')
+                          .replaceFirst('%s', names.join(', '));
                 return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  text,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontStyle: FontStyle.italic,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
                   ),
-                ),
-              );
-            },
-          ),
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    text,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                );
+              },
+            ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             child: Row(
@@ -695,9 +701,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Геолокация отключена')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Геолокация отключена')));
       return;
     }
     var permission = await Geolocator.checkPermission();
@@ -707,9 +713,9 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Нет доступа к геолокации')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Нет доступа к геолокации')));
       return;
     }
     setState(() => _sending = true);
@@ -740,14 +746,18 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
   Widget _buildLocationContent(Message m) {
     final loc = m.locationData;
     if (loc == null) {
-      return Text('📍 Геолокация', style: Theme.of(context).textTheme.bodyLarge);
+      return Text(
+        '📍 Геолокация',
+        style: Theme.of(context).textTheme.bodyLarge,
+      );
     }
     final url = 'https://www.google.com/maps?q=${loc.lat},${loc.lng}';
     final textColor = m.isMine
         ? Theme.of(context).colorScheme.onPrimaryContainer
         : Theme.of(context).colorScheme.onSurface;
     return InkWell(
-      onTap: () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      onTap: () =>
+          launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
       borderRadius: BorderRadius.circular(8),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -759,12 +769,16 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                loc.label ?? '${loc.lat.toStringAsFixed(4)}, ${loc.lng.toStringAsFixed(4)}',
+                loc.label ??
+                    '${loc.lat.toStringAsFixed(4)}, ${loc.lng.toStringAsFixed(4)}',
                 style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
               ),
               Text(
                 'Открыть на карте',
-                style: TextStyle(fontSize: 12, color: textColor.withValues(alpha: 0.7)),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: textColor.withValues(alpha: 0.7),
+                ),
               ),
             ],
           ),
@@ -779,7 +793,10 @@ class _GroupChatScreenState extends State<GroupChatScreen> {
       crossAxisAlignment: align,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (m.isLocation) _buildLocationContent(m) else Text(m.content, style: Theme.of(context).textTheme.bodyLarge),
+        if (m.isLocation)
+          _buildLocationContent(m)
+        else
+          Text(m.content, style: Theme.of(context).textTheme.bodyLarge),
         if (m.reactions.isNotEmpty) ...[
           const SizedBox(height: 6),
           Wrap(

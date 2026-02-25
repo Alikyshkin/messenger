@@ -38,7 +38,9 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
   @override
   void initState() {
     super.initState();
-    logAction('record_video_note_screen', 'initState', 'START', {'peerId': widget.peerId});
+    logAction('record_video_note_screen', 'initState', 'START', {
+      'peerId': widget.peerId,
+    });
     _initCamera();
   }
 

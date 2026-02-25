@@ -10,21 +10,28 @@ class NavigationUpdateObserver extends NavigatorObserver {
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
-    logUserAction('nav_push', {'route': route.settings.name ?? route.settings.toString()});
+    logUserAction('nav_push', {
+      'route': route.settings.name ?? route.settings.toString(),
+    });
     _checkForUpdatesIfHome(route);
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPop(route, previousRoute);
-    logUserAction('nav_pop', {'route': route.settings.name ?? route.settings.toString()});
+    logUserAction('nav_pop', {
+      'route': route.settings.name ?? route.settings.toString(),
+    });
     _checkForUpdatesIfHome(previousRoute);
   }
 
   @override
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
-    logUserAction('nav_replace', {'new': newRoute?.settings.name ?? '?', 'old': oldRoute?.settings.name ?? '?'});
+    logUserAction('nav_replace', {
+      'new': newRoute?.settings.name ?? '?',
+      'old': oldRoute?.settings.name ?? '?',
+    });
     _checkForUpdatesIfHome(newRoute);
   }
 

@@ -440,12 +440,18 @@ class LocalDb {
   }
 
   /// Включить/выключить уведомления для чата.
-  static Future<void> setChatMuted({int? peerId, int? groupId, required bool muted}) async {
+  static Future<void> setChatMuted({
+    int? peerId,
+    int? groupId,
+    required bool muted,
+  }) async {
     final db = await _getDb();
     if (db == null) return;
     final key = _mutedKey(peerId: peerId, groupId: groupId);
     if (muted) {
-      await db.insert('muted_chats', {'chat_key': key}, conflictAlgorithm: ConflictAlgorithm.ignore);
+      await db.insert('muted_chats', {
+        'chat_key': key,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     } else {
       await db.delete('muted_chats', where: 'chat_key = ?', whereArgs: [key]);
     }
@@ -457,13 +463,20 @@ class LocalDb {
   }
 
   /// Закрепить/открепить чат.
-  static Future<void> setChatPinned({int? peerId, int? groupId, required bool pinned}) async {
+  static Future<void> setChatPinned({
+    int? peerId,
+    int? groupId,
+    required bool pinned,
+  }) async {
     final db = await _getDb();
     if (db == null) return;
     final key = _pinnedKey(peerId: peerId, groupId: groupId);
     if (pinned) {
       final now = DateTime.now().toIso8601String();
-      await db.insert('pinned_chats', {'chat_key': key, 'pinned_at': now}, conflictAlgorithm: ConflictAlgorithm.replace);
+      await db.insert('pinned_chats', {
+        'chat_key': key,
+        'pinned_at': now,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     } else {
       await db.delete('pinned_chats', where: 'chat_key = ?', whereArgs: [key]);
     }
@@ -474,7 +487,11 @@ class LocalDb {
     final db = await _getDb();
     if (db == null) return {};
     final rows = await db.query('pinned_chats');
-    return Map.fromEntries(rows.map((r) => MapEntry(r['chat_key'] as String, r['pinned_at'] as String)));
+    return Map.fromEntries(
+      rows.map(
+        (r) => MapEntry(r['chat_key'] as String, r['pinned_at'] as String),
+      ),
+    );
   }
 
   /// Список ключей заглушенных чатов (для проверки при новом сообщении).
@@ -486,7 +503,10 @@ class LocalDb {
   }
 
   /// Удалить сообщение из локального кэша (при удалении для себя или для всех).
-  static Future<void> deleteMessage({required int peerId, required int messageId}) async {
+  static Future<void> deleteMessage({
+    required int peerId,
+    required int messageId,
+  }) async {
     final db = await _getDb();
     if (db == null) return;
     await db.delete(

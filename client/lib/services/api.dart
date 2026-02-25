@@ -66,8 +66,15 @@ class Api {
   }
 
   /// Обёртка для логирования API-запроса: старт, конец, ошибка.
-  Future<T> _logged<T>(String method, String path, Future<T> Function() fn) async {
-    final scope = logActionStart('api', '$method $path', {'method': method, 'path': path});
+  Future<T> _logged<T>(
+    String method,
+    String path,
+    Future<T> Function() fn,
+  ) async {
+    final scope = logActionStart('api', '$method $path', {
+      'method': method,
+      'path': path,
+    });
     try {
       final result = await fn();
       scope.end({'status': 'ok'});
@@ -121,7 +128,10 @@ class Api {
 
   /// Получить список доступных OAuth провайдеров
   Future<OAuthProviders> getOAuthProviders() async {
-    final r = await http.get(Uri.parse('$base/auth/oauth/providers'), headers: _headers);
+    final r = await http.get(
+      Uri.parse('$base/auth/oauth/providers'),
+      headers: _headers,
+    );
     _checkResponse(r);
     final data = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
     return OAuthProviders(
@@ -263,18 +273,27 @@ class Api {
   }
 
   Future<Map<String, dynamic>> getPrivacy() async {
-    final r = await http.get(Uri.parse('$base/users/me/privacy'), headers: _headers);
+    final r = await http.get(
+      Uri.parse('$base/users/me/privacy'),
+      headers: _headers,
+    );
     _checkResponse(r);
     return jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
   }
 
   Future<List<int>> getPrivacyHideFrom() async {
-    final r = await http.get(Uri.parse('$base/users/me/privacy/hide-from'), headers: _headers);
+    final r = await http.get(
+      Uri.parse('$base/users/me/privacy/hide-from'),
+      headers: _headers,
+    );
     _checkResponse(r);
     final json = jsonDecode(_utf8Body(r)) as Map<String, dynamic>;
     final list = json['user_ids'];
     if (list is! List) return [];
-    return list.map((e) => e is int ? e : (e is num ? e.toInt() : 0)).where((x) => x > 0).toList();
+    return list
+        .map((e) => e is int ? e : (e is num ? e.toInt() : 0))
+        .where((x) => x > 0)
+        .toList();
   }
 
   Future<void> addPrivacyHideFrom(int userId) async {
@@ -441,8 +460,19 @@ class Api {
   /// peerId — опционально, иначе поиск по всем личным чатам.
   /// type: text|image|video|file|voice|video_note|poll|link|all
   /// senderId — фильтр по отправителю.
-  Future<SearchMessagesResult> searchMessages(String q, {int? peerId, int? senderId, String type = 'all', int limit = 50, int offset = 0}) async {
-    final params = <String, String>{'q': q, 'limit': '$limit', 'offset': '$offset'};
+  Future<SearchMessagesResult> searchMessages(
+    String q, {
+    int? peerId,
+    int? senderId,
+    String type = 'all',
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final params = <String, String>{
+      'q': q,
+      'limit': '$limit',
+      'offset': '$offset',
+    };
     if (peerId != null) params['peerId'] = '$peerId';
     if (senderId != null) params['senderId'] = '$senderId';
     if (type != 'all') params['type'] = type;
@@ -458,8 +488,19 @@ class Api {
   /// Поиск по сообщениям в группах.
   /// type: text|image|video|file|voice|video_note|poll|link|all
   /// senderId — фильтр по отправителю.
-  Future<SearchMessagesResult> searchGroupMessages(String q, {int? groupId, int? senderId, String type = 'all', int limit = 50, int offset = 0}) async {
-    final params = <String, String>{'q': q, 'limit': '$limit', 'offset': '$offset'};
+  Future<SearchMessagesResult> searchGroupMessages(
+    String q, {
+    int? groupId,
+    int? senderId,
+    String type = 'all',
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final params = <String, String>{
+      'q': q,
+      'limit': '$limit',
+      'offset': '$offset',
+    };
     if (groupId != null) params['groupId'] = '$groupId';
     if (senderId != null) params['senderId'] = '$senderId';
     if (type != 'all') params['type'] = type;
@@ -699,7 +740,10 @@ class Api {
     bool attachmentEncrypted = false,
   }) async {
     return _logged('POST', '/messages (file)', () async {
-      final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$base/messages'),
+      );
       request.headers['Authorization'] = 'Bearer $token';
       request.fields['receiver_id'] = receiverId.toString();
       request.fields['content'] = content;
@@ -725,7 +769,10 @@ class Api {
       return [];
     }
     return _logged('POST', '/messages (multiple files)', () async {
-      final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$base/messages'),
+      );
       request.headers['Authorization'] = 'Bearer $token';
       request.fields['receiver_id'] = receiverId.toString();
       request.fields['content'] = content;
@@ -757,7 +804,10 @@ class Api {
     bool attachmentEncrypted = false,
   }) async {
     return _logged('POST', '/messages (voice)', () async {
-      final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$base/messages'),
+      );
       request.headers['Authorization'] = 'Bearer $token';
       request.fields['receiver_id'] = receiverId.toString();
       request.fields['content'] = '';
@@ -782,7 +832,10 @@ class Api {
     bool attachmentEncrypted = false,
   }) async {
     return _logged('POST', '/messages (video_note)', () async {
-      final request = http.MultipartRequest('POST', Uri.parse('$base/messages'));
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$base/messages'),
+      );
       request.headers['Authorization'] = 'Bearer $token';
       request.fields['receiver_id'] = receiverId.toString();
       request.fields['content'] = '';
@@ -1115,11 +1168,7 @@ class Api {
     double lng, {
     String? label,
   }) async {
-    final body = <String, dynamic>{
-      'type': 'location',
-      'lat': lat,
-      'lng': lng,
-    };
+    final body = <String, dynamic>{'type': 'location', 'lat': lat, 'lng': lng};
     if (label != null && label.isNotEmpty) {
       body['location_label'] = label;
     }

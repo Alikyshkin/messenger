@@ -90,7 +90,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         child: SingleChildScrollView(
           primary: true,
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          padding: EdgeInsets.all(AppSizes.isCompact(MediaQuery.sizeOf(context).width) ? 16 : 24),
+          padding: EdgeInsets.all(
+            AppSizes.isCompact(MediaQuery.sizeOf(context).width) ? 16 : 24,
+          ),
           child: Form(
             key: _formKey,
             child: Column(

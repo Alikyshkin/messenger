@@ -21,13 +21,20 @@ class OAuthServiceImpl {
   static Future<OAuthProviders> getProviders() async {
     try {
       final p = await _api.getOAuthProviders();
-      if (p.google && p.googleClientId != null && p.googleClientId!.isNotEmpty) {
+      if (p.google &&
+          p.googleClientId != null &&
+          p.googleClientId!.isNotEmpty) {
         _clientId = p.googleClientId;
       }
       return p;
     } catch (_) {
       return OAuthProviders(
-          google: false, googleClientId: null, vk: false, telegram: false, phone: false);
+        google: false,
+        googleClientId: null,
+        vk: false,
+        telegram: false,
+        phone: false,
+      );
     }
   }
 
@@ -82,7 +89,8 @@ class OAuthServiceImpl {
 
   static Future<void> signInWithTelegram() async {
     throw UnimplementedError(
-        'Вход через Telegram: встройте виджет на $_baseUrl/telegram-login');
+      'Вход через Telegram: встройте виджет на $_baseUrl/telegram-login',
+    );
   }
 
   static Future<void> sendPhoneCode(String phone) async {

@@ -26,7 +26,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Future<void> _submit() async {
     final email = _emailController.text.trim();
-    final scope = logActionStart('forgot_password_screen', 'submit', {'email': email.isNotEmpty ? '***' : ''});
+    final scope = logActionStart('forgot_password_screen', 'submit', {
+      'email': email.isNotEmpty ? '***' : '',
+    });
     if (email.isEmpty) {
       scope.fail('empty email');
       setState(() => _error = context.tr('enter_email'));

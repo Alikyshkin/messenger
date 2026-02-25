@@ -92,7 +92,10 @@ class _WsCallListenerState extends State<WsCallListener> {
       }
 
       // Обычный приватный звонок
-      logUserAction('call_incoming', {'fromUserId': signal.fromUserId, 'isVideo': signal.isVideoCall ?? true});
+      logUserAction('call_incoming', {
+        'fromUserId': signal.fromUserId,
+        'isVideo': signal.isVideoCall ?? true,
+      });
       // Загружаем информацию о пользователе
       User peer;
       try {

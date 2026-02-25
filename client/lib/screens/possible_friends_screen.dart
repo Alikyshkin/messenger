@@ -54,7 +54,10 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
         _pendingIds = {...outgoingIds, ...incoming.map((r) => r.fromUserId)};
         _loading = false;
       });
-      scope.end({'contacts': _contactIds.length, 'pending': _pendingIds.length});
+      scope.end({
+        'contacts': _contactIds.length,
+        'pending': _pendingIds.length,
+      });
     } catch (e) {
       scope.fail(e);
       if (!mounted) {
@@ -77,7 +80,11 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
   }
 
   Future<void> _syncContacts() async {
-    final scope = logActionStart('possible_friends_screen', '_syncContacts', {});
+    final scope = logActionStart(
+      'possible_friends_screen',
+      '_syncContacts',
+      {},
+    );
     logUserAction('possible_friends_sync', {});
     final status = await Permission.contacts.request();
     if (!status.isGranted) {
@@ -167,7 +174,10 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
   }
 
   Future<void> _addFriend(User u) async {
-    logUserAction('possible_friends_add', {'userId': u.id, 'username': u.username});
+    logUserAction('possible_friends_add', {
+      'userId': u.id,
+      'username': u.username,
+    });
     final auth = context.read<AuthService>();
     try {
       await Api(auth.token).addContact(u.username);

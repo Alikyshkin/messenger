@@ -21,7 +21,10 @@ class _AddContactScreenState extends State<AddContactScreen> {
   String? _error;
 
   Future<void> _add(User u) async {
-    final scope = logActionStart('add_contact_screen', '_add', {'userId': u.id, 'username': u.username});
+    final scope = logActionStart('add_contact_screen', '_add', {
+      'userId': u.id,
+      'username': u.username,
+    });
     logUserAction('add_contact', {'username': u.username});
     setState(() => _error = null);
     try {
