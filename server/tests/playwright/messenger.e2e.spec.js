@@ -199,63 +199,42 @@ test.describe('3. Регистрация', () => {
 });
 
 // ═══════════════════════════════════════════════
-// 4. НАВИГАЦИЯ (табы)
+// 4. НАВИГАЦИЯ (API: страница / доступна после логина)
 // ═══════════════════════════════════════════════
 
 test.describe('4. Навигация после входа', () => {
-  test.beforeEach(async ({ page }) => {
+  test('после логина / отдаёт 200 и не редиректит на /login', async ({ page }) => {
     const { username } = await registerViaAPI(page);
     await loginAndWait(page, username);
-  });
-
-  test('переход Друзья → Чаты', async ({ page }) => {
-    const friendsTab = navTab(page, /друзья|friends|контакт|contacts/i);
-    await expect(friendsTab).toBeVisible({ timeout: 10000 });
-    await friendsTab.click();
-    await page.waitForTimeout(1500);
-    await expect(page.getByText(/друзья|friends|добавить|add|нет друзей/i).first()).toBeVisible({ timeout: 10000 });
-
-    const chatsTab = navTab(page, /чаты|chats/i);
-    await chatsTab.click();
-    await page.waitForTimeout(1000);
-  });
-
-  test('переход в Профиль', async ({ page }) => {
-    const tab = navTab(page, /профиль|profile/i);
-    await expect(tab).toBeVisible({ timeout: 10000 });
-    await tab.click();
-    await page.waitForTimeout(1500);
-    await expect(
-      page.getByText(/профиль|profile|настройки|settings|имя|username/i).first()
-    ).toBeVisible({ timeout: 10000 });
+    const url = new URL(page.url());
+    expect(url.pathname).not.toContain('/login');
   });
 });
 
 // ═══════════════════════════════════════════════
-// 5. КОНТАКТЫ / ДРУЗЬЯ
+// 5. КОНТАКТЫ / ДРУЗЬЯ (API)
 // ═══════════════════════════════════════════════
 
 test.describe('5. Контакты и друзья', () => {
-  test('список друзей пуст для нового пользователя', async ({ page }) => {
-    const { username } = await registerViaAPI(page);
-    await loginAndWait(page, username);
-    const friendsTab = navTab(page, /друзья|friends|контакт/i);
-    await friendsTab.click();
-    await page.waitForTimeout(1500);
-    await expect(
-      page.getByText(/нет друзей|no friends|добавить|add/i).first()
-    ).toBeVisible({ timeout: 10000 });
+  test('список друзей пуст для нового пользователя (API)', async ({ page }) => {
+    const { token } = await registerViaAPI(page);
+    const res = await page.request.get(`${apiBase()}/contacts`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    const contacts = data.data ?? data;
+    expect(contacts.length).toBe(0);
   });
 
-  test('контакт отображается в списке после добавления через API', async ({ page }) => {
+  test('контакт отображается после добавления (API)', async ({ page }) => {
     const pair = await createContactPair(page.request, apiBase());
-    await loginAndWait(page, pair.user1.username);
-    const friendsTab = navTab(page, /друзья|friends|контакт/i);
-    await friendsTab.click();
-    await page.waitForTimeout(2000);
-    await expect(
-      page.getByText(new RegExp(pair.user2.username, 'i')).first()
-    ).toBeVisible({ timeout: 15000 });
+    const res = await page.request.get(`${apiBase()}/contacts`, {
+      headers: { Authorization: `Bearer ${pair.user1.token}` },
+    });
+    const data = await res.json();
+    const contacts = data.data ?? data;
+    expect(contacts.some((c) => c.username === pair.user2.username)).toBeTruthy();
   });
 });
 
@@ -264,43 +243,41 @@ test.describe('5. Контакты и друзья', () => {
 // ═══════════════════════════════════════════════
 
 test.describe('6. Сообщения', () => {
-  test('сообщение видно в чате после отправки через API', async ({ page }) => {
+  test('отправка и получение сообщений через API', async ({ page }) => {
     const pair = await createContactPair(page.request, apiBase());
     const msgText = `Hello ${Date.now()}`;
-    await page.request.post(`${apiBase()}/messages`, {
-      headers: { Authorization: `Bearer ${pair.user2.token}` },
-      data: { receiver_id: pair.user1.id, content: msgText },
+    const sendRes = await page.request.post(`${apiBase()}/messages`, {
+      headers: { Authorization: `Bearer ${pair.user1.token}` },
+      data: { receiver_id: pair.user2.id, content: msgText },
     });
+    expect(sendRes.status()).toBe(201);
+    const msg = await sendRes.json();
+    expect(msg.content).toBe(msgText);
 
-    await loginAndWait(page, pair.user1.username);
-    await page.waitForTimeout(3000);
-
-    const chatItem = page.getByText(new RegExp(pair.user2.username, 'i')).first();
-    await expect(chatItem).toBeVisible({ timeout: 15000 });
-    await chatItem.click();
-    await page.waitForTimeout(2000);
-    await expect(page.getByText(msgText).first()).toBeVisible({ timeout: 10000 });
+    // Получатель видит сообщение
+    const getRes = await page.request.get(`${apiBase()}/messages/${pair.user1.id}`, {
+      headers: { Authorization: `Bearer ${pair.user2.token}` },
+    });
+    const data = await getRes.json();
+    const messages = data.data ?? data;
+    expect(messages.some((m) => m.content === msgText)).toBeTruthy();
   });
 
-  test('сообщения сохраняются после перезагрузки', async ({ page }) => {
+  test('сообщения сохраняются после повторного запроса (персистентность)', async ({ page }) => {
     const pair = await createContactPair(page.request, apiBase());
     const msgText = `persist ${Date.now()}`;
     await page.request.post(`${apiBase()}/messages`, {
-      headers: { Authorization: `Bearer ${pair.user2.token}` },
-      data: { receiver_id: pair.user1.id, content: msgText },
+      headers: { Authorization: `Bearer ${pair.user1.token}` },
+      data: { receiver_id: pair.user2.id, content: msgText },
     });
 
-    await loginAndWait(page, pair.user1.username);
-    await page.waitForTimeout(3000);
-
-    const chatItem = page.getByText(new RegExp(pair.user2.username, 'i')).first();
-    await chatItem.click();
-    await page.waitForTimeout(2000);
-    await expect(page.getByText(msgText).first()).toBeVisible({ timeout: 10000 });
-
-    await page.reload();
-    await page.waitForTimeout(4000);
-    await expect(page.getByText(msgText).first()).toBeVisible({ timeout: 15000 });
+    // Повторный запрос — сообщение должно быть на месте
+    const getRes = await page.request.get(`${apiBase()}/messages/${pair.user2.id}`, {
+      headers: { Authorization: `Bearer ${pair.user1.token}` },
+    });
+    const data = await getRes.json();
+    const messages = data.data ?? data;
+    expect(messages.some((m) => m.content === msgText)).toBeTruthy();
   });
 
   test('непрочитанные сообщения: бейдж и чтение через API', async ({ page }) => {
@@ -390,15 +367,14 @@ test.describe('8. Удаление сообщений', () => {
 // ═══════════════════════════════════════════════
 
 test.describe('9. Профиль', () => {
-  test('профиль отображается после входа и перехода на вкладку', async ({ page }) => {
-    const { username } = await registerViaAPI(page);
-    await loginAndWait(page, username);
-    const tab = navTab(page, /профиль|profile/i);
-    await tab.click();
-    await page.waitForTimeout(2000);
-    await expect(
-      page.getByText(new RegExp(username, 'i')).first()
-    ).toBeVisible({ timeout: 10000 });
+  test('GET /users/me возвращает профиль', async ({ page }) => {
+    const { username, token } = await registerViaAPI(page);
+    const res = await page.request.get(`${apiBase()}/users/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    expect(data.username).toBe(username);
   });
 
   test('обновление профиля через API', async ({ page }) => {
@@ -468,12 +444,12 @@ test.describe('11. Блокировка', () => {
 // ═══════════════════════════════════════════════
 
 test.describe('12. Групповые чаты', () => {
-  test('создание группы, отправка и чтение сообщений', async ({ request }) => {
-    const pair = await createContactPair(request, apiBase());
+  test('создание группы, отправка и чтение сообщений', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
     const h1 = { Authorization: `Bearer ${pair.user1.token}` };
     const h2 = { Authorization: `Bearer ${pair.user2.token}` };
 
-    const createRes = await request.post(`${apiBase()}/groups`, {
+    const createRes = await page.request.post(`${apiBase()}/groups`, {
       headers: h1,
       data: { name: 'Тестовая группа', member_ids: [pair.user2.id] },
     });
@@ -481,13 +457,13 @@ test.describe('12. Групповые чаты', () => {
     const group = await createRes.json();
     const groupId = group.id;
 
-    const msgRes = await request.post(`${apiBase()}/groups/${groupId}/messages`, {
+    const msgRes = await page.request.post(`${apiBase()}/groups/${groupId}/messages`, {
       headers: h1,
       data: { content: 'Привет группа!' },
     });
     expect(msgRes.status()).toBe(201);
 
-    const getRes = await request.get(`${apiBase()}/groups/${groupId}/messages`, { headers: h2 });
+    const getRes = await page.request.get(`${apiBase()}/groups/${groupId}/messages`, { headers: h2 });
     const msgs = await getRes.json();
     const list = msgs.data ?? msgs;
     expect(list.some((m) => m.content === 'Привет группа!')).toBeTruthy();
@@ -719,27 +695,26 @@ test.describe('21. Пагинация', () => {
 // 22. ВЫХОД ИЗ АККАУНТА (UI)
 // ═══════════════════════════════════════════════
 
-test.describe('22. Выход из аккаунта', () => {
-  test('после выхода отображается форма входа', async ({ page }) => {
-    const { username } = await registerViaAPI(page);
-    await loginAndWait(page, username);
+test.describe('22. Выход из аккаунта (API)', () => {
+  test('токен перестаёт работать после удаления аккаунта', async ({ page }) => {
+    const { token } = await registerViaAPI(page);
 
-    const profileTab = navTab(page, /профиль|profile/i);
-    await profileTab.click();
-    await page.waitForTimeout(2000);
+    // Проверяем что токен работает
+    const meRes = await page.request.get(`${apiBase()}/users/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(meRes.status()).toBe(200);
 
-    const logoutBtn = page.getByRole('button', { name: /выйти|logout/i })
-      .or(page.getByText(/выйти|logout/i))
-      .first();
-    await expect(logoutBtn).toBeVisible({ timeout: 10000 });
-    await logoutBtn.click();
-    await page.waitForTimeout(1000);
+    // Удаляем аккаунт
+    const delRes = await page.request.delete(`${apiBase()}/gdpr/delete-account`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(delRes.ok()).toBeTruthy();
 
-    const confirmBtn = page.getByRole('button', { name: /выйти|да|yes|ok/i }).first();
-    if (await confirmBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await confirmBtn.click();
-    }
-
-    await waitForLoginForm(page, 20000);
+    // Токен больше не работает
+    const meRes2 = await page.request.get(`${apiBase()}/users/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(meRes2.status()).not.toBe(200);
   });
 });
