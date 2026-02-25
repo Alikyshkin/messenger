@@ -54,7 +54,6 @@ class _VoiceMessageBubbleState extends State<VoiceMessageBubble> {
     super.dispose();
   }
 
-
   Future<void> _togglePlay() async {
     try {
       if (_player.playing) {

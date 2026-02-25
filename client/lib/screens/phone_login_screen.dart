@@ -31,8 +31,13 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
   }
 
   Future<void> _sendCode() async {
-    final phone = _phoneController.text.trim().replaceAll(RegExp(r'[\s\-\(\)]'), '');
-    final scope = logActionStart('phone_login_screen', 'sendCode', {'phoneLen': phone.length});
+    final phone = _phoneController.text.trim().replaceAll(
+      RegExp(r'[\s\-\(\)]'),
+      '',
+    );
+    final scope = logActionStart('phone_login_screen', 'sendCode', {
+      'phoneLen': phone.length,
+    });
     if (phone.isEmpty) {
       scope.fail('empty phone');
       setState(() => _error = context.tr('enter_phone'));
@@ -69,10 +74,15 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
   }
 
   Future<void> _verify() async {
-    final phone = _phoneController.text.trim().replaceAll(RegExp(r'[\s\-\(\)]'), '');
+    final phone = _phoneController.text.trim().replaceAll(
+      RegExp(r'[\s\-\(\)]'),
+      '',
+    );
     final normalized = phone.startsWith('+') ? phone : '+7$phone';
     final code = _codeController.text.trim();
-    final scope = logActionStart('phone_login_screen', 'verify', {'codeLen': code.length});
+    final scope = logActionStart('phone_login_screen', 'verify', {
+      'codeLen': code.length,
+    });
     if (code.length != 6) {
       scope.fail('invalid code length');
       setState(() => _error = context.tr('enter_code_6'));
@@ -180,7 +190,11 @@ class _PhoneLoginScreenState extends State<PhoneLoginScreen> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : Text(_codeSent ? context.tr('login_btn') : context.tr('send_code')),
+                    : Text(
+                        _codeSent
+                            ? context.tr('login_btn')
+                            : context.tr('send_code'),
+                      ),
               ),
               if (_codeSent)
                 TextButton(

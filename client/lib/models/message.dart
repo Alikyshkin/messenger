@@ -178,18 +178,15 @@ class Message {
 
   /// Парсит content как JSON для location-сообщений.
   static ({double lat, double lng, String? label})? parseLocationContent(
-      String content) {
+    String content,
+  ) {
     if (content.isEmpty || !content.startsWith('{')) return null;
     try {
       final m = jsonDecode(content) as Map<String, dynamic>;
       final lat = (m['lat'] as num?)?.toDouble();
       final lng = (m['lng'] as num?)?.toDouble();
       if (lat == null || lng == null) return null;
-      return (
-        lat: lat,
-        lng: lng,
-        label: m['label'] as String?,
-      );
+      return (lat: lat, lng: lng, label: m['label'] as String?);
     } catch (_) {
       return null;
     }

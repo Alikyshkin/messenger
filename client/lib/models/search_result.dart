@@ -83,7 +83,9 @@ class SearchMessagesResult {
     final pagination = json['pagination'] as Map<String, dynamic>? ?? {};
     final list = json['data'] as List<dynamic>? ?? [];
     return SearchMessagesResult(
-      data: list.map((e) => SearchMessageItem.fromJson(e as Map<String, dynamic>)).toList(),
+      data: list
+          .map((e) => SearchMessageItem.fromJson(e as Map<String, dynamic>))
+          .toList(),
       total: pagination['total'] as int? ?? 0,
       limit: pagination['limit'] as int? ?? 50,
       offset: pagination['offset'] as int? ?? 0,

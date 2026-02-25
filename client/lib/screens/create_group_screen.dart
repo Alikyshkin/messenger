@@ -87,7 +87,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   }
 
   Future<void> _create() async {
-    logUserAction('create_group', {'name': _nameController.text.trim(), 'members': _selectedIds.length});
+    logUserAction('create_group', {
+      'name': _nameController.text.trim(),
+      'members': _selectedIds.length,
+    });
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       ScaffoldMessenger.of(

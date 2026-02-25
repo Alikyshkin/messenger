@@ -338,19 +338,25 @@ class _HomeScreenState extends State<HomeScreen>
           return;
         }
         final currentContext = context;
+        // ignore: use_build_context_synchronously
         final errorMessage = e is ApiException
             ? e.message
+            // ignore: use_build_context_synchronously
             : currentContext.tr('error');
         if (!mounted) {
           return;
         }
+        // ignore: use_build_context_synchronously
         final scaffoldMessenger = ScaffoldMessenger.of(currentContext);
         scaffoldMessenger.showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     }
   }
 
-  List<ChatPreview> _sortChats(List<ChatPreview> chats, Map<String, String> pinned) {
+  List<ChatPreview> _sortChats(
+    List<ChatPreview> chats,
+    Map<String, String> pinned,
+  ) {
     if (pinned.isEmpty) {
       return chats;
     }
@@ -428,7 +434,9 @@ class _HomeScreenState extends State<HomeScreen>
               logUserAction('home_possible_friends');
               final nav = _navigatorKey.currentState ?? Navigator.of(context);
               await nav.push(
-                MaterialPageRoute(builder: (_) => const PossibleFriendsScreen()),
+                MaterialPageRoute(
+                  builder: (_) => const PossibleFriendsScreen(),
+                ),
               );
               _loadFriendRequests();
             },
@@ -609,22 +617,34 @@ class _HomeScreenState extends State<HomeScreen>
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                              if (_pinnedChats.containsKey(isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}'))
+                              if (_pinnedChats.containsKey(
+                                isGroup
+                                    ? 'g_${c.group!.id}'
+                                    : 'p_${c.peer!.id}',
+                              ))
                                 Padding(
                                   padding: const EdgeInsets.only(right: 4),
                                   child: Icon(
                                     Icons.push_pin,
                                     size: 14,
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                                   ),
                                 ),
-                              if (_mutedChatKeys.contains(isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}'))
+                              if (_mutedChatKeys.contains(
+                                isGroup
+                                    ? 'g_${c.group!.id}'
+                                    : 'p_${c.peer!.id}',
+                              ))
                                 Padding(
                                   padding: const EdgeInsets.only(right: 4),
                                   child: Icon(
                                     Icons.notifications_off,
                                     size: 16,
-                                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                               if (unread > 0)
@@ -674,7 +694,9 @@ class _HomeScreenState extends State<HomeScreen>
                             icon: Icon(
                               Icons.more_vert,
                               size: AppSizes.iconSM,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(
@@ -682,57 +704,99 @@ class _HomeScreenState extends State<HomeScreen>
                               minHeight: 32,
                             ),
                             onSelected: (value) async {
-                              final key = isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}';
+                              final key = isGroup
+                                  ? 'g_${c.group!.id}'
+                                  : 'p_${c.peer!.id}';
                               if (value == 'mute') {
                                 await LocalDb.setChatMuted(
                                   peerId: isGroup ? null : c.peer!.id,
                                   groupId: isGroup ? c.group!.id : null,
                                   muted: true,
                                 );
-                                if (mounted) setState(() => _mutedChatKeys = {..._mutedChatKeys, key});
+                                if (mounted) {
+                                  setState(
+                                    () => _mutedChatKeys = {
+                                      ..._mutedChatKeys,
+                                      key,
+                                    },
+                                  );
+                                }
                               } else if (value == 'unmute') {
                                 await LocalDb.setChatMuted(
                                   peerId: isGroup ? null : c.peer!.id,
                                   groupId: isGroup ? c.group!.id : null,
                                   muted: false,
                                 );
-                                if (mounted) setState(() => _mutedChatKeys = {..._mutedChatKeys}..remove(key));
+                                if (mounted) {
+                                  setState(
+                                    () =>
+                                        _mutedChatKeys = {..._mutedChatKeys}
+                                          ..remove(key),
+                                  );
+                                }
                               } else if (value == 'pin') {
                                 await LocalDb.setChatPinned(
                                   peerId: isGroup ? null : c.peer!.id,
                                   groupId: isGroup ? c.group!.id : null,
                                   pinned: true,
                                 );
-                                if (mounted) setState(() {
-                                  _pinnedChats = {..._pinnedChats, key: DateTime.now().toIso8601String()};
-                                  _chats = _sortChats(List.from(_chats), _pinnedChats);
-                                });
+                                if (mounted) {
+                                  setState(() {
+                                    _pinnedChats = {
+                                      ..._pinnedChats,
+                                      key: DateTime.now().toIso8601String(),
+                                    };
+                                    _chats = _sortChats(
+                                      List.from(_chats),
+                                      _pinnedChats,
+                                    );
+                                  });
+                                }
                               } else if (value == 'unpin') {
                                 await LocalDb.setChatPinned(
                                   peerId: isGroup ? null : c.peer!.id,
                                   groupId: isGroup ? c.group!.id : null,
                                   pinned: false,
                                 );
-                                if (mounted) setState(() {
-                                  _pinnedChats = Map.from(_pinnedChats)..remove(key);
-                                  _chats = _sortChats(List.from(_chats), _pinnedChats);
-                                });
+                                if (mounted) {
+                                  setState(() {
+                                    _pinnedChats = Map.from(_pinnedChats)
+                                      ..remove(key);
+                                    _chats = _sortChats(
+                                      List.from(_chats),
+                                      _pinnedChats,
+                                    );
+                                  });
+                                }
                               } else if (value == 'delete') {
                                 _confirmDeleteChat(context, c, isGroup);
                               }
                             },
                             itemBuilder: (ctx) {
-                              final chatKey = isGroup ? 'g_${c.group!.id}' : 'p_${c.peer!.id}';
+                              final chatKey = isGroup
+                                  ? 'g_${c.group!.id}'
+                                  : 'p_${c.peer!.id}';
                               final isMuted = _mutedChatKeys.contains(chatKey);
-                              final isPinned = _pinnedChats.containsKey(chatKey);
+                              final isPinned = _pinnedChats.containsKey(
+                                chatKey,
+                              );
                               return [
                                 PopupMenuItem(
                                   value: isPinned ? 'unpin' : 'pin',
                                   child: Row(
                                     children: [
-                                      Icon(isPinned ? Icons.push_pin : Icons.push_pin_outlined, size: 20),
+                                      Icon(
+                                        isPinned
+                                            ? Icons.push_pin
+                                            : Icons.push_pin_outlined,
+                                        size: 20,
+                                      ),
                                       const SizedBox(width: 12),
-                                      Text(isPinned ? context.tr('unpin_chat') : context.tr('pin_chat')),
+                                      Text(
+                                        isPinned
+                                            ? context.tr('unpin_chat')
+                                            : context.tr('pin_chat'),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -740,9 +804,18 @@ class _HomeScreenState extends State<HomeScreen>
                                   value: isMuted ? 'unmute' : 'mute',
                                   child: Row(
                                     children: [
-                                      Icon(isMuted ? Icons.notifications : Icons.notifications_off, size: 20),
+                                      Icon(
+                                        isMuted
+                                            ? Icons.notifications
+                                            : Icons.notifications_off,
+                                        size: 20,
+                                      ),
                                       const SizedBox(width: 12),
-                                      Text(isMuted ? context.tr('unmute_chat') : context.tr('mute_chat')),
+                                      Text(
+                                        isMuted
+                                            ? context.tr('unmute_chat')
+                                            : context.tr('mute_chat'),
+                                      ),
                                     ],
                                   ),
                                 ),
@@ -750,11 +823,21 @@ class _HomeScreenState extends State<HomeScreen>
                                   value: 'delete',
                                   child: Row(
                                     children: [
-                                      Icon(Icons.delete_outline, size: 20, color: Theme.of(context).colorScheme.error),
+                                      Icon(
+                                        Icons.delete_outline,
+                                        size: 20,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.error,
+                                      ),
                                       const SizedBox(width: 12),
                                       Text(
                                         context.tr('delete_chat'),
-                                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                                        style: TextStyle(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.error,
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -829,9 +912,13 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                           );
                           if (ok == true && mounted) {
-                            final authService = context.read<AuthService>();
+                            // ignore: use_build_context_synchronously
+                            final ctx = context;
+                            // ignore: use_build_context_synchronously
+                            final authService = ctx.read<AuthService>();
                             await authService.logout();
-                            if (mounted) context.go('/login');
+                            // ignore: use_build_context_synchronously
+                            if (mounted) ctx.go('/login');
                           }
                         }
                       },
@@ -907,196 +994,186 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildSideNav(BuildContext context) {
     return Container(
       width: AppSizes.navigationWidth,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerLowest,
-                border: Border(
-                  right: BorderSide(
-                    color: Theme.of(context).dividerColor,
-                    width: 1,
-                  ),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        border: Border(
+          right: BorderSide(color: Theme.of(context).dividerColor, width: 1),
+        ),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          // Профиль
+          Builder(
+            builder: (context) {
+              return Consumer<AuthService>(
+                builder: (context, auth, _) {
+                  final user = auth.user;
+                  final isActive = _currentView == _NavigationItem.profile;
+                  return _NavButton(
+                    icon:
+                        (user != null && (user.avatarUrl?.isNotEmpty ?? false))
+                        ? UserAvatar(user: user, radius: AppSizes.avatarSM)
+                        : Icon(
+                            Icons.account_circle_outlined,
+                            size: AppSizes.iconXL,
+                            color: isActive
+                                ? Theme.of(context).colorScheme.primary
+                                : null,
+                          ),
+                    tooltip: context.tr('my_profile'),
+                    isActive: isActive,
+                    onPressed: () {
+                      if (mounted && _currentView != _NavigationItem.profile) {
+                        context.go('/profile');
+                      }
+                    },
+                  );
+                },
+              );
+            },
+          ),
+          const SizedBox(height: 8),
+          // Чаты с badge
+          _NavButton(
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  Icons.chat_outlined,
+                  size: AppSizes.iconXL,
+                  color: _currentView == _NavigationItem.chats
+                      ? Theme.of(context).colorScheme.primary
+                      : null,
                 ),
+                if (_totalUnreadCount > 0)
+                  Positioned(
+                    right: -6,
+                    top: -6,
+                    child: NavBadge(count: _totalUnreadCount),
+                  ),
+              ],
+            ),
+            tooltip: context.tr('chats'),
+            isActive: _currentView == _NavigationItem.chats,
+            onPressed: () {
+              if (mounted && _currentView != _NavigationItem.chats) {
+                context.go('/');
+              }
+            },
+          ),
+          const SizedBox(height: 8),
+          // Контакты с badge
+          _NavButton(
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Icon(
+                  Icons.people_outline,
+                  size: AppSizes.iconXL,
+                  color: _currentView == _NavigationItem.contacts
+                      ? Theme.of(context).colorScheme.primary
+                      : null,
+                ),
+                if (_friendRequests.isNotEmpty)
+                  Positioned(
+                    right: -6,
+                    top: -6,
+                    child: NavBadge(count: _friendRequests.length),
+                  ),
+              ],
+            ),
+            tooltip: context.tr('contacts'),
+            isActive: _currentView == _NavigationItem.contacts,
+            onPressed: () {
+              if (mounted && _currentView != _NavigationItem.contacts) {
+                context.go('/contacts');
+              }
+            },
+          ),
+          const Spacer(),
+          // Разделитель перед нижними кнопками
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            height: 1,
+            width: 40,
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.3),
+          ),
+          // Версия
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              'v${AppVersion.displayVersion}',
+              style: TextStyle(
+                fontSize: 9,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.2,
               ),
-              child: Column(
-                children: [
-                  const SizedBox(height: 12),
-                  // Профиль
-                  Builder(
-                    builder: (context) {
-                      return Consumer<AuthService>(
-                        builder: (context, auth, _) {
-                          final user = auth.user;
-                          final isActive =
-                              _currentView == _NavigationItem.profile;
-                          return _NavButton(
-                            icon:
-                                (user != null &&
-                                    (user.avatarUrl?.isNotEmpty ?? false))
-                                ? UserAvatar(
-                                    user: user,
-                                    radius: AppSizes.avatarSM,
-                                  )
-                                : Icon(
-                                    Icons.account_circle_outlined,
-                                    size: AppSizes.iconXL,
-                                    color: isActive
-                                        ? Theme.of(context).colorScheme.primary
-                                        : null,
-                                  ),
-                            tooltip: context.tr('my_profile'),
-                            isActive: isActive,
-                            onPressed: () {
-                              if (mounted &&
-                                  _currentView != _NavigationItem.profile) {
-                                context.go('/profile');
-                              }
-                            },
-                          );
-                        },
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  // Чаты с badge
-                  _NavButton(
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Icon(
-                          Icons.chat_outlined,
-                          size: AppSizes.iconXL,
-                          color: _currentView == _NavigationItem.chats
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
-                        ),
-                        if (_totalUnreadCount > 0)
-                          Positioned(
-                            right: -6,
-                            top: -6,
-                            child: NavBadge(count: _totalUnreadCount),
-                          ),
-                      ],
+              textAlign: TextAlign.center,
+            ),
+          ),
+          // Настройки
+          _NavButton(
+            icon: const Icon(Icons.settings, size: AppSizes.iconXL),
+            tooltip: context.tr('settings'),
+            isActive: false,
+            onPressed: () => context.push('/settings'),
+          ),
+          const SizedBox(height: 4),
+          // Выход
+          _NavButton(
+            icon: Icon(
+              Icons.logout,
+              size: AppSizes.iconXL,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            tooltip: context.tr('logout'),
+            isActive: false,
+            onPressed: () async {
+              final navigator = _navigatorKey.currentState;
+              if (navigator == null) {
+                return;
+              }
+              final ok = await showDialog<bool>(
+                context: navigator.context,
+                useRootNavigator: false,
+                builder: (ctx) => AlertDialog(
+                  title: Text(context.tr('logout_confirm')),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: Text(context.tr('cancel')),
                     ),
-                    tooltip: context.tr('chats'),
-                    isActive: _currentView == _NavigationItem.chats,
-                    onPressed: () {
-                      if (mounted && _currentView != _NavigationItem.chats) {
-                        context.go('/');
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 8),
-                  // Контакты с badge
-                  _NavButton(
-                    icon: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Icon(
-                          Icons.people_outline,
-                          size: AppSizes.iconXL,
-                          color: _currentView == _NavigationItem.contacts
-                              ? Theme.of(context).colorScheme.primary
-                              : null,
-                        ),
-                        if (_friendRequests.isNotEmpty)
-                          Positioned(
-                            right: -6,
-                            top: -6,
-                            child: NavBadge(count: _friendRequests.length),
-                          ),
-                      ],
+                    FilledButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      child: Text(context.tr('logout')),
                     ),
-                    tooltip: context.tr('contacts'),
-                    isActive: _currentView == _NavigationItem.contacts,
-                    onPressed: () {
-                      if (mounted && _currentView != _NavigationItem.contacts) {
-                        context.go('/contacts');
-                      }
-                    },
-                  ),
-                  const Spacer(),
-                  // Разделитель перед нижними кнопками
-                  Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8),
-                    height: 1,
-                    width: 40,
-                    color: Theme.of(
-                      context,
-                    ).dividerColor.withValues(alpha: 0.3),
-                  ),
-                  // Версия
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
-                      'v${AppVersion.displayVersion}',
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.2,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  // Настройки
-                  _NavButton(
-                    icon: const Icon(Icons.settings, size: AppSizes.iconXL),
-                    tooltip: context.tr('settings'),
-                    isActive: false,
-                    onPressed: () => context.push('/settings'),
-                  ),
-                  const SizedBox(height: 4),
-                  // Выход
-                  _NavButton(
-                    icon: Icon(
-                      Icons.logout,
-                      size: AppSizes.iconXL,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    tooltip: context.tr('logout'),
-                    isActive: false,
-                    onPressed: () async {
-                      final navigator = _navigatorKey.currentState;
-                      if (navigator == null) {
-                        return;
-                      }
-                      final ok = await showDialog<bool>(
-                        context: navigator.context,
-                        useRootNavigator: false,
-                        builder: (ctx) => AlertDialog(
-                          title: Text(context.tr('logout_confirm')),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(ctx).pop(false),
-                              child: Text(context.tr('cancel')),
-                            ),
-                            FilledButton(
-                              onPressed: () => Navigator.of(ctx).pop(true),
-                              child: Text(context.tr('logout')),
-                            ),
-                          ],
-                        ),
-                      );
-                      if (ok == true) {
-                        if (!mounted) {
-                          return;
-                        }
-                        final currentContext = context;
-                        final authService = currentContext.read<AuthService>();
-                        final router = currentContext;
-                        await authService.logout();
-                        if (!mounted) {
-                          return;
-                        }
-                        router.go('/login');
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                ],
-              ),
-            );
+                  ],
+                ),
+              );
+              if (ok == true) {
+                if (!mounted) {
+                  return;
+                }
+                final currentContext = context;
+                // ignore: use_build_context_synchronously
+                final authService = currentContext.read<AuthService>();
+                await authService.logout();
+                if (!mounted) {
+                  return;
+                }
+                // ignore: use_build_context_synchronously
+                context.go('/login');
+              }
+            },
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
   }
 
   void _onTabTap(String path, _NavigationItem target) {
@@ -1104,7 +1181,10 @@ class _HomeScreenState extends State<HomeScreen>
     logUserAction('home_nav_tab', {'tab': target.name});
     final minimizedService = context.read<CallMinimizedService>();
     if (minimizedService.hasActiveCall && minimizedService.peer != null) {
-      minimizedService.minimizeCall(minimizedService.peer!, minimizedService.isVideoCall);
+      minimizedService.minimizeCall(
+        minimizedService.peer!,
+        minimizedService.isVideoCall,
+      );
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
@@ -1117,9 +1197,7 @@ class _HomeScreenState extends State<HomeScreen>
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        border: Border(
-          top: BorderSide(color: theme.dividerColor, width: 1),
-        ),
+        border: Border(top: BorderSide(color: theme.dividerColor, width: 1)),
       ),
       child: SafeArea(
         child: SizedBox(
@@ -1144,7 +1222,9 @@ class _HomeScreenState extends State<HomeScreen>
                 icon: Icons.people_outline,
                 label: context.tr('contacts'),
                 isActive: _currentView == _NavigationItem.contacts,
-                badge: _friendRequests.isNotEmpty ? _friendRequests.length : null,
+                badge: _friendRequests.isNotEmpty
+                    ? _friendRequests.length
+                    : null,
                 onTap: () => _onTabTap('/contacts', _NavigationItem.contacts),
               ),
             ],

@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use, avoid_web_libraries_in_flutter
 import 'dart:html' as html;
 import 'dart:convert';
 import 'dart:typed_data';
@@ -28,14 +29,16 @@ Future<Uint8List> readVoiceFileBytes(String path) async {
         throw Exception('Ошибка декодирования data URI: $e');
       }
     }
-    
+
     // Для blob URL или обычного URL используем HttpRequest
     // Проверяем, что path является валидным URL
-    if (!path.startsWith('blob:') && !path.startsWith('http://') && !path.startsWith('https://')) {
+    if (!path.startsWith('blob:') &&
+        !path.startsWith('http://') &&
+        !path.startsWith('https://')) {
       scope.fail('invalid URL format: $path');
       throw Exception('Неверный формат пути: $path');
     }
-    
+
     try {
       final request = await html.HttpRequest.request(
         path,
@@ -53,7 +56,9 @@ Future<Uint8List> readVoiceFileBytes(String path) async {
       // Если это ошибка из-за CSP или другого ограничения браузера
       if (e.toString().contains('Namespace') || e.toString().contains('CSP')) {
         scope.fail('CSP or namespace error: $e');
-        throw Exception('Ошибка доступа к файлу (возможно, ограничение безопасности браузера): $e');
+        throw Exception(
+          'Ошибка доступа к файлу (возможно, ограничение безопасности браузера): $e',
+        );
       }
       rethrow;
     }

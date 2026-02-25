@@ -3,10 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../l10n/app_localizations.dart';
 import '../models/search_result.dart';
-import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
-import '../utils/app_page_route.dart';
 import '../utils/format_date.dart';
 import '../utils/user_action_logger.dart';
 import '../widgets/app_back_button.dart';
@@ -57,15 +55,20 @@ class _SearchChatsScreenState extends State<SearchChatsScreen> {
       final auth = context.read<AuthService>();
       final api = Api(auth.token);
 
-      final personal = await api.searchMessages(q, type: _typeFilter, limit: 30);
-      final group = await api.searchGroupMessages(q, type: _typeFilter, limit: 30);
+      final personal = await api.searchMessages(
+        q,
+        type: _typeFilter,
+        limit: 30,
+      );
+      final group = await api.searchGroupMessages(
+        q,
+        type: _typeFilter,
+        limit: 30,
+      );
 
       if (!mounted) return;
 
-      final combined = <SearchMessageItem>[
-        ...personal.data,
-        ...group.data,
-      ];
+      final combined = <SearchMessageItem>[...personal.data, ...group.data];
       combined.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       setState(() {
@@ -125,7 +128,9 @@ class _SearchChatsScreenState extends State<SearchChatsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             child: Row(
               children: _searchTypes.map((t) {
-                final label = t == 'all' ? context.tr('search_filter_all') : context.tr('search_filter_$t');
+                final label = t == 'all'
+                    ? context.tr('search_filter_all')
+                    : context.tr('search_filter_$t');
                 final selected = _typeFilter == t;
                 return Padding(
                   padding: const EdgeInsets.only(right: 6),
@@ -135,7 +140,9 @@ class _SearchChatsScreenState extends State<SearchChatsScreen> {
                     onSelected: (v) {
                       setState(() {
                         _typeFilter = t;
-                        if (_controller.text.trim().length >= _minQueryLength) _search();
+                        if (_controller.text.trim().length >= _minQueryLength) {
+                          _search();
+                        }
                       });
                     },
                   ),
@@ -155,7 +162,10 @@ class _SearchChatsScreenState extends State<SearchChatsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
             const SizedBox(height: 16),
             TextButton(onPressed: _search, child: Text(context.tr('retry'))),
           ],
@@ -173,8 +183,8 @@ class _SearchChatsScreenState extends State<SearchChatsScreen> {
         child: Text(
           context.tr('search_in_chats_enter_query'),
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           textAlign: TextAlign.center,
         ),
       );
@@ -185,8 +195,8 @@ class _SearchChatsScreenState extends State<SearchChatsScreen> {
         child: Text(
           context.tr('search_no_results'),
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           textAlign: TextAlign.center,
         ),
       );

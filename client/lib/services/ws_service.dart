@@ -34,10 +34,7 @@ class EditMessageUpdate {
 class DeleteMessageUpdate {
   final int messageId;
   final int peerId;
-  DeleteMessageUpdate({
-    required this.messageId,
-    required this.peerId,
-  });
+  DeleteMessageUpdate({required this.messageId, required this.peerId});
 }
 
 class TypingInfo {
@@ -85,9 +82,14 @@ class WsService extends ChangeNotifier {
       _newMessagePayloadController.stream;
 
   void connect(String token) {
-    logAction('ws_service', 'connect', 'START', {'tokenLen': token.length, 'wasConnected': _connected});
+    logAction('ws_service', 'connect', 'START', {
+      'tokenLen': token.length,
+      'wasConnected': _connected,
+    });
     if (_token == token && _connected) {
-      logAction('ws_service', 'connect', 'SKIP', {'reason': 'already_connected'});
+      logAction('ws_service', 'connect', 'SKIP', {
+        'reason': 'already_connected',
+      });
       return;
     }
     _reconnectTimer?.cancel();
@@ -102,7 +104,9 @@ class WsService extends ChangeNotifier {
   }
 
   void _doConnect() {
-    logAction('ws_service', '_doConnect', 'START', {'attempt': _reconnectAttempts});
+    logAction('ws_service', '_doConnect', 'START', {
+      'attempt': _reconnectAttempts,
+    });
     _sub?.cancel();
     _sub = null;
     _channel?.sink.close();
@@ -113,14 +117,18 @@ class WsService extends ChangeNotifier {
       _sub = _channel!.stream.listen(
         _onMessage,
         onError: (e) {
-          logActionError('ws_service', '_doConnect_onError', e, {'attempt': _reconnectAttempts});
+          logActionError('ws_service', '_doConnect_onError', e, {
+            'attempt': _reconnectAttempts,
+          });
           _connected = false;
           _reconnectAttempts++;
           notifyListeners();
           _scheduleReconnect();
         },
         onDone: () {
-          logAction('ws_service', '_doConnect_onDone', 'done', {'attempt': _reconnectAttempts});
+          logAction('ws_service', '_doConnect_onDone', 'done', {
+            'attempt': _reconnectAttempts,
+          });
           _connected = false;
           _reconnectAttempts++;
           notifyListeners();
@@ -342,10 +350,9 @@ class WsService extends ChangeNotifier {
   void sendTyping(int toUserId) {
     if (_connected && _channel != null) {
       try {
-        _channel!.sink.add(jsonEncode({
-          'type': 'typing',
-          'toUserId': toUserId,
-        }));
+        _channel!.sink.add(
+          jsonEncode({'type': 'typing', 'toUserId': toUserId}),
+        );
       } catch (_) {}
     }
   }
@@ -353,10 +360,9 @@ class WsService extends ChangeNotifier {
   void sendGroupTyping(int groupId) {
     if (_connected && _channel != null) {
       try {
-        _channel!.sink.add(jsonEncode({
-          'type': 'group_typing',
-          'groupId': groupId,
-        }));
+        _channel!.sink.add(
+          jsonEncode({'type': 'group_typing', 'groupId': groupId}),
+        );
       } catch (_) {}
     }
   }

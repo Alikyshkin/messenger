@@ -66,7 +66,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _addContact() async {
-    logUserAction('user_profile_add_contact', {'userId': (_user ?? widget.user).id});
+    logUserAction('user_profile_add_contact', {
+      'userId': (_user ?? widget.user).id,
+    });
     final u = _user ?? widget.user;
     final auth = context.read<AuthService>();
     try {
@@ -77,23 +79,37 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is ApiException ? e.message : context.tr('connection_error'))),
+        SnackBar(
+          content: Text(
+            e is ApiException ? e.message : context.tr('connection_error'),
+          ),
+        ),
       );
     }
   }
 
   Future<void> _removeContact() async {
-    logUserAction('user_profile_remove_contact', {'userId': (_user ?? widget.user).id});
+    logUserAction('user_profile_remove_contact', {
+      'userId': (_user ?? widget.user).id,
+    });
     final u = _user ?? widget.user;
     final auth = context.read<AuthService>();
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(context.tr('remove_friend_title')),
-        content: Text(context.tr('remove_friend_body').replaceFirst('%s', u.displayName)),
+        content: Text(
+          context.tr('remove_friend_body').replaceFirst('%s', u.displayName),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('cancel'))),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('delete'))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(context.tr('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(context.tr('delete')),
+          ),
         ],
       ),
     );
@@ -106,7 +122,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is ApiException ? e.message : context.tr('connection_error'))),
+        SnackBar(
+          content: Text(
+            e is ApiException ? e.message : context.tr('connection_error'),
+          ),
+        ),
       );
     }
   }
@@ -156,7 +176,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   }
 
   Future<void> _toggleHideStatus() async {
-    logUserAction('user_profile_toggle_hide_status', {'userId': (_user ?? widget.user).id});
+    logUserAction('user_profile_toggle_hide_status', {
+      'userId': (_user ?? widget.user).id,
+    });
     final u = _user ?? widget.user;
     final auth = context.read<AuthService>();
     try {
@@ -170,13 +192,19 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is ApiException ? e.message : context.tr('connection_error'))),
+        SnackBar(
+          content: Text(
+            e is ApiException ? e.message : context.tr('connection_error'),
+          ),
+        ),
       );
     }
   }
 
   Future<void> _toggleBlock() async {
-    logUserAction('user_profile_toggle_block', {'userId': (_user ?? widget.user).id});
+    logUserAction('user_profile_toggle_block', {
+      'userId': (_user ?? widget.user).id,
+    });
     final u = _user ?? widget.user;
     final auth = context.read<AuthService>();
     try {
@@ -190,7 +218,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e is ApiException ? e.message : context.tr('connection_error'))),
+        SnackBar(
+          content: Text(
+            e is ApiException ? e.message : context.tr('connection_error'),
+          ),
+        ),
       );
     }
   }
@@ -274,7 +306,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                   ),
                 ),
-                if (u.isOnline == true || (u.lastSeen != null && u.lastSeen!.isNotEmpty)) ...[
+                if (u.isOnline == true ||
+                    (u.lastSeen != null && u.lastSeen!.isNotEmpty)) ...[
                   const SizedBox(height: 4),
                   Center(
                     child: Text(
@@ -338,9 +371,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         if (_isContact)
                           FilledButton.icon(
                             onPressed: () {
-                              logUserAction('user_profile_message', {'userId': u.id});
+                              logUserAction('user_profile_message', {
+                                'userId': u.id,
+                              });
                               Navigator.of(context).push(
-                                AppPageRoute(builder: (_) => ChatScreen(peer: u)),
+                                AppPageRoute(
+                                  builder: (_) => ChatScreen(peer: u),
+                                ),
                               );
                             },
                             icon: const Icon(Icons.message),
@@ -385,9 +422,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                         if (_isContact && u.isBlocked != true) ...[
                           OutlinedButton.icon(
                             onPressed: () {
-                              logUserAction('user_profile_audio_call', {'userId': u.id});
+                              logUserAction('user_profile_audio_call', {
+                                'userId': u.id,
+                              });
                               Navigator.of(context).push(
-                                AppPageRoute(builder: (_) => CallScreen(peer: u, isIncoming: false, isVideoCall: false)),
+                                AppPageRoute(
+                                  builder: (_) => CallScreen(
+                                    peer: u,
+                                    isIncoming: false,
+                                    isVideoCall: false,
+                                  ),
+                                ),
                               );
                             },
                             icon: const Icon(Icons.phone),
@@ -395,9 +440,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                           ),
                           OutlinedButton.icon(
                             onPressed: () {
-                              logUserAction('user_profile_video_call', {'userId': u.id});
+                              logUserAction('user_profile_video_call', {
+                                'userId': u.id,
+                              });
                               Navigator.of(context).push(
-                                AppPageRoute(builder: (_) => CallScreen(peer: u, isIncoming: false, isVideoCall: true)),
+                                AppPageRoute(
+                                  builder: (_) => CallScreen(
+                                    peer: u,
+                                    isIncoming: false,
+                                    isVideoCall: true,
+                                  ),
+                                ),
                               );
                             },
                             icon: const Icon(Icons.videocam),

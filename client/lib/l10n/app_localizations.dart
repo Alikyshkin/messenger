@@ -338,7 +338,8 @@ class AppLocalizations {
     'forgot_password': 'Forgot password?',
     'no_account_register': 'No account? Sign up',
     'or_login_with': 'Or sign in with',
-    'oauth_not_configured': 'This sign-in method is not configured on the server',
+    'oauth_not_configured':
+        'This sign-in method is not configured on the server',
     'login_with_phone': 'Sign in with phone',
     'enter_phone': 'Enter phone number',
     'send_code': 'Send code',

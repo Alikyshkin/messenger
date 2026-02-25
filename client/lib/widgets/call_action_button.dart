@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 class CallActionButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final IconData icon;
+
   /// Поворот иконки в радианах (для выпрямления call_end и т.п.)
   final double? iconRotation;
   final String? tooltip;
@@ -70,10 +71,7 @@ class CallActionButton extends StatelessWidget {
 
     Widget iconWidget = Icon(icon);
     if (iconRotation != null && iconRotation != 0) {
-      iconWidget = Transform.rotate(
-        angle: iconRotation!,
-        child: iconWidget,
-      );
+      iconWidget = Transform.rotate(angle: iconRotation!, child: iconWidget);
     }
     return IconButton.filled(
       onPressed: onPressed,

@@ -1,4 +1,5 @@
 import swaggerJsdoc from 'swagger-jsdoc';
+import { DEFAULT_HTTP_PORT } from '../config/constants.js';
 
 const options = {
   definition: {
@@ -13,7 +14,7 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:3000',
+        url: `http://localhost:${DEFAULT_HTTP_PORT}`,
         description: 'Development server',
       },
       {

@@ -22,13 +22,17 @@ String formatLastSeen(BuildContext context, String? lastSeen, bool? isOnline) {
     return context.tr('last_seen_just_now');
   }
   if (diff.inMinutes < 60) {
-    return context.tr('last_seen_minutes').replaceFirst('%s', '${diff.inMinutes}');
+    return context
+        .tr('last_seen_minutes')
+        .replaceFirst('%s', '${diff.inMinutes}');
   }
   if (diff.inHours < 24) {
     return context.tr('last_seen_hours').replaceFirst('%s', '${diff.inHours}');
   }
   final yesterday = now.subtract(const Duration(days: 1));
-  if (dt.day == yesterday.day && dt.month == yesterday.month && dt.year == yesterday.year) {
+  if (dt.day == yesterday.day &&
+      dt.month == yesterday.month &&
+      dt.year == yesterday.year) {
     return context.tr('last_seen_yesterday');
   }
   if (dt.day == now.day && dt.month == now.month && dt.year == now.year) {

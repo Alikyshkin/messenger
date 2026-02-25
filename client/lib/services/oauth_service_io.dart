@@ -11,7 +11,13 @@ class OAuthServiceImpl {
     try {
       return await _api.getOAuthProviders();
     } catch (_) {
-      return OAuthProviders(google: false, googleClientId: null, vk: false, telegram: false, phone: false);
+      return OAuthProviders(
+        google: false,
+        googleClientId: null,
+        vk: false,
+        telegram: false,
+        phone: false,
+      );
     }
   }
 
@@ -21,7 +27,9 @@ class OAuthServiceImpl {
       await signIn.initialize();
       if (!signIn.supportsAuthenticate()) return null;
 
-      final account = await signIn.authenticate(scopeHint: ['email', 'profile']);
+      final account = await signIn.authenticate(
+        scopeHint: ['email', 'profile'],
+      );
       final idToken = account.authentication.idToken;
       if (idToken == null) return null;
 
@@ -34,14 +42,20 @@ class OAuthServiceImpl {
   static Future<AuthResponse?> signInWithVk() async {
     try {
       final vkLogin = VKLogin();
-      final initResult = await vkLogin.initSdk(scope: [VKScope.email, VKScope.friends]);
+      final initResult = await vkLogin.initSdk(
+        scope: [VKScope.email, VKScope.friends],
+      );
       if (initResult.isError) throw initResult.asError!.error;
 
-      final result = await vkLogin.logIn(scope: [VKScope.email, VKScope.friends]);
+      final result = await vkLogin.logIn(
+        scope: [VKScope.email, VKScope.friends],
+      );
       if (result.isError) throw result.asError!.error;
 
       final loginResult = result.asValue!.value;
-      if (loginResult.isCanceled || loginResult.accessToken == null) return null;
+      if (loginResult.isCanceled || loginResult.accessToken == null) {
+        return null;
+      }
 
       return await _api.loginWithVk(
         loginResult.accessToken!.token,
@@ -53,7 +67,9 @@ class OAuthServiceImpl {
   }
 
   static Future<void> signInWithTelegram() async {
-    throw UnimplementedError('Вход через Telegram: откройте страницу с виджетом');
+    throw UnimplementedError(
+      'Вход через Telegram: откройте страницу с виджетом',
+    );
   }
 
   static Future<void> sendPhoneCode(String phone) async {

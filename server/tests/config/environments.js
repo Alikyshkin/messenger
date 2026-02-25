@@ -1,3 +1,5 @@
+import { DEFAULT_HTTP_PORT } from '../../config/constants.js';
+
 /**
  * Конфигурация окружений для тестов.
  */
@@ -8,8 +10,8 @@ export const environments = {
     dbPath: process.env.MESSENGER_DB_PATH || ':memory:',
   },
   dev: {
-    baseUrl: process.env.API_BASE_URL || 'http://localhost:3000',
-    wsUrl: process.env.WS_BASE_URL || 'ws://localhost:3000',
+    baseUrl: process.env.API_BASE_URL || `http://localhost:${DEFAULT_HTTP_PORT}`,
+    wsUrl: process.env.WS_BASE_URL || `ws://localhost:${DEFAULT_HTTP_PORT}`,
   },
   stage: {
     baseUrl: process.env.API_BASE_URL || 'https://stage-api.example.com',

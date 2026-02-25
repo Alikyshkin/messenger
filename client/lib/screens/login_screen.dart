@@ -24,39 +24,71 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _loading = false;
   bool _passwordVisible = false;
   String? _error;
-  OAuthProviders _providers = OAuthProviders(google: false, vk: false, telegram: false, phone: false);
+  OAuthProviders _providers = OAuthProviders(
+    google: false,
+    vk: false,
+    telegram: false,
+    phone: false,
+  );
   StreamSubscription<AuthResponse?>? _googleAuthSub;
 
   @override
   void initState() {
     super.initState();
-    logAction('login_screen', 'initState', 'START', null, 'инициализация экрана входа');
+    logAction(
+      'login_screen',
+      'initState',
+      'START',
+      null,
+      'инициализация экрана входа',
+    );
     OAuthService.getProviders().then((p) {
-      logAction('login_screen', 'getOAuthProviders', 'END', {'google': p.google, 'vk': p.vk}, 'ok');
+      logAction('login_screen', 'getOAuthProviders', 'END', {
+        'google': p.google,
+        'vk': p.vk,
+      }, 'ok');
       if (mounted) setState(() => _providers = p);
     });
     if (kIsWeb) {
       _googleAuthSub = OAuthService.googleAuthStream.listen((res) async {
         if (!mounted || res == null) return;
-        logAction('login_screen', 'googleAuthStream', 'START', null, 'получен ответ от Google');
+        logAction(
+          'login_screen',
+          'googleAuthStream',
+          'START',
+          null,
+          'получен ответ от Google',
+        );
         setState(() => _loading = true);
         try {
           await context.read<AuthService>().loginWithOAuth(res);
           if (!mounted) return;
-          logAction('login_screen', 'loginWithOAuth', 'END', null, 'успех, переход на /');
+          logAction(
+            'login_screen',
+            'loginWithOAuth',
+            'END',
+            null,
+            'успех, переход на /',
+          );
           context.go('/');
         } on ApiException catch (e) {
-          logActionError('login_screen', 'loginWithOAuth', e, {'statusCode': e.statusCode});
-          if (mounted) setState(() {
-            _error = e.message;
-            _loading = false;
+          logActionError('login_screen', 'loginWithOAuth', e, {
+            'statusCode': e.statusCode,
           });
+          if (mounted) {
+            setState(() {
+              _error = e.message;
+              _loading = false;
+            });
+          }
         } catch (err, st) {
           logActionError('login_screen', 'loginWithOAuth', err, null, st);
-          if (mounted) setState(() {
-            _error = context.tr('connection_error');
-            _loading = false;
-          });
+          if (mounted) {
+            setState(() {
+              _error = context.tr('connection_error');
+              _loading = false;
+            });
+          }
         }
       });
     }
@@ -72,7 +104,9 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
-    final scope = logActionStart('login_screen', 'submit', {'username': _username.text.trim()});
+    final scope = logActionStart('login_screen', 'submit', {
+      'username': _username.text.trim(),
+    });
     setState(() {
       _error = null;
       _loading = true;
@@ -113,7 +147,9 @@ class _LoginScreenState extends State<LoginScreen> {
     return _OAuthButton(
       icon: Icons.g_mobiledata_rounded,
       label: 'Google',
-      onPressed: _loading ? null : () => _oauthLogin(OAuthService.signInWithGoogle),
+      onPressed: _loading
+          ? null
+          : () => _oauthLogin(OAuthService.signInWithGoogle),
     );
   }
 
@@ -149,7 +185,9 @@ class _LoginScreenState extends State<LoginScreen> {
       scope.fail(e, st);
       if (!mounted) return;
       setState(() {
-        _error = e.toString().contains('501') ? context.tr('oauth_not_configured') : context.tr('connection_error');
+        _error = e.toString().contains('501')
+            ? context.tr('oauth_not_configured')
+            : context.tr('connection_error');
         _loading = false;
       });
     }
@@ -165,7 +203,9 @@ class _LoginScreenState extends State<LoginScreen> {
           child: SingleChildScrollView(
             padding: EdgeInsets.symmetric(horizontal: padding),
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: screenWidth < 400 ? double.infinity : 380),
+              constraints: BoxConstraints(
+                maxWidth: screenWidth < 400 ? double.infinity : 380,
+              ),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -266,44 +306,75 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: _loading
                                   ? null
                                   : () {
-                                      logAction('login_screen', 'nav_push', 'done', {'route': '/forgot-password'});
+                                      logAction(
+                                        'login_screen',
+                                        'nav_push',
+                                        'done',
+                                        {'route': '/forgot-password'},
+                                      );
                                       context.push('/forgot-password');
                                     },
                               child: Text(context.tr('forgot_password')),
                             ),
                             TextButton(
                               onPressed: () {
-                                logAction('login_screen', 'nav_push', 'done', {'route': '/register'});
+                                logAction('login_screen', 'nav_push', 'done', {
+                                  'route': '/register',
+                                });
                                 context.push('/register');
                               },
                               child: Text(context.tr('no_account_register')),
                             ),
-                            if (_providers.google || _providers.vk || _providers.telegram || _providers.phone) ...[
+                            if (_providers.google ||
+                                _providers.vk ||
+                                _providers.telegram ||
+                                _providers.phone) ...[
                               const SizedBox(height: 24),
-                              Row(children: [
-                                Expanded(child: Divider(color: Theme.of(context).colorScheme.outline)),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                                  child: Text(
-                                    context.tr('or_login_with'),
-                                    style: Theme.of(context).textTheme.bodySmall,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.outline,
+                                    ),
                                   ),
-                                ),
-                                Expanded(child: Divider(color: Theme.of(context).colorScheme.outline)),
-                              ]),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    child: Text(
+                                      context.tr('or_login_with'),
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.outline,
+                                    ),
+                                  ),
+                                ],
+                              ),
                               const SizedBox(height: 16),
                               Wrap(
                                 spacing: 12,
                                 runSpacing: 12,
                                 alignment: WrapAlignment.center,
                                 children: [
-                                  if (_providers.google)
-                                    _buildGoogleButton(),
+                                  if (_providers.google) _buildGoogleButton(),
                                   if (_providers.vk)
                                     _OAuthButton(
                                       icon: Icons.tag,
                                       label: 'VK',
-                                      onPressed: _loading ? null : () => _oauthLogin(OAuthService.signInWithVk),
+                                      onPressed: _loading
+                                          ? null
+                                          : () => _oauthLogin(
+                                              OAuthService.signInWithVk,
+                                            ),
                                     ),
                                   if (_providers.telegram)
                                     _OAuthButton(
@@ -312,13 +383,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                       onPressed: _loading
                                           ? null
                                           : () async {
-                                              final messenger = ScaffoldMessenger.of(context);
+                                              final messenger =
+                                                  ScaffoldMessenger.of(context);
                                               try {
                                                 await OAuthService.signInWithTelegram();
                                               } catch (e) {
                                                 if (mounted) {
                                                   messenger.showSnackBar(
-                                                    SnackBar(content: Text(e.toString())),
+                                                    SnackBar(
+                                                      content: Text(
+                                                        e.toString(),
+                                                      ),
+                                                    ),
                                                   );
                                                 }
                                               }
@@ -328,7 +404,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                     _OAuthButton(
                                       icon: Icons.phone_android,
                                       label: context.tr('phone'),
-                                      onPressed: _loading ? null : () => context.push('/login/phone'),
+                                      onPressed: _loading
+                                          ? null
+                                          : () => context.push('/login/phone'),
                                     ),
                                 ],
                               ),

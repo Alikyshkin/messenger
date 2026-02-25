@@ -20,7 +20,9 @@ class ImagePreviewScreen extends StatelessWidget {
   });
 
   Future<void> _download(BuildContext context) async {
-    final scope = logActionStart('image_preview_screen', '_download', {'filename': filename});
+    final scope = logActionStart('image_preview_screen', '_download', {
+      'filename': filename,
+    });
     Uint8List? bytes = imageBytes;
     if (bytes == null && bytesFuture != null) {
       bytes = await bytesFuture;

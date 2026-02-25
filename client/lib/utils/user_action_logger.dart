@@ -5,7 +5,13 @@ import 'package:flutter/foundation.dart';
 
 String _ts() => DateTime.now().toIso8601String();
 
-String _fmt(String file, String action, String phase, [Map<String, dynamic>? details, String? reason]) {
+String _fmt(
+  String file,
+  String action,
+  String phase, [
+  Map<String, dynamic>? details,
+  String? reason,
+]) {
   final parts = <String>['[$file]', _ts(), action, '|', phase];
   if (details != null && details.isNotEmpty) {
     parts.add('|');
@@ -30,20 +36,36 @@ void logUserActionError(String action, Object error, [StackTrace? stack]) {
 
 /// Начало действия — вызывать в начале функции/обработчика.
 /// Возвращает [ActionLogScope] для вызова [ActionLogScope.end] или [ActionLogScope.fail].
-ActionLogScope logActionStart(String file, String action, [Map<String, dynamic>? details]) {
+ActionLogScope logActionStart(
+  String file,
+  String action, [
+  Map<String, dynamic>? details,
+]) {
   debugPrint(_fmt(file, action, 'START', details));
   return ActionLogScope._(file, action, DateTime.now(), details);
 }
 
 /// Конец действия — вызывать при успешном завершении.
-void logActionEnd(String file, String action, [Map<String, dynamic>? details, Duration? duration]) {
+void logActionEnd(
+  String file,
+  String action, [
+  Map<String, dynamic>? details,
+  Duration? duration,
+]) {
   final d = duration != null ? '${duration.inMilliseconds}ms' : null;
-  final m = <String, dynamic>{if (d != null) 'duration': d}..addAll(details ?? {});
+  // ignore: use_null_aware_elements
+  final m = <String, dynamic>{if (d != null) 'duration': d, ...?details};
   debugPrint(_fmt(file, action, 'END', m.isNotEmpty ? m : null, 'ok'));
 }
 
 /// Ошибка действия — вызывать при исключении.
-void logActionError(String file, String action, Object error, [Map<String, dynamic>? details, StackTrace? stack]) {
+void logActionError(
+  String file,
+  String action,
+  Object error, [
+  Map<String, dynamic>? details,
+  StackTrace? stack,
+]) {
   debugPrint(_fmt(file, action, 'ERROR', details, error.toString()));
   if (stack != null) {
     debugPrint('[$file] $action | STACK: $stack');
@@ -51,7 +73,13 @@ void logActionError(String file, String action, Object error, [Map<String, dynam
 }
 
 /// Универсальный лог: файл, действие, фаза (START/END/ERROR/done), детали.
-void logAction(String file, String action, String phase, [Map<String, dynamic>? details, String? reason]) {
+void logAction(
+  String file,
+  String action,
+  String phase, [
+  Map<String, dynamic>? details,
+  String? reason,
+]) {
   debugPrint(_fmt(file, action, phase, details, reason));
 }
 
@@ -66,13 +94,16 @@ class ActionLogScope {
 
   void end([Map<String, dynamic>? extra]) {
     final d = DateTime.now().difference(_start);
-    final m = <String, dynamic>{'duration': '${d.inMilliseconds}ms'}..addAll(_details ?? {})..addAll(extra ?? {});
+    final m = <String, dynamic>{'duration': '${d.inMilliseconds}ms'}
+      ..addAll(_details ?? {})
+      ..addAll(extra ?? {});
     debugPrint(_fmt(_file, _action, 'END', m, 'ok'));
   }
 
   void fail(Object error, [StackTrace? stack]) {
     final d = DateTime.now().difference(_start);
-    final m = <String, dynamic>{'duration': '${d.inMilliseconds}ms'}..addAll(_details ?? {});
+    final m = <String, dynamic>{'duration': '${d.inMilliseconds}ms'}
+      ..addAll(_details ?? {});
     logActionError(_file, _action, error, m, stack);
   }
 }

@@ -23,7 +23,7 @@ class MinimizedCallWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    if (service == null || !service.isMinimized) {
+    if (!service.isMinimized) {
       return const SizedBox.shrink();
     }
 
@@ -54,135 +54,135 @@ class MinimizedCallWidget extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               child: Row(
                 children: [
-                // Аватар
-                if (isGroupCall && group != null)
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.primaryContainer,
-                        backgroundImage:
-                            group.avatarUrl != null &&
-                                group.avatarUrl!.isNotEmpty
-                            ? NetworkImage(group.avatarUrl!)
-                            : null,
-                        child:
-                            group.avatarUrl == null || group.avatarUrl!.isEmpty
-                            ? Icon(
-                                Icons.group,
-                                size: 24,
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onPrimaryContainer,
-                              )
-                            : null,
-                      ),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  )
-                else if (peer != null)
-                  Stack(
-                    children: [
-                      UserAvatar(user: peer, radius: 24),
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                const SizedBox(width: 12),
-                // Информация о звонке
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        isGroupCall && group != null
-                            ? group.name
-                            : peer?.displayName ?? '',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(
-                            isVideoCall ? Icons.videocam : Icons.phone,
-                            size: 14,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            isVideoCall ? 'Видеозвонок' : 'Аудиозвонок',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
+                  // Аватар
+                  if (isGroupCall && group != null)
+                    Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer,
+                          backgroundImage:
+                              group.avatarUrl != null &&
+                                  group.avatarUrl!.isNotEmpty
+                              ? NetworkImage(group.avatarUrl!)
+                              : null,
+                          child:
+                              group.avatarUrl == null ||
+                                  group.avatarUrl!.isEmpty
+                              ? Icon(
+                                  Icons.group,
+                                  size: 24,
                                   color: Theme.of(
                                     context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
+                                  ).colorScheme.onPrimaryContainer,
+                                )
+                              : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                width: 2,
+                              ),
+                            ),
                           ),
-                        ],
-                      ),
-                    ],
+                        ),
+                      ],
+                    )
+                  else if (peer != null)
+                    Stack(
+                      children: [
+                        UserAvatar(user: peer, radius: 24),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            width: 16,
+                            height: 16,
+                            decoration: BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(width: 12),
+                  // Информация о звонке
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isGroupCall && group != null
+                              ? group.name
+                              : peer?.displayName ?? '',
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(
+                              isVideoCall ? Icons.videocam : Icons.phone,
+                              size: 14,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              isVideoCall ? 'Видеозвонок' : 'Аудиозвонок',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                // Кнопка завершения
-                IconButton(
-                  icon: const Icon(Icons.call_end),
-                  color: Colors.red,
-                  iconSize: 24,
-                  onPressed: () {
-                    // Завершаем звонок через сервис
-                    service?.endCall();
-                    // Навигация обрабатывается в экранах звонков
-                  },
-                  tooltip: 'Завершить звонок',
-                ),
-              ],
+                  // Кнопка завершения
+                  IconButton(
+                    icon: const Icon(Icons.call_end),
+                    color: Colors.red,
+                    iconSize: 24,
+                    onPressed: () {
+                      // Завершаем звонок через сервис
+                      service?.endCall();
+                      // Навигация обрабатывается в экранах звонков
+                    },
+                    tooltip: 'Завершить звонок',
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
-    ),
     );
   }
 

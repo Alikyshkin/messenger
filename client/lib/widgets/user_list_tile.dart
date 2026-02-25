@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
@@ -47,7 +46,9 @@ class UserListTile extends StatelessWidget {
           ? Text(
               [
                 if (showUsername) '@${user.username}',
-                if (showLastSeen && (user.isOnline == true || (user.lastSeen != null && user.lastSeen!.isNotEmpty)))
+                if (showLastSeen &&
+                    (user.isOnline == true ||
+                        (user.lastSeen != null && user.lastSeen!.isNotEmpty)))
                   formatLastSeen(context, user.lastSeen, user.isOnline),
               ].where((s) => s.isNotEmpty).join(' • '),
               style: TextStyle(

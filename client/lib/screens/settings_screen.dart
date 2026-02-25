@@ -14,7 +14,14 @@ import '../styles/app_spacing.dart';
 import '../utils/user_action_logger.dart';
 import '../styles/app_sizes.dart';
 
-enum _SettingsCategory { profile, appearance, privacy, security, storage, danger }
+enum _SettingsCategory {
+  profile,
+  appearance,
+  privacy,
+  security,
+  storage,
+  danger,
+}
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -47,7 +54,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    logAction('settings_screen', 'initState', 'START', null, 'инициализация настроек');
+    logAction(
+      'settings_screen',
+      'initState',
+      'START',
+      null,
+      'инициализация настроек',
+    );
     final u = context.read<AuthService>().user;
     if (u != null) {
       _displayNameController.text = u.displayName;
@@ -59,7 +72,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     _loadCacheSize();
     _loadPrivacy();
-    logAction('settings_screen', 'initState', 'END', u != null ? {'userId': u.id} : null, 'ok');
+    logAction(
+      'settings_screen',
+      'initState',
+      'END',
+      u != null ? {'userId': u.id} : null,
+      'ok',
+    );
   }
 
   Future<void> _loadPrivacy() async {
@@ -67,11 +86,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!auth.isLoggedIn) return;
     try {
       final p = await Api(auth.token).getPrivacy();
-      if (mounted) setState(() {
-        _whoCanSeeStatus = p['who_can_see_status'] as String? ?? 'contacts';
-        _whoCanMessage = p['who_can_message'] as String? ?? 'contacts';
-        _whoCanCall = p['who_can_call'] as String? ?? 'contacts';
-      });
+      if (mounted) {
+        setState(() {
+          _whoCanSeeStatus = p['who_can_see_status'] as String? ?? 'contacts';
+          _whoCanMessage = p['who_can_message'] as String? ?? 'contacts';
+          _whoCanCall = p['who_can_call'] as String? ?? 'contacts';
+        });
+      }
     } catch (_) {}
   }
 
@@ -95,13 +116,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       );
       if (mounted) {
         scope.end({'result': 'ok'});
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('profile_saved'))));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(context.tr('profile_saved'))));
       }
     } catch (e, st) {
       scope.fail(e, st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e is ApiException ? e.message : context.tr('connection_error'))),
+          SnackBar(
+            content: Text(
+              e is ApiException ? e.message : context.tr('connection_error'),
+            ),
+          ),
         );
       }
     } finally {
@@ -372,10 +399,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             )
           else if (_currentCategory == _SettingsCategory.profile)
-            TextButton(
-              onPressed: _saveProfile,
-              child: Text(context.tr('save')),
-            )
+            TextButton(onPressed: _saveProfile, child: Text(context.tr('save')))
           else if (_currentCategory == _SettingsCategory.privacy)
             TextButton(
               onPressed: _savePrivacy,
@@ -392,7 +416,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 // Горизонтальное меню категорий на мобильных
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
                   child: Row(
                     children: [
                       _buildMobileCategoryChip(
@@ -786,12 +813,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 8),
                 SegmentedButton<String>(
                   segments: [
-                    ButtonSegment(value: 'all', label: Text(context.tr('privacy_all'))),
-                    ButtonSegment(value: 'contacts', label: Text(context.tr('privacy_contacts'))),
-                    ButtonSegment(value: 'nobody', label: Text(context.tr('privacy_nobody'))),
+                    ButtonSegment(
+                      value: 'all',
+                      label: Text(context.tr('privacy_all')),
+                    ),
+                    ButtonSegment(
+                      value: 'contacts',
+                      label: Text(context.tr('privacy_contacts')),
+                    ),
+                    ButtonSegment(
+                      value: 'nobody',
+                      label: Text(context.tr('privacy_nobody')),
+                    ),
                   ],
                   selected: {_whoCanSeeStatus},
-                  onSelectionChanged: _loading ? null : (s) => setState(() => _whoCanSeeStatus = s.first),
+                  onSelectionChanged: _loading
+                      ? null
+                      : (s) => setState(() => _whoCanSeeStatus = s.first),
                 ),
               ],
             ),
@@ -813,12 +851,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 8),
                 SegmentedButton<String>(
                   segments: [
-                    ButtonSegment(value: 'all', label: Text(context.tr('privacy_all'))),
-                    ButtonSegment(value: 'contacts', label: Text(context.tr('privacy_contacts'))),
-                    ButtonSegment(value: 'nobody', label: Text(context.tr('privacy_nobody'))),
+                    ButtonSegment(
+                      value: 'all',
+                      label: Text(context.tr('privacy_all')),
+                    ),
+                    ButtonSegment(
+                      value: 'contacts',
+                      label: Text(context.tr('privacy_contacts')),
+                    ),
+                    ButtonSegment(
+                      value: 'nobody',
+                      label: Text(context.tr('privacy_nobody')),
+                    ),
                   ],
                   selected: {_whoCanMessage},
-                  onSelectionChanged: _loading ? null : (s) => setState(() => _whoCanMessage = s.first),
+                  onSelectionChanged: _loading
+                      ? null
+                      : (s) => setState(() => _whoCanMessage = s.first),
                 ),
               ],
             ),
@@ -840,12 +889,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 8),
                 SegmentedButton<String>(
                   segments: [
-                    ButtonSegment(value: 'all', label: Text(context.tr('privacy_all'))),
-                    ButtonSegment(value: 'contacts', label: Text(context.tr('privacy_contacts'))),
-                    ButtonSegment(value: 'nobody', label: Text(context.tr('privacy_nobody'))),
+                    ButtonSegment(
+                      value: 'all',
+                      label: Text(context.tr('privacy_all')),
+                    ),
+                    ButtonSegment(
+                      value: 'contacts',
+                      label: Text(context.tr('privacy_contacts')),
+                    ),
+                    ButtonSegment(
+                      value: 'nobody',
+                      label: Text(context.tr('privacy_nobody')),
+                    ),
                   ],
                   selected: {_whoCanCall},
-                  onSelectionChanged: _loading ? null : (s) => setState(() => _whoCanCall = s.first),
+                  onSelectionChanged: _loading
+                      ? null
+                      : (s) => setState(() => _whoCanCall = s.first),
                 ),
               ],
             ),
@@ -1052,8 +1112,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: Text(context.tr('clear_all_chats_messages_title')),
         content: Text(context.tr('clear_all_chats_messages_body')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('cancel'))),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(context.tr('delete'))),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(context.tr('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(context.tr('delete')),
+          ),
         ],
       ),
     );
@@ -1071,9 +1137,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) setState(() => _loading = false);

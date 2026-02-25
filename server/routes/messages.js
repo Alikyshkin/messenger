@@ -19,6 +19,7 @@ import { syncMessagesFTS } from '../utils/ftsSync.js';
 import { log } from '../utils/logger.js';
 import { isCommunicationBlocked } from '../utils/blocked.js';
 import { canMessage } from '../utils/privacy.js';
+import { getUserDisplayName } from '../utils/users.js';
 const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getMessageReactions(messageId) {
   const rows = db.prepare('SELECT user_id, emoji FROM message_reactions WHERE message_id = ?').all(messageId);
@@ -249,8 +250,7 @@ router.get('/:peerId', validateParams(peerIdParamSchema), asyncHandler(async (re
     if (r.reply_to_id) {
       const replyRow = db.prepare('SELECT content, sender_id FROM messages WHERE id = ?').get(r.reply_to_id);
       if (replyRow) {
-        const replySender = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(replyRow.sender_id);
-        const replyName = replySender?.display_name || replySender?.username || '?';
+        const replyName = getUserDisplayName(db, replyRow.sender_id, '?');
         let snippet = replyRow.content || '';
         if (snippet.length > 80) snippet = snippet.slice(0, 77) + '...';
         msg.reply_to_content = snippet;
@@ -554,9 +554,8 @@ router.post('/', messageLimiter, uploadLimiter, (req, res, next) => {
     if (row.reply_to_id) {
       const replyRow = db.prepare('SELECT content, sender_id FROM messages WHERE id = ?').get(row.reply_to_id);
       if (replyRow) {
-        const replySender = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(replyRow.sender_id);
         payload.reply_to_content = (replyRow.content || '').length > 80 ? (replyRow.content || '').slice(0, 77) + '...' : (replyRow.content || '');
-        payload.reply_to_sender_name = replySender?.display_name || replySender?.username || '?';
+        payload.reply_to_sender_name = getUserDisplayName(db, replyRow.sender_id, '?');
       }
     }
     payload.reactions = getMessageReactions(row.id);

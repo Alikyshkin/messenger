@@ -4,6 +4,7 @@ import { authMiddleware } from '../auth.js';
 import { decryptIfLegacy } from '../cipher.js';
 import { escapeHtml } from '../middleware/sanitize.js';
 import { asyncHandler } from '../middleware/errorHandler.js';
+import { getUserDisplayName } from '../utils/users.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -184,11 +185,8 @@ router.get('/html', asyncHandler(async (req, res) => {
   `).all(me);
   
   // Получаем имена пользователей для отображения
-  const getUserName = (userId) => {
-    const u = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(userId);
-    return u ? (u.display_name || u.username) : 'Неизвестный';
-  };
-  
+  const getUserName = (userId) => getUserDisplayName(db, userId, 'Неизвестный');
+
   const getGroupName = (groupId) => {
     const g = db.prepare('SELECT name FROM groups WHERE id = ?').get(groupId);
     return g ? g.name : 'Неизвестная группа';

@@ -17,6 +17,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 import config from './config/index.js';
 import { handleHealth, handleReady, handleLive } from './health.js';
 import { handleWsMessage } from './wsHandlers.js';
+import { getContactIds } from './utils/contacts.js';
 
 import authRoutes from './routes/auth.js';
 import oauthRoutes from './routes/oauth.js';
@@ -335,7 +336,7 @@ wss.on('connection', (ws, req) => {
   // Обновляем статус пользователя на онлайн
   db.prepare('UPDATE users SET is_online = 1 WHERE id = ?').run(userId);
   // Уведомляем контакты об изменении статуса
-  const contacts = db.prepare('SELECT contact_id FROM contacts WHERE user_id = ?').all(userId).map(r => r.contact_id);
+  const contacts = getContactIds(db, userId);
   contacts.forEach(contactId => {
     broadcastToUser(contactId, {
       type: 'user_status',
@@ -359,7 +360,7 @@ wss.on('connection', (ws, req) => {
         // Обновляем статус пользователя на офлайн
         db.prepare('UPDATE users SET is_online = 0, last_seen = datetime(\'now\') WHERE id = ?').run(userId);
         // Уведомляем контакты об изменении статуса
-        const contacts = db.prepare('SELECT contact_id FROM contacts WHERE user_id = ?').all(userId).map(r => r.contact_id);
+        const contacts = getContactIds(db, userId);
         contacts.forEach(contactId => {
           broadcastToUser(contactId, {
             type: 'user_status',

@@ -46,13 +46,19 @@ GoRouter createAppRouter(AuthService authService) {
 
       // Если пользователь не авторизован и пытается зайти на защищенные страницы
       if (!isLoggedIn && !isLoggingIn) {
-        logAction('app_router', 'redirect', 'done', {'to': '/login', 'from': state.matchedLocation}, 'auth required');
+        logAction('app_router', 'redirect', 'done', {
+          'to': '/login',
+          'from': state.matchedLocation,
+        }, 'auth required');
         return '/login';
       }
 
       // Если пользователь авторизован и пытается зайти на страницы входа
       if (isLoggedIn && isLoggingIn) {
-        logAction('app_router', 'redirect', 'done', {'to': '/', 'from': state.matchedLocation}, 'already logged in');
+        logAction('app_router', 'redirect', 'done', {
+          'to': '/',
+          'from': state.matchedLocation,
+        }, 'already logged in');
         return '/';
       }
 

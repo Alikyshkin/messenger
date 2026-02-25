@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -38,7 +37,9 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
   @override
   void initState() {
     super.initState();
-    logAction('record_video_note_screen', 'initState', 'START', {'peerId': widget.peerId});
+    logAction('record_video_note_screen', 'initState', 'START', {
+      'peerId': widget.peerId,
+    });
     _initCamera();
   }
 

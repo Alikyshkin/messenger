@@ -1,24 +1,26 @@
 /**
  * Запуск сервера и Flutter web-клиента для Playwright E2E.
- * Сервер — на PLAYWRIGHT_TEST_PORT (по умолчанию 38473).
- * Клиент — на PLAYWRIGHT_CLIENT_PORT (по умолчанию 8765).
+ * Сервер — на PLAYWRIGHT_TEST_PORT (по умолчанию из config/constants.js).
+ * Клиент — на PLAYWRIGHT_CLIENT_PORT, API_BASE_URL указывает на сервер.
  *
  * Клиент подаётся из предварительно собранного build/web (flutter build web).
  * Если build/web не существует, запускает flutter run -d web-server (медленнее).
+ * Процесс живёт до SIGINT/SIGTERM, затем завершает оба дочерних процесса.
  */
 import { spawn } from 'child_process';
 import { createServer } from 'http';
 import { join, dirname, extname } from 'path';
 import { fileURLToPath } from 'url';
 import { readFileSync, existsSync } from 'fs';
+import { TEST_PORTS } from '../config/constants.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const serverDir = join(__dirname, '..');
 const clientDir = join(serverDir, '..', 'client');
 const buildDir = join(clientDir, 'build', 'web');
 
-const SERVER_PORT = parseInt(process.env.PLAYWRIGHT_TEST_PORT || '38473', 10);
-const CLIENT_PORT = parseInt(process.env.PLAYWRIGHT_CLIENT_PORT || '8765', 10);
+const SERVER_PORT = parseInt(process.env.PLAYWRIGHT_TEST_PORT || String(TEST_PORTS.PLAYWRIGHT_E2E), 10);
+const CLIENT_PORT = parseInt(process.env.PLAYWRIGHT_CLIENT_PORT || String(TEST_PORTS.PLAYWRIGHT_CLIENT), 10);
 const SERVER_URL = `http://127.0.0.1:${SERVER_PORT}`;
 
 function waitForUrl(url, label, maxAttempts = 60, intervalMs = 1000) {

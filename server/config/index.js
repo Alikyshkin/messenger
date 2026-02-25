@@ -11,7 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export const config = {
   // Сервер
-  port: parseInt(process.env.PORT || '3000', 10),
+  port: parseInt(process.env.PORT || String(constants.DEFAULT_HTTP_PORT), 10),
   nodeEnv: process.env.NODE_ENV || 'development',
   
   // База данных
@@ -29,7 +29,7 @@ export const config = {
   cors: {
     origins: process.env.CORS_ORIGINS 
       ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
-      : ['http://localhost:3000', 'http://localhost:8080', 'http://127.0.0.1:3000', 'http://127.0.0.1:8080'],
+      : [`http://localhost:${constants.DEFAULT_HTTP_PORT}`, 'http://localhost:8080', `http://127.0.0.1:${constants.DEFAULT_HTTP_PORT}`, 'http://127.0.0.1:8080'],
   },
   
   // Логирование
@@ -48,7 +48,7 @@ export const config = {
   
   // Приложение
   app: {
-    baseUrl: process.env.APP_BASE_URL || 'http://localhost:3000',
+    baseUrl: process.env.APP_BASE_URL || `http://localhost:${constants.DEFAULT_HTTP_PORT}`,
   },
   
   // Шифрование (для старых сообщений)

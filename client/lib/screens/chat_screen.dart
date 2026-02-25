@@ -96,7 +96,8 @@ class _ChatScreenState extends State<ChatScreen> {
     _typingDebounce = Timer(const Duration(milliseconds: 400), () {
       if (!mounted) return;
       final ws = _ws;
-      if (ws != null && DateTime.now().difference(_lastTypingSent).inSeconds >= 2) {
+      if (ws != null &&
+          DateTime.now().difference(_lastTypingSent).inSeconds >= 2) {
         ws.sendTyping(widget.peer.id);
         _lastTypingSent = DateTime.now();
       }
@@ -173,9 +174,7 @@ class _ChatScreenState extends State<ChatScreen> {
       final idx = _messages.indexWhere((msg) => msg.id == eu!.messageId);
       if (idx >= 0 && mounted) {
         setState(
-          () => _messages[idx] = _messages[idx].copyWith(
-            content: eu!.content,
-          ),
+          () => _messages[idx] = _messages[idx].copyWith(content: eu!.content),
         );
       }
     }
@@ -183,7 +182,10 @@ class _ChatScreenState extends State<ChatScreen> {
     while ((du = ws.takeDeleteUpdateFor(widget.peer.id)) != null) {
       final idx = _messages.indexWhere((msg) => msg.id == du!.messageId);
       if (idx >= 0 && mounted) {
-        await LocalDb.deleteMessage(peerId: widget.peer.id, messageId: du!.messageId);
+        await LocalDb.deleteMessage(
+          peerId: widget.peer.id,
+          messageId: du!.messageId,
+        );
         setState(() => _messages.removeAt(idx));
       }
     }
@@ -191,14 +193,17 @@ class _ChatScreenState extends State<ChatScreen> {
     // Используем debounce, чтобы не вызывать слишком часто
     if (mounted) {
       final now = DateTime.now();
-      if (_lastMarkReadTime == null || now.difference(_lastMarkReadTime!).inSeconds >= 2) {
+      if (_lastMarkReadTime == null ||
+          now.difference(_lastMarkReadTime!).inSeconds >= 2) {
         _markReadDebounce?.cancel();
         _markReadDebounce = Timer(const Duration(milliseconds: 500), () {
           if (!mounted) return;
           final auth = context.read<AuthService>();
           _lastMarkReadTime = DateTime.now();
           Api(auth.token).markMessagesRead(widget.peer.id).catchError((e) {
-            logActionError('chat_screen', 'markMessagesRead_onVisible', e, {'peerId': widget.peer.id});
+            logActionError('chat_screen', 'markMessagesRead_onVisible', e, {
+              'peerId': widget.peer.id,
+            });
           });
         });
       }
@@ -302,7 +307,9 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _load() async {
-    final scope = logActionStart('chat_screen', '_load', {'peerId': widget.peer.id});
+    final scope = logActionStart('chat_screen', '_load', {
+      'peerId': widget.peer.id,
+    });
     final auth = context.read<AuthService>();
     if (!auth.isLoggedIn) {
       scope.end({'result': 'not_logged_in'});
@@ -320,7 +327,9 @@ class _ChatScreenState extends State<ChatScreen> {
         } catch (_) {}
       }
     } catch (e) {
-      logAction('chat_screen', 'markMessagesRead', 'ERROR', {'peerId': peerId}, e.toString());
+      logAction('chat_screen', 'markMessagesRead', 'ERROR', {
+        'peerId': peerId,
+      }, e.toString());
     }
     setState(() {
       _loading = true;
@@ -542,7 +551,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 },
               ),
               ListTile(
-                leading: Icon(Icons.delete_outline, color: Theme.of(ctx).colorScheme.error),
+                leading: Icon(
+                  Icons.delete_outline,
+                  color: Theme.of(ctx).colorScheme.error,
+                ),
                 title: Text(context.tr('delete_for_me')),
                 onTap: () {
                   Navigator.pop(ctx);
@@ -551,7 +563,10 @@ class _ChatScreenState extends State<ChatScreen> {
               ),
               if (m.isMine)
                 ListTile(
-                  leading: Icon(Icons.delete_forever, color: Theme.of(ctx).colorScheme.error),
+                  leading: Icon(
+                    Icons.delete_forever,
+                    color: Theme.of(ctx).colorScheme.error,
+                  ),
                   title: Text(context.tr('delete_for_all')),
                   onTap: () {
                     Navigator.pop(ctx);
@@ -635,7 +650,10 @@ class _ChatScreenState extends State<ChatScreen> {
             },
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              leading: Icon(Icons.delete_outline, color: Theme.of(context).colorScheme.error),
+              leading: Icon(
+                Icons.delete_outline,
+                color: Theme.of(context).colorScheme.error,
+              ),
               title: Text(context.tr('delete_for_me')),
             ),
           ),
@@ -647,7 +665,10 @@ class _ChatScreenState extends State<ChatScreen> {
               },
               child: ListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                leading: Icon(Icons.delete_forever, color: Theme.of(context).colorScheme.error),
+                leading: Icon(
+                  Icons.delete_forever,
+                  color: Theme.of(context).colorScheme.error,
+                ),
                 title: Text(context.tr('delete_for_all')),
               ),
             ),
@@ -674,7 +695,9 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e is ApiException ? e.message : context.tr('connection_error')),
+          content: Text(
+            e is ApiException ? e.message : context.tr('connection_error'),
+          ),
         ),
       );
     }
@@ -724,7 +747,9 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e is ApiException ? e.message : context.tr('connection_error')),
+          content: Text(
+            e is ApiException ? e.message : context.tr('connection_error'),
+          ),
         ),
       );
     }
@@ -862,7 +887,11 @@ class _ChatScreenState extends State<ChatScreen> {
       return;
     }
     final content = _text.text.trim();
-    logUserAction('send_message', {'peerId': widget.peer.id, 'hasFile': _pendingAttachment != null, 'hasMulti': _pendingMultipleFiles != null});
+    logUserAction('send_message', {
+      'peerId': widget.peer.id,
+      'hasFile': _pendingAttachment != null,
+      'hasMulti': _pendingMultipleFiles != null,
+    });
     final replyToId = _replyingTo?.id;
     final pending = _pendingAttachment;
     final pendingMulti = _pendingMultipleFiles;
@@ -1168,9 +1197,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Геолокация отключена')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Геолокация отключена')));
       return;
     }
     var permission = await Geolocator.checkPermission();
@@ -1180,9 +1209,9 @@ class _ChatScreenState extends State<ChatScreen> {
     if (permission == LocationPermission.denied ||
         permission == LocationPermission.deniedForever) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Нет доступа к геолокации')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Нет доступа к геолокации')));
       return;
     }
     setState(() => _sending = true);
@@ -1312,7 +1341,9 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_sending || _isRecording) {
       return;
     }
-    final scope = logActionStart('chat_screen', 'voice_record_start', {'peerId': widget.peer.id});
+    final scope = logActionStart('chat_screen', 'voice_record_start', {
+      'peerId': widget.peer.id,
+    });
     try {
       final hasPermission = await _audioRecorder.hasPermission();
       if (!hasPermission) {
@@ -1365,7 +1396,9 @@ class _ChatScreenState extends State<ChatScreen> {
     if (!_isRecording || _recordPath == null) {
       return;
     }
-    final scope = logActionStart('chat_screen', 'voice_record_stop', {'peerId': widget.peer.id});
+    final scope = logActionStart('chat_screen', 'voice_record_stop', {
+      'peerId': widget.peer.id,
+    });
     final startTime = _recordStartTime;
     try {
       final path = await _audioRecorder.stop();
@@ -1498,8 +1531,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
-                    widget.peer.isOnline == true || (widget.peer.lastSeen != null && widget.peer.lastSeen!.isNotEmpty)
-                        ? formatLastSeen(context, widget.peer.lastSeen, widget.peer.isOnline)
+                    widget.peer.isOnline == true ||
+                            (widget.peer.lastSeen != null &&
+                                widget.peer.lastSeen!.isNotEmpty)
+                        ? formatLastSeen(
+                            context,
+                            widget.peer.lastSeen,
+                            widget.peer.isOnline,
+                          )
                         : '@${widget.peer.username}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: widget.peer.isOnline == true
@@ -1517,7 +1556,8 @@ class _ChatScreenState extends State<ChatScreen> {
         iconTheme: IconThemeData(color: appBarFg),
         actionsIconTheme: IconThemeData(color: appBarFg),
         actions: [
-          if (MediaQuery.sizeOf(context).width >= AppSizes.mobileBreakpoint) ...[
+          if (MediaQuery.sizeOf(context).width >=
+              AppSizes.mobileBreakpoint) ...[
             IconButton(
               icon: const Icon(Icons.person_outline),
               tooltip: 'Профиль',
@@ -1534,7 +1574,9 @@ class _ChatScreenState extends State<ChatScreen> {
               icon: const Icon(Icons.phone),
               tooltip: 'Голосовой звонок',
               onPressed: () {
-                logUserAction('chat_start_audio_call', {'peerId': widget.peer.id});
+                logUserAction('chat_start_audio_call', {
+                  'peerId': widget.peer.id,
+                });
                 Navigator.of(context).push(
                   AppPageRoute(
                     builder: (_) => CallScreen(
@@ -1550,7 +1592,9 @@ class _ChatScreenState extends State<ChatScreen> {
               icon: const Icon(Icons.videocam),
               tooltip: 'Видеозвонок',
               onPressed: () {
-                logUserAction('chat_start_video_call', {'peerId': widget.peer.id});
+                logUserAction('chat_start_video_call', {
+                  'peerId': widget.peer.id,
+                });
                 Navigator.of(context).push(
                   AppPageRoute(
                     builder: (_) => CallScreen(
@@ -2093,7 +2137,10 @@ class _ChatScreenState extends State<ChatScreen> {
                 final typing = _ws!.getPeerTyping(widget.peer.id);
                 if (typing == null) return const SizedBox.shrink();
                 return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   alignment: Alignment.centerLeft,
                   child: Text(
                     context.tr('typing').replaceFirst('%s', typing),
@@ -2408,16 +2455,13 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       );
     }
-    final url =
-        'https://www.google.com/maps?q=${loc.lat},${loc.lng}';
+    final url = 'https://www.google.com/maps?q=${loc.lat},${loc.lng}';
     final textColor = m.isMine
         ? Theme.of(context).colorScheme.onPrimary
         : Theme.of(context).colorScheme.onSurface;
     return InkWell(
-      onTap: () => launchUrl(
-            Uri.parse(url),
-            mode: LaunchMode.externalApplication,
-          ),
+      onTap: () =>
+          launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
       borderRadius: BorderRadius.circular(8),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2429,11 +2473,9 @@ class _ChatScreenState extends State<ChatScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                loc.label ?? '${loc.lat.toStringAsFixed(4)}, ${loc.lng.toStringAsFixed(4)}',
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: textColor,
-                ),
+                loc.label ??
+                    '${loc.lat.toStringAsFixed(4)}, ${loc.lng.toStringAsFixed(4)}',
+                style: TextStyle(fontWeight: FontWeight.w500, color: textColor),
               ),
               Text(
                 'Открыть на карте',

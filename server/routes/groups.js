@@ -18,6 +18,7 @@ import { asyncHandler } from '../middleware/errorHandler.js';
 import { validatePagination, createPaginationMeta } from '../middleware/pagination.js';
 import { ALLOWED_REACTION_EMOJIS, FILE_LIMITS, ALLOWED_FILE_TYPES } from '../config/constants.js';
 import { log } from '../utils/logger.js';
+import { getUserDisplayName } from '../utils/users.js';
 
 const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getGroupMessageReactions(groupMessageId) {
@@ -360,12 +361,12 @@ router.get('/:id/messages', validateParams(idParamSchema), (req, res) => {
 
   const rows = db.prepare(query).all(...params);
   const list = rows.reverse().map((r) => {
-    const sender = db.prepare('SELECT public_key, display_name, username FROM users WHERE id = ?').get(r.sender_id);
+    const senderPublicKey = db.prepare('SELECT public_key FROM users WHERE id = ?').get(r.sender_id)?.public_key ?? null;
     const msg = {
       id: r.id,
       group_id: r.group_id,
       sender_id: r.sender_id,
-      sender_display_name: sender?.display_name || sender?.username || '?',
+      sender_display_name: getUserDisplayName(db, r.sender_id, '?'),
       content: decryptIfLegacy(r.content),
       created_at: r.created_at,
       is_mine: r.sender_id === me,
@@ -376,7 +377,7 @@ router.get('/:id/messages', validateParams(idParamSchema), (req, res) => {
       attachment_kind: r.attachment_kind || 'file',
       attachment_duration_sec: r.attachment_duration_sec ?? null,
       attachment_encrypted: !!(r.attachment_encrypted),
-      sender_public_key: sender?.public_key ?? null,
+      sender_public_key: senderPublicKey,
       reply_to_id: r.reply_to_id ?? null,
       is_forwarded: !!(r.is_forwarded),
       forward_from_sender_id: r.forward_from_sender_id ?? null,
@@ -385,11 +386,10 @@ router.get('/:id/messages', validateParams(idParamSchema), (req, res) => {
     if (r.reply_to_id) {
       const replyRow = db.prepare('SELECT content, sender_id FROM group_messages WHERE id = ?').get(r.reply_to_id);
       if (replyRow) {
-        const replySender = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(replyRow.sender_id);
         let snippet = replyRow.content || '';
         if (snippet.length > 80) snippet = snippet.slice(0, 77) + '...';
         msg.reply_to_content = snippet;
-        msg.reply_to_sender_name = replySender?.display_name || replySender?.username || '?';
+        msg.reply_to_sender_name = getUserDisplayName(db, replyRow.sender_id, '?');
       }
     }
     const pollRow = db.prepare('SELECT id, question, options, multiple FROM group_polls WHERE group_message_id = ?').get(r.id);
@@ -524,12 +524,12 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
     if (!row) {
       return res.status(500).json({ error: 'Ошибка при создании опроса' });
     }
-    const sender = db.prepare('SELECT public_key, display_name, username FROM users WHERE id = ?').get(me);
+    const senderPublicKey = db.prepare('SELECT public_key FROM users WHERE id = ?').get(me)?.public_key ?? null;
     const payload = {
       id: row.id,
       group_id: row.group_id,
       sender_id: row.sender_id,
-      sender_display_name: sender?.display_name || sender?.username || '?',
+      sender_display_name: getUserDisplayName(db, me, '?'),
       content: row.content,
       created_at: row.created_at,
       is_mine: true,
@@ -568,12 +568,11 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
     const row = db.prepare(
       'SELECT id, group_id, sender_id, content, created_at, message_type FROM group_messages WHERE id = ?',
     ).get(msgId);
-    const sender = db.prepare('SELECT public_key, display_name, username FROM users WHERE id = ?').get(me);
     const payload = {
       id: row.id,
       group_id: row.group_id,
       sender_id: row.sender_id,
-      sender_display_name: sender?.display_name || sender?.username || '?',
+      sender_display_name: getUserDisplayName(db, me, '?'),
       content: locationContent,
       created_at: row.created_at,
       is_mine: true,
@@ -599,7 +598,7 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
     ? parseInt(req.body.attachment_duration_sec, 10)
     : null;
   const attachmentEncrypted = req.body?.attachment_encrypted === 'true' || req.body?.attachment_encrypted === true ? 1 : 0;
-  const sender = db.prepare('SELECT public_key, display_name, username FROM users WHERE id = ?').get(me);
+  const senderPublicKey = db.prepare('SELECT public_key FROM users WHERE id = ?').get(me)?.public_key ?? null;
   const memberIds = getGroupMemberIds(groupId);
 
   if (files.length === 0) {
@@ -616,7 +615,7 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
       id: row.id,
       group_id: row.group_id,
       sender_id: row.sender_id,
-      sender_display_name: sender?.display_name || sender?.username || '?',
+      sender_display_name: getUserDisplayName(db, me, '?'),
       content: row.content,
       created_at: row.created_at,
       is_mine: true,
@@ -627,7 +626,7 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
       attachment_kind: row.attachment_kind || 'file',
       attachment_duration_sec: row.attachment_duration_sec ?? null,
       attachment_encrypted: !!(row.attachment_encrypted),
-      sender_public_key: sender?.public_key ?? null,
+      sender_public_key: senderPublicKey,
       reply_to_id: row.reply_to_id ?? null,
       is_forwarded: !!(row.is_forwarded),
       forward_from_sender_id: row.forward_from_sender_id ?? null,
@@ -636,9 +635,8 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
     if (row.reply_to_id) {
       const replyRow = db.prepare('SELECT content, sender_id FROM group_messages WHERE id = ?').get(row.reply_to_id);
       if (replyRow) {
-        const replySender = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(replyRow.sender_id);
         payload.reply_to_content = (replyRow.content || '').length > 80 ? (replyRow.content || '').slice(0, 77) + '...' : (replyRow.content || '');
-        payload.reply_to_sender_name = replySender?.display_name || replySender?.username || '?';
+        payload.reply_to_sender_name = getUserDisplayName(db, replyRow.sender_id, '?');
       }
     }
     payload.reactions = [];
@@ -702,7 +700,7 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
       id: row.id,
       group_id: row.group_id,
       sender_id: row.sender_id,
-      sender_display_name: sender?.display_name || sender?.username || '?',
+      sender_display_name: getUserDisplayName(db, me, '?'),
       content: row.content,
       created_at: row.created_at,
       is_mine: true,
@@ -713,7 +711,7 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
       attachment_kind: row.attachment_kind || 'file',
       attachment_duration_sec: row.attachment_duration_sec ?? null,
       attachment_encrypted: !!(row.attachment_encrypted),
-      sender_public_key: sender?.public_key ?? null,
+      sender_public_key: senderPublicKey,
       reply_to_id: row.reply_to_id ?? null,
       is_forwarded: !!(row.is_forwarded),
       forward_from_sender_id: row.forward_from_sender_id ?? null,
@@ -722,9 +720,8 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
     if (row.reply_to_id) {
       const replyRow = db.prepare('SELECT content, sender_id FROM group_messages WHERE id = ?').get(row.reply_to_id);
       if (replyRow) {
-        const replySender = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(replyRow.sender_id);
         payload.reply_to_content = (replyRow.content || '').length > 80 ? (replyRow.content || '').slice(0, 77) + '...' : (replyRow.content || '');
-        payload.reply_to_sender_name = replySender?.display_name || replySender?.username || '?';
+        payload.reply_to_sender_name = getUserDisplayName(db, replyRow.sender_id, '?');
       }
     }
     payload.reactions = [];

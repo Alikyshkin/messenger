@@ -97,7 +97,10 @@ class _CallScreenState extends State<CallScreen> {
     }
     _renderersFuture = _initRenderers();
     _ws = context.read<WsService>();
-    context.read<CallMinimizedService>().registerActiveCall(widget.peer, widget.isVideoCall);
+    context.read<CallMinimizedService>().registerActiveCall(
+      widget.peer,
+      widget.isVideoCall,
+    );
 
     // Проверяем, не идет ли уже звонок с этим пользователем (при разворачивании из минимизации)
     final minimizedService = context.read<CallMinimizedService>();
@@ -334,7 +337,9 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _toggleScreenShare() async {
-    logUserAction('call_toggle_screen_share', {'enabled': !_screenShareEnabled});
+    logUserAction('call_toggle_screen_share', {
+      'enabled': !_screenShareEnabled,
+    });
     if (_pc == null || _localStream == null) {
       return;
     }
@@ -770,7 +775,10 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   Future<void> _acceptCall() async {
-    logUserAction('call_accept', {'peerId': widget.peer.id, 'isVideo': widget.isVideoCall});
+    logUserAction('call_accept', {
+      'peerId': widget.peer.id,
+      'isVideo': widget.isVideoCall,
+    });
     final offerPayload = widget.initialSignal?.payload;
     if (offerPayload == null) {
       return;
@@ -1393,18 +1401,11 @@ class _CallScreenState extends State<CallScreen> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                _networkQualityIcon,
-                color: _networkQualityColor,
-                size: 18,
-              ),
+              Icon(_networkQualityIcon, color: _networkQualityColor, size: 18),
               const SizedBox(width: 4),
               Text(
                 _networkQualityLabel,
-                style: TextStyle(
-                  color: _networkQualityColor,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: _networkQualityColor, fontSize: 12),
               ),
             ],
           ),
@@ -1652,7 +1653,10 @@ class _CallScreenState extends State<CallScreen> {
             children: [
               TabBar(
                 onTap: (i) {
-                  logUserAction('call_panel_tab', {'index': i, 'tab': i == 0 ? 'participants' : 'settings'});
+                  logUserAction('call_panel_tab', {
+                    'index': i,
+                    'tab': i == 0 ? 'participants' : 'settings',
+                  });
                   setState(() => _panelTabIndex = i);
                   if (i == 1) {
                     _loadMediaDevices();

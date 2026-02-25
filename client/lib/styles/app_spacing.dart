@@ -31,7 +31,7 @@ class AppSpacing {
   static const EdgeInsets sectionPadding = EdgeInsets.fromLTRB(16, 16, 16, 8);
   static const EdgeInsets inputPadding = EdgeInsets.all(16);
   static const EdgeInsets errorPadding = EdgeInsets.all(24);
-  static const EdgeInsets emptyStatePadding = EdgeInsets.all(32);
+  static const EdgeInsets emptyStatePadding = EdgeInsets.all(40);
 
   // Отступы для навигации
   static const EdgeInsets navigationPadding = EdgeInsets.symmetric(
