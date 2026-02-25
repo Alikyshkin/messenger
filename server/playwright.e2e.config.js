@@ -1,7 +1,8 @@
 import { defineConfig } from '@playwright/test';
+import { TEST_PORTS } from './config/constants.js';
 
-const testPort = process.env.PLAYWRIGHT_TEST_PORT || 38473;
-const clientPort = process.env.PLAYWRIGHT_CLIENT_PORT || 8765;
+const testPort = process.env.PLAYWRIGHT_TEST_PORT || TEST_PORTS.PLAYWRIGHT_E2E;
+const clientPort = process.env.PLAYWRIGHT_CLIENT_PORT || TEST_PORTS.PLAYWRIGHT_CLIENT;
 
 // При запуске Playwright (npm run test:playwright:e2e) поднимаются и client, и server.
 // baseURL — Flutter web-клиент в браузере; API — на testPort (для запросов из тестов).

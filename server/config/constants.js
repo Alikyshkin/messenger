@@ -2,6 +2,16 @@
  * Константы приложения
  */
 
+// Порты по умолчанию (переопределяются через PORT, PLAYWRIGHT_TEST_PORT, PLAYWRIGHT_CLIENT_PORT)
+export const DEFAULT_HTTP_PORT = 3000;
+
+/** Порты для тестов Playwright (используются, если переменные окружения не заданы) */
+export const TEST_PORTS = {
+  PLAYWRIGHT_API: 48473,
+  PLAYWRIGHT_E2E: 38473,
+  PLAYWRIGHT_CLIENT: 8765,
+};
+
 // Лимиты файлов
 export const FILE_LIMITS = {
   MAX_FILE_SIZE: 100 * 1024 * 1024, // 100 MB

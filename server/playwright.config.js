@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
+import { TEST_PORTS } from './config/constants.js';
 
-// Порт отдельный от E2E (38473), в верхнем диапазоне чтобы реже конфликтовать с другими процессами
-const testPort = process.env.PLAYWRIGHT_TEST_PORT || 48473;
+const testPort = process.env.PLAYWRIGHT_TEST_PORT || TEST_PORTS.PLAYWRIGHT_API;
 
 export default defineConfig({
   testDir: './tests/playwright',
