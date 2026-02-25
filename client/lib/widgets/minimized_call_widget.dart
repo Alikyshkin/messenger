@@ -23,7 +23,7 @@ class MinimizedCallWidget extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    if (service == null || !service.isMinimized) {
+    if (!service.isMinimized) {
       return const SizedBox.shrink();
     }
 

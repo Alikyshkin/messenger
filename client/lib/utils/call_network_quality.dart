@@ -40,8 +40,10 @@ class CallNetworkQuality {
         final received = r.values['packetsReceived'];
         final loss = r.values['packetsLost'];
         if (received != null && loss != null) {
-          totalPackets += (received as num).toInt() + (loss as num).toInt();
-          lost += (loss as num).toInt();
+          final receivedInt = (received as num).toInt();
+          final lossInt = (loss as num).toInt();
+          totalPackets += receivedInt + lossInt;
+          lost += lossInt;
         }
       }
     }

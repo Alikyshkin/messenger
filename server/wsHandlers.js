@@ -6,6 +6,7 @@ import { clients, broadcastToUser, broadcastTyping, broadcastGroupTyping } from 
 import { isCommunicationBlocked } from './utils/blocked.js';
 import { canCall } from './utils/privacy.js';
 import { log } from './utils/logger.js';
+import { getUserDisplayName } from './utils/users.js';
 
 /**
  * Обрабатывает входящее WebSocket-сообщение.
@@ -107,7 +108,7 @@ async function handleCallSignal(data, userId, req) {
         return;
       }
 
-      const sender = db.prepare('SELECT public_key, display_name, username FROM users WHERE id = ?').get(row.sender_id);
+      const sender = db.prepare('SELECT public_key FROM users WHERE id = ?').get(row.sender_id);
       const senderKey = row.sender_public_key ?? sender?.public_key;
       const proto = req.headers['x-forwarded-proto'] || (req.socket?.encrypted ? 'https' : 'http');
       const host = req.headers.host || 'localhost:3000';
@@ -128,7 +129,7 @@ async function handleCallSignal(data, userId, req) {
         attachment_duration_sec: null,
         attachment_encrypted: false,
         sender_public_key: senderKey ?? null,
-        sender_display_name: sender?.display_name || sender?.username || '?',
+        sender_display_name: getUserDisplayName(db, row.sender_id, '?'),
         reply_to_id: null,
         is_forwarded: false,
         forward_from_sender_id: null,
@@ -169,8 +170,7 @@ function handleTyping(data, userId) {
   const toUserId = data.toUserId != null ? Number(data.toUserId) : null;
   if (toUserId && Number.isInteger(toUserId) && toUserId > 0 && toUserId !== userId) {
     if (!isCommunicationBlocked(userId, toUserId)) {
-      const user = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(userId);
-      const displayName = user?.display_name || user?.username || 'User';
+      const displayName = getUserDisplayName(db, userId, 'User');
       broadcastTyping(toUserId, userId, displayName);
     }
   }
@@ -182,8 +182,7 @@ function handleGroupTyping(data, userId) {
     const isMember = db.prepare('SELECT 1 FROM group_members WHERE group_id = ? AND user_id = ?').get(groupId, userId);
     if (isMember) {
       const members = db.prepare('SELECT user_id FROM group_members WHERE group_id = ?').all(groupId);
-      const user = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(userId);
-      const displayName = user?.display_name || user?.username || 'User';
+      const displayName = getUserDisplayName(db, userId, 'User');
       broadcastGroupTyping(groupId, userId, displayName, members.map(m => m.user_id));
     }
   }

@@ -5,6 +5,7 @@ import { canSeeStatus } from '../utils/privacy.js';
 import { decryptIfLegacy } from '../cipher.js';
 import { validatePagination, createPaginationMeta } from '../middleware/pagination.js';
 import { getUsersByIds } from '../utils/queryOptimizer.js';
+import { displayNameFromUser } from '../utils/users.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -159,7 +160,7 @@ router.get('/', validatePagination, (req, res) => {
         created_at: lastRow.created_at,
         is_mine: lastRow.sender_id === me,
         message_type: lastRow.message_type || 'text',
-        sender_display_name: sender?.display_name || sender?.username || '?',
+        sender_display_name: displayNameFromUser(sender, '?'),
       },
       unread_count: unreadCnt,
     });

@@ -3,10 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../l10n/app_localizations.dart';
 import '../models/search_result.dart';
-import '../models/user.dart';
 import '../services/api.dart';
 import '../services/auth_service.dart';
-import '../utils/app_page_route.dart';
 import '../utils/format_date.dart';
 import '../utils/user_action_logger.dart';
 import '../widgets/app_back_button.dart';
@@ -142,8 +140,9 @@ class _SearchChatsScreenState extends State<SearchChatsScreen> {
                     onSelected: (v) {
                       setState(() {
                         _typeFilter = t;
-                        if (_controller.text.trim().length >= _minQueryLength)
+                        if (_controller.text.trim().length >= _minQueryLength) {
                           _search();
+                        }
                       });
                     },
                   ),

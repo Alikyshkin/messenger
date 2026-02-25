@@ -5,6 +5,7 @@ import { decryptIfLegacy } from '../cipher.js';
 import { validatePagination } from '../middleware/pagination.js';
 import { SEARCH_CONFIG } from '../config/constants.js';
 import { getUsersByIds } from '../utils/queryOptimizer.js';
+import { displayNameFromUser } from '../utils/users.js';
 
 const router = Router();
 router.use(authMiddleware);
@@ -162,7 +163,7 @@ router.get('/messages', validatePagination, (req, res) => {
         receiver_id: r.receiver_id,
         peer: {
           id: peerId,
-          display_name: peer?.display_name || peer?.username || '?',
+          display_name: displayNameFromUser(peer, '?'),
         },
         content: decryptIfLegacy(r.content),
         created_at: r.created_at,
@@ -236,7 +237,7 @@ router.get('/messages', validatePagination, (req, res) => {
         receiver_id: r.receiver_id,
         peer: {
           id: peerId,
-          display_name: peer?.display_name || peer?.username || '?',
+          display_name: displayNameFromUser(peer, '?'),
         },
         content: decryptIfLegacy(r.content),
         created_at: r.created_at,
@@ -413,7 +414,7 @@ router.get('/group-messages', validatePagination, (req, res) => {
         group_id: r.group_id,
         group_name: group?.name || '?',
         sender_id: r.sender_id,
-        sender_display_name: sender?.display_name || sender?.username || '?',
+        sender_display_name: displayNameFromUser(sender, '?'),
         content: decryptIfLegacy(r.content),
         created_at: r.created_at,
         is_mine: r.sender_id === me,
@@ -486,7 +487,7 @@ router.get('/group-messages', validatePagination, (req, res) => {
         group_id: r.group_id,
         group_name: group?.name || '?',
         sender_id: r.sender_id,
-        sender_display_name: sender?.display_name || sender?.username || '?',
+        sender_display_name: displayNameFromUser(sender, '?'),
         content: decryptIfLegacy(r.content),
         created_at: r.created_at,
         is_mine: r.sender_id === me,

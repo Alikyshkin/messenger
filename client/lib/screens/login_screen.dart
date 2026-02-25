@@ -75,18 +75,20 @@ class _LoginScreenState extends State<LoginScreen> {
           logActionError('login_screen', 'loginWithOAuth', e, {
             'statusCode': e.statusCode,
           });
-          if (mounted)
+          if (mounted) {
             setState(() {
               _error = e.message;
               _loading = false;
             });
+          }
         } catch (err, st) {
           logActionError('login_screen', 'loginWithOAuth', err, null, st);
-          if (mounted)
+          if (mounted) {
             setState(() {
               _error = context.tr('connection_error');
               _loading = false;
             });
+          }
         }
       });
     }

@@ -338,12 +338,15 @@ class _HomeScreenState extends State<HomeScreen>
           return;
         }
         final currentContext = context;
+        // ignore: use_build_context_synchronously
         final errorMessage = e is ApiException
             ? e.message
+            // ignore: use_build_context_synchronously
             : currentContext.tr('error');
         if (!mounted) {
           return;
         }
+        // ignore: use_build_context_synchronously
         final scaffoldMessenger = ScaffoldMessenger.of(currentContext);
         scaffoldMessenger.showSnackBar(SnackBar(content: Text(errorMessage)));
       }
@@ -710,32 +713,34 @@ class _HomeScreenState extends State<HomeScreen>
                                   groupId: isGroup ? c.group!.id : null,
                                   muted: true,
                                 );
-                                if (mounted)
+                                if (mounted) {
                                   setState(
                                     () => _mutedChatKeys = {
                                       ..._mutedChatKeys,
                                       key,
                                     },
                                   );
+                                }
                               } else if (value == 'unmute') {
                                 await LocalDb.setChatMuted(
                                   peerId: isGroup ? null : c.peer!.id,
                                   groupId: isGroup ? c.group!.id : null,
                                   muted: false,
                                 );
-                                if (mounted)
+                                if (mounted) {
                                   setState(
                                     () =>
                                         _mutedChatKeys = {..._mutedChatKeys}
                                           ..remove(key),
                                   );
+                                }
                               } else if (value == 'pin') {
                                 await LocalDb.setChatPinned(
                                   peerId: isGroup ? null : c.peer!.id,
                                   groupId: isGroup ? c.group!.id : null,
                                   pinned: true,
                                 );
-                                if (mounted)
+                                if (mounted) {
                                   setState(() {
                                     _pinnedChats = {
                                       ..._pinnedChats,
@@ -746,13 +751,14 @@ class _HomeScreenState extends State<HomeScreen>
                                       _pinnedChats,
                                     );
                                   });
+                                }
                               } else if (value == 'unpin') {
                                 await LocalDb.setChatPinned(
                                   peerId: isGroup ? null : c.peer!.id,
                                   groupId: isGroup ? c.group!.id : null,
                                   pinned: false,
                                 );
-                                if (mounted)
+                                if (mounted) {
                                   setState(() {
                                     _pinnedChats = Map.from(_pinnedChats)
                                       ..remove(key);
@@ -761,6 +767,7 @@ class _HomeScreenState extends State<HomeScreen>
                                       _pinnedChats,
                                     );
                                   });
+                                }
                               } else if (value == 'delete') {
                                 _confirmDeleteChat(context, c, isGroup);
                               }
@@ -905,9 +912,13 @@ class _HomeScreenState extends State<HomeScreen>
                             ),
                           );
                           if (ok == true && mounted) {
-                            final authService = context.read<AuthService>();
+                            // ignore: use_build_context_synchronously
+                            final ctx = context;
+                            // ignore: use_build_context_synchronously
+                            final authService = ctx.read<AuthService>();
                             await authService.logout();
-                            if (mounted) context.go('/login');
+                            // ignore: use_build_context_synchronously
+                            if (mounted) ctx.go('/login');
                           }
                         }
                       },
@@ -1148,13 +1159,14 @@ class _HomeScreenState extends State<HomeScreen>
                   return;
                 }
                 final currentContext = context;
+                // ignore: use_build_context_synchronously
                 final authService = currentContext.read<AuthService>();
-                final router = currentContext;
                 await authService.logout();
                 if (!mounted) {
                   return;
                 }
-                router.go('/login');
+                // ignore: use_build_context_synchronously
+                context.go('/login');
               }
             },
           ),

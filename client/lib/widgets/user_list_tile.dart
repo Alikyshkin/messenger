@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../l10n/app_localizations.dart';
 import '../models/user.dart';
 import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';

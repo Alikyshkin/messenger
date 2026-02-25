@@ -53,8 +53,9 @@ class OAuthServiceImpl {
       if (result.isError) throw result.asError!.error;
 
       final loginResult = result.asValue!.value;
-      if (loginResult.isCanceled || loginResult.accessToken == null)
+      if (loginResult.isCanceled || loginResult.accessToken == null) {
         return null;
+      }
 
       return await _api.loginWithVk(
         loginResult.accessToken!.token,

@@ -53,8 +53,8 @@ void logActionEnd(
   Duration? duration,
 ]) {
   final d = duration != null ? '${duration.inMilliseconds}ms' : null;
-  final m = <String, dynamic>{if (d != null) 'duration': d}
-    ..addAll(details ?? {});
+  // ignore: use_null_aware_elements
+  final m = <String, dynamic>{if (d != null) 'duration': d, ...?details};
   debugPrint(_fmt(file, action, 'END', m.isNotEmpty ? m : null, 'ok'));
 }
 

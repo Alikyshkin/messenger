@@ -13,9 +13,7 @@ import 'user_list_tile.dart';
 import 'section_card.dart';
 import 'error_state_widget.dart';
 import 'empty_state_widget.dart';
-import '../screens/add_contact_screen.dart';
 import '../screens/chat_screen.dart';
-import '../screens/possible_friends_screen.dart';
 import '../screens/user_profile_screen.dart';
 import '../utils/user_action_logger.dart';
 

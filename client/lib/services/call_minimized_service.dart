@@ -40,7 +40,6 @@ class MinimizedCallState {
 class CallMinimizedService extends ChangeNotifier {
   MinimizedCallState _state = MinimizedCallState();
   User? _activeCallPeer;
-  bool _activeCallVideoCall = true;
 
   MinimizedCallState get state => _state;
   bool get isMinimized => _state.isMinimized;
@@ -97,7 +96,6 @@ class CallMinimizedService extends ChangeNotifier {
   /// Регистрация активного звонка (вызывается CallScreen при монтировании)
   void registerActiveCall(User peer, bool isVideoCall) {
     _activeCallPeer = peer;
-    _activeCallVideoCall = isVideoCall;
     notifyListeners();
   }
 

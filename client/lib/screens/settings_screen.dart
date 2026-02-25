@@ -86,12 +86,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (!auth.isLoggedIn) return;
     try {
       final p = await Api(auth.token).getPrivacy();
-      if (mounted)
+      if (mounted) {
         setState(() {
           _whoCanSeeStatus = p['who_can_see_status'] as String? ?? 'contacts';
           _whoCanMessage = p['who_can_message'] as String? ?? 'contacts';
           _whoCanCall = p['who_can_call'] as String? ?? 'contacts';
         });
+      }
     } catch (_) {}
   }
 

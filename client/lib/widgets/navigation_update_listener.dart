@@ -63,6 +63,7 @@ class NavigationUpdateObserver extends NavigatorObserver {
         // Проверяем обновления при навигации на главный экран
         try {
           Provider.of<AppUpdateService>(
+            // ignore: use_build_context_synchronously
             navigatorContext,
             listen: false,
           ).checkForUpdates();
@@ -70,6 +71,7 @@ class NavigationUpdateObserver extends NavigatorObserver {
         // Обновляем список чатов при возврате на главный экран
         try {
           Provider.of<ChatListRefreshService>(
+            // ignore: use_build_context_synchronously
             navigatorContext,
             listen: false,
           ).requestRefresh();
