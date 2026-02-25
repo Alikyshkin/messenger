@@ -157,10 +157,11 @@ router.post('/', (req, res, next) => {
     });
   }
   next();
-}, validate(createGroupSchema), async (req, res) => {
+}, validate(createGroupSchema), asyncHandler(async (req, res) => {
   const me = req.user.userId;
   const baseUrl = getBaseUrl(req);
-  const { name, member_ids: memberIds } = req.validated;
+  const { name } = req.validated;
+  let memberIds = req.validated.member_ids;
   if (typeof memberIds === 'string') {
     try { memberIds = JSON.parse(memberIds); } catch { memberIds = []; }
   }
@@ -211,7 +212,7 @@ router.post('/', (req, res, next) => {
   const memberCount = db.prepare('SELECT COUNT(*) AS c FROM group_members WHERE group_id = ?').get(groupId);
   const payload = groupToJson(group, baseUrl, { my_role: 'admin', member_count: memberCount?.c ?? 0 });
   res.status(201).json(payload);
-});
+}));
 
 // Информация о группе и участники
 router.get('/:id', validateParams(idParamSchema), (req, res) => {

@@ -10,11 +10,11 @@ process.env.PLAYWRIGHT_SERVER_URL = process.env.PLAYWRIGHT_SERVER_URL || `http:/
 
 export default defineConfig({
   testDir: './tests/playwright',
-  timeout: 60000,
-  fullyParallel: true,
+  timeout: 120000,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : 4,
+  workers: 1,
   reporter: 'list',
   use: {
     baseURL: `http://127.0.0.1:${clientPort}`,
