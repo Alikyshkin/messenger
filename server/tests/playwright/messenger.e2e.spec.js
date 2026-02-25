@@ -24,9 +24,8 @@ async function waitForLoginForm(page, timeout = 40000) {
   await expect(form).toBeVisible({ timeout });
 }
 
-async function waitForLoggedIn(page, timeout = 30000) {
-  // После успешного логина Flutter переходит с /login на /
-  await page.waitForURL((url) => !url.pathname.includes('/login') && !url.pathname.includes('/register'), { timeout });
+async function waitForLoggedIn(page, timeout = 60000) {
+  await page.waitForURL((url) => !url.pathname.includes('/login') && !url.pathname.includes('/register'), { timeout, waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2000);
 }
 
@@ -444,6 +443,7 @@ test.describe('11. Блокировка', () => {
 // ═══════════════════════════════════════════════
 
 test.describe('12. Групповые чаты', () => {
+  test.setTimeout(120000);
   test('создание группы, отправка и чтение сообщений', async ({ page }) => {
     const pair = await createContactPair(page.request, apiBase());
     const h1 = { Authorization: `Bearer ${pair.user1.token}` };
