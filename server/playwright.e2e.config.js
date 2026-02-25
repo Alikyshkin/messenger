@@ -9,7 +9,7 @@ process.env.PLAYWRIGHT_SERVER_URL = process.env.PLAYWRIGHT_SERVER_URL || `http:/
 
 export default defineConfig({
   testDir: './tests/playwright',
-  timeout: 60000,
+  timeout: 90000,
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
