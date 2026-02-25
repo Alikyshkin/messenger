@@ -120,6 +120,7 @@ try { db.exec('ALTER TABLE messages ADD COLUMN reply_to_id INTEGER'); } catch (_
 try { db.exec('ALTER TABLE messages ADD COLUMN is_forwarded INTEGER'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN forward_from_sender_id INTEGER'); } catch (_) {}
 try { db.exec('ALTER TABLE messages ADD COLUMN forward_from_display_name TEXT'); } catch (_) {}
+try { db.exec('ALTER TABLE groups ADD COLUMN avatar_path TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN email TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN birthday TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE users ADD COLUMN phone TEXT'); } catch (_) {}
