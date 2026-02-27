@@ -79,18 +79,10 @@ class _ContactsScreenState extends State<ContactsScreen>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         leading: const AppBackButton(),
         title: Text(context.tr('contacts')),
-        backgroundColor: isDark
-            ? theme.colorScheme.surfaceContainerHighest
-            : theme.colorScheme.primary,
-        foregroundColor: isDark ? theme.colorScheme.onSurface : Colors.white,
-        actionsIconTheme: IconThemeData(
-          color: isDark ? theme.colorScheme.onSurface : Colors.white,
-        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.people_alt_outlined),

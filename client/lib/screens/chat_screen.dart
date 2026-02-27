@@ -1499,9 +1499,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final appBarBg = isDark
-        ? const Color(0xFF1F2D3B)
+        ? theme.colorScheme.surfaceContainerHighest
         : theme.colorScheme.primary;
-    final appBarFg = Colors.white;
+    final appBarFg = isDark ? theme.colorScheme.onSurface : Colors.white;
     final sentBubbleColor = isDark
         ? AppColors.darkSentBubble
         : AppColors.lightSentBubble;

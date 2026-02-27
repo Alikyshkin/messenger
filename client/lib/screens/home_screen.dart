@@ -1124,17 +1124,17 @@ class _HomeScreenState extends State<HomeScreen>
               )
             : null,
         body: isMobile
-            ? SafeArea(
-                child: _isMainRoute
-                    ? Navigator(
-                        key: _navigatorKey,
-                        onGenerateRoute: (settings) => MaterialPageRoute(
-                          builder: (_) => _buildContentView(context),
-                          settings: settings,
-                        ),
-                      )
-                    : content,
-              )
+            ? (_isMainRoute
+                ? SafeArea(
+                    child: Navigator(
+                      key: _navigatorKey,
+                      onGenerateRoute: (settings) => MaterialPageRoute(
+                        builder: (_) => _buildContentView(context),
+                        settings: settings,
+                      ),
+                    ),
+                  )
+                : content)
             : Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -1223,7 +1223,8 @@ class _HomeScreenState extends State<HomeScreen>
             tooltip: context.tr('chats'),
             isActive: _currentView == _NavigationItem.chats,
             onPressed: () {
-              if (mounted && _currentView != _NavigationItem.chats) {
+              final currentPath = GoRouterState.of(context).uri.path;
+              if (mounted && (_currentView != _NavigationItem.chats || currentPath != '/')) {
                 context.go('/');
               }
             },
@@ -1349,7 +1350,9 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _onTabTap(String path, _NavigationItem target) {
-    if (!mounted || _currentView == target) return;
+    if (!mounted) return;
+    final currentPath = GoRouterState.of(context).uri.path;
+    if (_currentView == target && currentPath == path) return;
     logUserAction('home_nav_tab', {'tab': target.name});
     final minimizedService = context.read<CallMinimizedService>();
     if (minimizedService.hasActiveCall && minimizedService.peer != null) {
