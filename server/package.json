@@ -27,7 +27,7 @@
     "test:node": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/auth.test.js tests/unit/api.test.js tests/unit/websocket.test.js tests/unit/validation.test.js tests/unit/sanitize.test.js tests/unit/pagination.test.js tests/unit/apiVersioning.test.js tests/unit/fileValidation.test.js tests/unit/csrf.test.js tests/unit/sanitizeLogs.test.js tests/unit/cipher.test.js tests/integration/messages-integration.test.js tests/e2e/chat_e2e.test.js tests/smoke/smoke.test.js tests/smoke/routes-smoke.test.js"
   },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
+    "bcryptjs": "^3.0.3",
     "better-sqlite3": "^11.5.0",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
