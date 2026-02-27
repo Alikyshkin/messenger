@@ -5,9 +5,9 @@
 import { describe, it, before, after } from 'node:test';
 import { strict as assert } from 'node:assert';
 import crypto from 'crypto';
-import db from '../../db.js';
-import { app, server } from '../../index.js';
-import { fetchJson, register, login, authHeaders } from '../helpers.js';
+import db from '../../server/db.js';
+import { app, server } from '../../server/index.js';
+import { fetchJson, register, login, authHeaders } from './helpers.js';
 
 let baseUrl;
 

@@ -37,8 +37,9 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
       return;
     }
     final scope = logActionStart('possible_friends_screen', '_load', {});
+    final hasData = _contactIds.isNotEmpty || _pendingIds.isNotEmpty;
     setState(() {
-      _loading = true;
+      if (!hasData) _loading = true;
       _error = null;
     });
     try {
@@ -73,7 +74,7 @@ class _PossibleFriendsScreenState extends State<PossibleFriendsScreen> {
   Future<Set<int>> _getOutgoingRequestIds(Api api) async {
     try {
       final r = await api.getFriendRequestsOutgoing();
-      return r.toSet();
+      return r.map((e) => e.toUserId).toSet();
     } catch (_) {
       return {};
     }

@@ -3,7 +3,7 @@
  */
 import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { csrfProtect } from '../../middleware/csrf.js';
+import { csrfProtect } from '../../server/middleware/csrf.js';
 
 describe('csrfProtect', () => {
   it('пропускает GET без вызова next с ошибкой', (_, done) => {

@@ -3,7 +3,7 @@
  */
 import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { apiVersioning, validateApiVersion, isVersionSupported } from '../../middleware/apiVersioning.js';
+import { apiVersioning, validateApiVersion, isVersionSupported } from '../../server/middleware/apiVersioning.js';
 
 describe('isVersionSupported', () => {
   it('поддерживает v1', () => {

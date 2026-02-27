@@ -3,7 +3,7 @@
  */
 import { describe, it, before, after } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { encrypt, decrypt, decryptIfLegacy } from '../../cipher.js';
+import { encrypt, decrypt, decryptIfLegacy } from '../../server/cipher.js';
 
 const PREFIX = 'enc:';
 

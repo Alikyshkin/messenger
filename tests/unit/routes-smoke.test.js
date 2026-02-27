@@ -4,9 +4,9 @@
  */
 import { describe, it, before, after } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { server } from '../../index.js';
-import { createUser, createChatPair } from '../core/user_factory.js';
-import { fetchJson, authHeaders } from '../helpers.js';
+import { server } from '../../server/index.js';
+import { createUser, createChatPair } from './core/user_factory.js';
+import { fetchJson, authHeaders } from './helpers.js';
 
 let baseUrl;
 let user;

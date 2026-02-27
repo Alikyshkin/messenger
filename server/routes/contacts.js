@@ -90,10 +90,32 @@ router.post('/', validate(addContactSchema), async (req, res) => {
 // Исходящие заявки (кому я отправил заявку)
 router.get('/requests/outgoing', (req, res) => {
   const rows = db.prepare(`
-    SELECT to_user_id as user_id FROM friend_requests
-    WHERE from_user_id = ? AND status = 'pending'
+    SELECT fr.id, fr.to_user_id, fr.created_at,
+           u.username, u.display_name
+    FROM friend_requests fr
+    JOIN users u ON u.id = fr.to_user_id
+    WHERE fr.from_user_id = ? AND fr.status = 'pending'
+    ORDER BY fr.created_at DESC
   `).all(req.user.userId);
-  res.json(rows.map(r => ({ to_user_id: r.user_id })));
+  res.json(rows.map(r => ({
+    id: r.id,
+    to_user_id: r.to_user_id,
+    username: r.username,
+    display_name: r.display_name || r.username,
+    created_at: r.created_at,
+  })));
+});
+
+// Отменить исходящую заявку
+router.delete('/requests/:id', validateParams(idParamSchema), (req, res) => {
+  const id = req.validatedParams.id;
+  const result = db.prepare(
+    "DELETE FROM friend_requests WHERE id = ? AND from_user_id = ? AND status = 'pending'"
+  ).run(id, req.user.userId);
+  if (result.changes === 0) {
+    return res.status(404).json({ error: 'Заявка не найдена' });
+  }
+  res.status(204).send();
 });
 
 // Входящие заявки в друзья

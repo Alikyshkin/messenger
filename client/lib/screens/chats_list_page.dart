@@ -70,14 +70,23 @@ class _ChatsListPageState extends State<ChatsListPage>
     final auth = context.read<AuthService>();
     if (!auth.isLoggedIn) return;
 
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    final cached = await LocalDb.getChats();
-    if (cached.isNotEmpty && mounted) {
-      setState(() => _chats = cached);
+    final isFirstLoad = _chats.isEmpty && _error == null;
+
+    List<ChatPreview> cached = [];
+    if (isFirstLoad) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+      cached = await LocalDb.getChats();
+      if (cached.isNotEmpty && mounted) {
+        setState(() => _chats = cached);
+      }
+    } else {
+      cached = _chats;
+      if (mounted) setState(() => _error = null);
     }
+
     try {
       final api = Api(auth.token);
       final list = await api.getChats();
@@ -137,7 +146,10 @@ class _ChatsListPageState extends State<ChatsListPage>
     }
   }
 
-  String _previewContent(BuildContext context, String content) {
+  String _lastMessagePreview(BuildContext context, LastMessage msg) {
+    if (msg.isPoll) return context.tr('poll_prefix');
+    if (msg.isLocation) return '📍 ${context.tr('location')}';
+    final content = msg.content;
     if (content.startsWith('e2ee:')) return context.tr('message');
     return content;
   }
@@ -216,17 +228,16 @@ class _ChatsListPageState extends State<ChatsListPage>
                           : c.peer!.avatarUrl;
                       String subtitleText = '';
                       if (c.lastMessage != null) {
+                        final preview = _lastMessagePreview(context, c.lastMessage!);
                         if (c.lastMessage!.isMine) {
-                          subtitleText =
-                              '${context.tr('you_prefix')}${c.lastMessage!.isPoll ? context.tr('poll_prefix') : ''}${_previewContent(context, c.lastMessage!.content)}';
+                          subtitleText = '${context.tr('you_prefix')}$preview';
                         } else {
                           final prefix =
                               isGroup &&
                                   c.lastMessage!.senderDisplayName != null
                               ? '${c.lastMessage!.senderDisplayName}: '
                               : '';
-                          subtitleText =
-                              '$prefix${c.lastMessage!.isPoll ? context.tr('poll_prefix') : ''}${_previewContent(context, c.lastMessage!.content)}';
+                          subtitleText = '$prefix$preview';
                         }
                       }
                       final theme = Theme.of(context);

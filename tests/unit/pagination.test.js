@@ -3,8 +3,8 @@
  */
 import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { paginationSchema, createPaginationMeta } from '../../middleware/pagination.js';
-import { PAGINATION } from '../../config/constants.js';
+import { paginationSchema, createPaginationMeta } from '../../server/middleware/pagination.js';
+import { PAGINATION } from '../../server/config/constants.js';
 
 describe('paginationSchema', () => {
   it('принимает валидные limit и offset', () => {

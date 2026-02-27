@@ -4,8 +4,8 @@
 import { describe, it, before, after } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { WebSocket } from 'ws';
-import { server } from '../../index.js';
-import { register, login } from '../helpers.js';
+import { server } from '../../server/index.js';
+import { register, login } from './helpers.js';
 
 let baseUrl;
 let wsUrl;
@@ -23,7 +23,7 @@ before(async () => {
       res();
     });
   });
-  
+
   const r1 = await register(baseUrl, { username: 'wsuser1', password: 'Str0ngP@ss!' });
   const r2 = await register(baseUrl, { username: 'wsuser2', password: 'Str0ngP@ss!' });
   assert.strictEqual(r1.status, 201);
@@ -34,7 +34,7 @@ before(async () => {
   userId2 = r2.data.user.id;
 
   // Устанавливаем взаимные контакты для корректной работы звонков
-  const { fetchJson, authHeaders } = await import('../helpers.js');
+  const { fetchJson, authHeaders } = await import('./helpers.js');
   await fetchJson(baseUrl, '/contacts', {
     method: 'POST',
     headers: authHeaders(token1),
@@ -162,19 +162,19 @@ describe('WebSocket', () => {
       const ws1 = new WebSocket(`${wsUrl}?token=${token1}`);
       const ws2 = new WebSocket(`${wsUrl}?token=${token2}`);
       let missedCallReceived = false;
-      
+
       await new Promise((res) => {
         ws1.on('open', () => ws2.on('open', res));
       });
-      
+
       // user1 звонит user2
-      ws1.send(JSON.stringify({ 
-        type: 'call_signal', 
-        toUserId: userId2, 
+      ws1.send(JSON.stringify({
+        type: 'call_signal',
+        toUserId: userId2,
         signal: 'offer',
         payload: { sdp: 'test', type: 'offer' }
       }));
-      
+
       // Ждем получения offer
       await new Promise((res) => {
         ws2.on('message', (data) => {
@@ -184,14 +184,14 @@ describe('WebSocket', () => {
           }
         });
       });
-      
+
       // user2 отклоняет звонок
-      ws2.send(JSON.stringify({ 
-        type: 'call_signal', 
-        toUserId: userId1, 
+      ws2.send(JSON.stringify({
+        type: 'call_signal',
+        toUserId: userId1,
         signal: 'reject'
       }));
-      
+
       // Проверяем, что user1 получил сообщение о пропущенном звонке
       ws1.on('message', (data) => {
         const msg = JSON.parse(data.toString());
@@ -201,7 +201,7 @@ describe('WebSocket', () => {
           missedCallReceived = true;
         }
       });
-      
+
       setTimeout(() => {
         ws1.close();
         ws2.close();
@@ -211,7 +211,7 @@ describe('WebSocket', () => {
           reject(new Error('Сообщение о пропущенном звонке не было создано'));
         }
       }, 1000);
-      
+
       ws1.on('error', reject);
       ws2.on('error', reject);
     });

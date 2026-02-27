@@ -5,9 +5,9 @@
 import { describe, it, before, after } from 'node:test';
 import { strict as assert } from 'node:assert';
 import { WebSocket } from 'ws';
-import { server } from '../../index.js';
-import { createChatPair } from '../core/user_factory.js';
-import { sendMessage, getMessages } from '../core/chat_helpers.js';
+import { server } from '../../server/index.js';
+import { createChatPair } from './core/user_factory.js';
+import { sendMessage, getMessages } from './core/chat_helpers.js';
 
 let baseUrl;
 let wsUrl;

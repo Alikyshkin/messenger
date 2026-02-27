@@ -1,4 +1,4 @@
-import { DEFAULT_HTTP_PORT } from '../../config/constants.js';
+import { DEFAULT_HTTP_PORT } from '../../../server/config/constants.js';
 
 /**
  * Конфигурация окружений для тестов.

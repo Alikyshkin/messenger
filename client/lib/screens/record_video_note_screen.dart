@@ -44,13 +44,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
   }
 
   String _cameraErrorMessage(Object e) {
-    if (kIsWeb) {
-      return MediaUtils.mediaUnavailableMessage;
-    }
-    if (e.toString().toLowerCase().contains('permission')) {
-      return 'Нет доступа к камере. Разрешите доступ в настройках.';
-    }
-    return 'Ошибка камеры. Проверьте, что приложению разрешён доступ к камере.';
+    return MediaUtils.getMediaErrorMessage(e);
   }
 
   Future<void> _initCamera() async {
@@ -59,9 +53,7 @@ class _RecordVideoNoteScreenState extends State<RecordVideoNoteScreen> {
       if (_cameras == null || _cameras!.isEmpty) {
         setState(() {
           _loading = false;
-          _error = kIsWeb
-              ? MediaUtils.mediaUnavailableMessage
-              : 'Камера недоступна';
+          _error = 'Камера недоступна. Разрешите доступ к камере в браузере.';
         });
         return;
       }

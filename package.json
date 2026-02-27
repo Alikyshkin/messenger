@@ -1,0 +1,17 @@
+{
+  "name": "messenger",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:unit": "npm run test:unit:server && npm run test:unit:client",
+    "test:unit:server": "NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/auth.test.js tests/unit/api.test.js tests/unit/websocket.test.js tests/unit/validation.test.js tests/unit/sanitize.test.js tests/unit/pagination.test.js tests/unit/apiVersioning.test.js tests/unit/fileValidation.test.js tests/unit/csrf.test.js tests/unit/sanitizeLogs.test.js tests/unit/cipher.test.js tests/unit/messages-integration.test.js tests/unit/chat_e2e.test.js tests/unit/smoke.test.js tests/unit/routes-smoke.test.js",
+    "test:unit:client": "cd client && flutter test",
+    "test:api": "npx playwright test --config=tests/api/playwright.config.js",
+    "test:e2e": "npx playwright test --config=tests/e2e/playwright.e2e.config.js",
+    "test:e2e:ui": "PW_HEADED=1 npx playwright test --config=tests/e2e/playwright.e2e.config.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}

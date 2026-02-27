@@ -390,8 +390,7 @@ class Api {
         .toList();
   }
 
-  /// Идентификаторы пользователей, которым я отправил заявку в друзья (ожидают подтверждения).
-  Future<List<int>> getFriendRequestsOutgoing() async {
+  Future<List<OutgoingFriendRequest>> getFriendRequestsOutgoing() async {
     final r = await http.get(
       Uri.parse('$base/contacts/requests/outgoing'),
       headers: _headers,
@@ -399,8 +398,16 @@ class Api {
     _checkResponse(r);
     final list = jsonDecode(_utf8Body(r)) as List<dynamic>;
     return list
-        .map((e) => (e as Map<String, dynamic>)['to_user_id'] as int)
+        .map((e) => OutgoingFriendRequest.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<void> cancelFriendRequest(int requestId) async {
+    final r = await http.delete(
+      Uri.parse('$base/contacts/requests/$requestId'),
+      headers: _headers,
+    );
+    _checkResponse(r);
   }
 
   Future<void> acceptFriendRequest(int requestId) async {

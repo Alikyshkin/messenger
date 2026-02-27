@@ -55,12 +55,19 @@
       "Bash(npx playwright test tests/playwright/messaging.spec.js --config playwright.config.js)",
       "Bash(npx playwright test tests/playwright/messaging.spec.js --config playwright.config.js --workers=1 --grep \"редактирует|for_me=true\")",
       "Bash(npx playwright test tests/playwright/messaging.spec.js --config playwright.config.js --workers=1)",
-      "Bash(grep -n \"search_in_chats\\\\|new_chat\\\\|possible_friends\\\\|add_by_username\" /Users/alikakuznecova/Documents/messenger/client/lib/l10n/*.dart)"
+      "Bash(grep -n \"search_in_chats\\\\|new_chat\\\\|possible_friends\\\\|add_by_username\" /Users/alikakuznecova/Documents/messenger/client/lib/l10n/*.dart)",
+      "Bash(flutter test test/widgets/theme_contrast_test.dart --reporter compact)",
+      "Bash(wc -l /Users/alikakuznecova/Documents/messenger/server/tests/**/*.js /Users/alikakuznecova/Documents/messenger/server/tests/*.js)",
+      "Bash(wc -l /Users/alikakuznecova/Documents/messenger/server/tests/unit/*.test.js)",
+      "Bash(wc -l /Users/alikakuznecova/Documents/messenger/server/tests/playwright/*.spec.js)",
+      "Bash(wc -l /Users/alikakuznecova/Documents/messenger/client/test/**/*.dart)",
+      "Bash(NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/validation.test.js tests/unit/sanitize.test.js tests/unit/cipher.test.js tests/unit/csrf.test.js)"
     ],
     "additionalDirectories": [
       "/Users/alikakuznecova/Documents/messenger",
       "/Users/alikakuznecova/Documents/messenger/data",
-      "/tmp"
+      "/tmp",
+      "/Users/alikakuznecova/Documents/messenger/tests/unit"
     ]
   }
 }

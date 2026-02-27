@@ -33,6 +33,7 @@ class LastMessage {
   }
 
   bool get isPoll => messageType == 'poll';
+  bool get isLocation => messageType == 'location';
 }
 
 class ChatPreview {

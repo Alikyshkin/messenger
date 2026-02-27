@@ -1346,25 +1346,30 @@ class _ChatScreenState extends State<ChatScreen> {
       'peerId': widget.peer.id,
     });
     try {
-      final hasPermission = await _audioRecorder.hasPermission();
-      if (!hasPermission) {
-        scope.fail('Permission denied');
-        if (!mounted) {
+      // На вебе hasPermission() возвращает false для состояния 'prompt'
+      // (ещё не спрашивали), не запрашивая разрешение. На нативе — корректен.
+      if (!kIsWeb) {
+        final hasPermission = await _audioRecorder.hasPermission();
+        if (!hasPermission) {
+          scope.fail('Permission denied');
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Нет доступа к микрофону')),
+          );
           return;
         }
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Нет доступа к микрофону')),
-        );
-        return;
       }
       final path = kIsWeb
-          ? 'voice_${DateTime.now().millisecondsSinceEpoch}.m4a'
+          ? 'voice_${DateTime.now().millisecondsSinceEpoch}.webm'
           : p.join(
               (await getTemporaryDirectory()).path,
               'voice_${DateTime.now().millisecondsSinceEpoch}.m4a',
             );
       await _audioRecorder.start(
-        const RecordConfig(encoder: AudioEncoder.aacLc, sampleRate: 44100),
+        RecordConfig(
+          encoder: kIsWeb ? AudioEncoder.opus : AudioEncoder.aacLc,
+          sampleRate: 44100,
+        ),
         path: path,
       );
       if (!mounted) {
@@ -1381,11 +1386,12 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) {
         return;
       }
+      final msg = e.toString().toLowerCase();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            e.toString().contains('Permission')
-                ? 'Нет доступа к микрофону'
+            msg.contains('permission') || msg.contains('notallowed')
+                ? 'Нет доступа к микрофону. Разрешите в браузере.'
                 : 'Ошибка записи',
           ),
         ),
@@ -2386,17 +2392,11 @@ class _ChatScreenState extends State<ChatScreen> {
     if (loc == null) {
       return Text(
         '📍 Геолокация',
-        style: TextStyle(
-          color: m.isMine
-              ? Theme.of(context).colorScheme.onPrimary
-              : Theme.of(context).colorScheme.onSurface,
-        ),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       );
     }
     final url = 'https://www.google.com/maps?q=${loc.lat},${loc.lng}';
-    final textColor = m.isMine
-        ? Theme.of(context).colorScheme.onPrimary
-        : Theme.of(context).colorScheme.onSurface;
+    final textColor = Theme.of(context).colorScheme.onSurface;
     return InkWell(
       onTap: () =>
           launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
@@ -2431,10 +2431,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildPollBubble(Message m) {
     final poll = m.poll!;
-    final isMine = m.isMine;
-    final textColor = isMine
-        ? Theme.of(context).colorScheme.onPrimary
-        : Theme.of(context).colorScheme.onSurface;
+    final textColor = Theme.of(context).colorScheme.onSurface;
     final totalVotes = poll.options.fold<int>(0, (s, o) => s + o.votes);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2519,9 +2516,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final url = m.attachmentUrl!;
     final name = m.attachmentFilename ?? 'файл';
     final isImage = _isImageFilename(name);
-    final textColor = m.isMine
-        ? Theme.of(context).colorScheme.onPrimary
-        : Theme.of(context).colorScheme.onSurface;
+    final textColor = Theme.of(context).colorScheme.onSurface;
     if (m.attachmentEncrypted) {
       final cacheKey =
           '${widget.peer.id}_${m.id}_${m.attachmentFilename ?? ""}';

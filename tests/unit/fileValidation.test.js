@@ -11,7 +11,7 @@ import {
   validateFileSize,
   scanFileForThreats,
   validateFile,
-} from '../../middleware/fileValidation.js';
+} from '../../server/middleware/fileValidation.js';
 
 const testDir = join(tmpdir(), `messenger-filevalidation-${Date.now()}`);
 

@@ -3,7 +3,7 @@
  */
 import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { registerSchema, loginSchema, sendMessageSchema } from '../../middleware/validation.js';
+import { registerSchema, loginSchema, sendMessageSchema } from '../../server/middleware/validation.js';
 
 describe('Validation Schemas', () => {
   describe('registerSchema', () => {

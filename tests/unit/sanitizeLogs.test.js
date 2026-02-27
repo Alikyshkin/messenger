@@ -9,7 +9,7 @@ import {
   sanitizeHeaders,
   sanitizeBody,
   sanitizeRequest,
-} from '../../utils/sanitizeLogs.js';
+} from '../../server/utils/sanitizeLogs.js';
 
 const MASK = '***REDACTED***';
 

@@ -3,7 +3,7 @@
  */
 import { describe, it } from 'node:test';
 import { strict as assert } from 'node:assert';
-import { sanitizeHtml, escapeHtml, sanitizeText } from '../../middleware/sanitize.js';
+import { sanitizeHtml, escapeHtml, sanitizeText } from '../../server/middleware/sanitize.js';
 
 describe('sanitizeHtml', () => {
   it('возвращает пустую строку для не-строки', () => {

@@ -1,7 +1,7 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert';
-import { server } from '../../index.js';
-import { fetchJson, authHeaders } from '../helpers.js';
+import { server } from '../../server/index.js';
+import { fetchJson, authHeaders } from './helpers.js';
 
 let baseUrl;
 
@@ -207,7 +207,7 @@ describe('POST /messages - Integration Tests', () => {
       // Может быть 400 или 404 в зависимости от реализации
       // Проверяем, что запрос не прошел успешно
     } catch (error) {
-      assert.ok(error.status >= 400 && error.status < 500, 
+      assert.ok(error.status >= 400 && error.status < 500,
         `Ожидалась ошибка 4xx, получена: ${error.status || error.message}`);
     }
   });
