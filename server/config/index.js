@@ -2,12 +2,15 @@
  * Централизованная конфигурация приложения
  */
 
-import 'dotenv/config';
+import { config as dotenvConfig } from 'dotenv';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import * as constants from './constants.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+
+// Загружаем .env из корня проекта (на два уровня выше server/config/)
+dotenvConfig({ path: join(__dirname, '../../.env') });
 
 export const config = {
   // Сервер
