@@ -34,10 +34,13 @@
       "Bash(npx playwright test tests/playwright/messenger.e2e.spec.js --grep \"успешный вход через UI\")",
       "Bash(npx playwright test tests/playwright/messenger.e2e.spec.js --grep \"успешный вход\")",
       "Bash(npx playwright test --config=playwright.config.js -g \"успешный вход\")",
-      "Bash(npx playwright test --config=playwright.e2e.config.js -g \"успешный вход\")"
+      "Bash(npx playwright test --config=playwright.e2e.config.js -g \"успешный вход\")",
+      "Bash(du -sh /Users/alikakuznecova/Documents/messenger/*)",
+      "Bash(grep -n \"backup-db\\\\|backup_db\" /Users/alikakuznecova/Documents/messenger/.github/workflows/*.yml /Users/alikakuznecova/Documents/messenger/scripts/*.sh)"
     ],
     "additionalDirectories": [
-      "/Users/alikakuznecova/Documents/messenger"
+      "/Users/alikakuznecova/Documents/messenger",
+      "/Users/alikakuznecova/Documents/messenger/data"
     ]
   }
 }
