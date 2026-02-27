@@ -426,8 +426,7 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  List<Widget> _appBarActionsForMobile(BuildContext context, bool isMobile) {
-    if (!isMobile) return [];
+  List<Widget> _appBarActions(BuildContext context) {
     switch (_currentView) {
       case _NavigationItem.chats:
         return [
@@ -1051,7 +1050,7 @@ class _HomeScreenState extends State<HomeScreen>
             ? AppBar(
                 title: Text(_getAppBarTitle(context)),
                 actions: [
-                  if (isMobile) ..._appBarActionsForMobile(context, isMobile),
+                  ..._appBarActions(context),
                   if (isMobile)
                     PopupMenuButton<String>(
                       icon: const Icon(Icons.more_vert),

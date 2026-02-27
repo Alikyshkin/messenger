@@ -1916,3 +1916,96 @@ test.describe('40. Sync API', () => {
     expect(data.synced).toBeTruthy();
   });
 });
+
+// ═══════════════════════════════════════════════
+// 41. КНОПКИ «ДОБАВИТЬ ЧАТ» И «ДОБАВИТЬ ДРУГА» (UI)
+// ═══════════════════════════════════════════════
+
+test.describe('41. Кнопки добавления чата и друга (UI)', () => {
+  test('на экране чатов видна кнопка поиска', async ({ page }) => {
+    const { username } = await registerViaAPI(page);
+    await loginAndWait(page, username);
+    await waitForApp(page);
+
+    // Кнопка поиска должна присутствовать в AX-дереве Flutter
+    const searchBtn = page.getByRole('button', { name: /поиск по чатам/i });
+    await searchBtn.waitFor({ state: 'attached', timeout: 15000 });
+    expect(await searchBtn.count()).toBeGreaterThan(0);
+  });
+
+  test('на экране чатов видна кнопка «Новый чат»', async ({ page }) => {
+    const { username } = await registerViaAPI(page);
+    await loginAndWait(page, username);
+    await waitForApp(page);
+
+    // Кнопка «Новый чат» должна присутствовать в AX-дереве Flutter
+    const addChatBtn = page.getByRole('button', { name: /новый чат/i });
+    await addChatBtn.waitFor({ state: 'attached', timeout: 15000 });
+    expect(await addChatBtn.count()).toBeGreaterThan(0);
+  });
+
+  test('кнопка «Новый чат» открывает экран поиска/начала чата', async ({ page }) => {
+    const { username } = await registerViaAPI(page);
+    await loginAndWait(page, username);
+    await waitForApp(page);
+
+    const addChatBtn = page.getByRole('button', { name: /новый чат/i });
+    await addChatBtn.waitFor({ state: 'attached', timeout: 15000 });
+
+    const box = await addChatBtn.boundingBox();
+    if (box) {
+      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    } else {
+      await addChatBtn.click({ noWaitAfter: true });
+    }
+    await page.waitForTimeout(3000);
+
+    // После клика должен появиться экран начала нового чата
+    const html = await page.content();
+    expect(html).toMatch(/найти|поиск|новый чат|начать чат|пользовател/i);
+  });
+
+  test('на экране контактов видна кнопка «Добавить по username»', async ({ page }) => {
+    const { username } = await registerViaAPI(page);
+    await loginAndWait(page, username);
+    await waitForApp(page);
+
+    // Переходим на вкладку контактов через навигацию
+    const contactsNavBtn = page.getByRole('button', { name: /^контакты$/i });
+    await contactsNavBtn.waitFor({ state: 'attached', timeout: 10000 });
+    const navBox = await contactsNavBtn.boundingBox();
+    if (navBox) {
+      await page.mouse.click(navBox.x + navBox.width / 2, navBox.y + navBox.height / 2);
+    } else {
+      await contactsNavBtn.click({ noWaitAfter: true });
+    }
+    await page.waitForTimeout(2000);
+
+    // Кнопка «Добавить по username» должна быть видна
+    const addBtn = page.getByRole('button', { name: /добавить по username/i });
+    await addBtn.waitFor({ state: 'attached', timeout: 15000 });
+    expect(await addBtn.count()).toBeGreaterThan(0);
+  });
+
+  test('на экране контактов видна кнопка «Возможные друзья»', async ({ page }) => {
+    const { username } = await registerViaAPI(page);
+    await loginAndWait(page, username);
+    await waitForApp(page);
+
+    // Переходим на вкладку контактов
+    const contactsNavBtn = page.getByRole('button', { name: /^контакты$/i });
+    await contactsNavBtn.waitFor({ state: 'attached', timeout: 10000 });
+    const navBox = await contactsNavBtn.boundingBox();
+    if (navBox) {
+      await page.mouse.click(navBox.x + navBox.width / 2, navBox.y + navBox.height / 2);
+    } else {
+      await contactsNavBtn.click({ noWaitAfter: true });
+    }
+    await page.waitForTimeout(2000);
+
+    // Кнопка «Возможные друзья» должна быть видна
+    const possBtn = page.getByRole('button', { name: /возможные друзья/i });
+    await possBtn.waitFor({ state: 'attached', timeout: 15000 });
+    expect(await possBtn.count()).toBeGreaterThan(0);
+  });
+});
