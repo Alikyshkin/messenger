@@ -65,7 +65,8 @@
       "Bash(npm run test:unit:client -- --name \"RegisterScreen|ForgotPasswordScreen|LoginScreen\")",
       "Bash(flutter test test/screens/register_screen_test.dart test/screens/forgot_password_screen_test.dart test/screens/login_screen_test.dart)",
       "Bash(flutter test test/screens/register_screen_test.dart --name \"shows error when passwords do not match\")",
-      "Bash(node scripts/reset-password.js admin alika123)"
+      "Bash(node scripts/reset-password.js admin alika123)",
+      "Bash(dart format .)"
     ],
     "additionalDirectories": [
       "/Users/alikakuznecova/Documents/messenger",

@@ -12,9 +12,7 @@ void main() {
     testWidgets('renders logo, title and email form', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(
-        wrapWithApp(child: const ForgotPasswordScreen()),
-      );
+      await tester.pumpWidget(wrapWithApp(child: const ForgotPasswordScreen()));
       await tester.pumpAndSettle();
 
       expect(find.text('Мессенджер'), findsOneWidget);
@@ -23,24 +21,16 @@ void main() {
       expect(find.byType(FilledButton), findsOneWidget);
     });
 
-    testWidgets('has links to login and register', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        wrapWithApp(child: const ForgotPasswordScreen()),
-      );
+    testWidgets('has links to login and register', (WidgetTester tester) async {
+      await tester.pumpWidget(wrapWithApp(child: const ForgotPasswordScreen()));
       await tester.pumpAndSettle();
 
       expect(find.text('Вернуться ко входу'), findsOneWidget);
       expect(find.text('Нет аккаунта? Зарегистрироваться'), findsOneWidget);
     });
 
-    testWidgets('shows error when email is empty', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(
-        wrapWithApp(child: const ForgotPasswordScreen()),
-      );
+    testWidgets('shows error when email is empty', (WidgetTester tester) async {
+      await tester.pumpWidget(wrapWithApp(child: const ForgotPasswordScreen()));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byType(FilledButton));
@@ -50,18 +40,14 @@ void main() {
     });
 
     testWidgets('has no AppBar', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        wrapWithApp(child: const ForgotPasswordScreen()),
-      );
+      await tester.pumpWidget(wrapWithApp(child: const ForgotPasswordScreen()));
       await tester.pumpAndSettle();
 
       expect(find.byType(AppBar), findsNothing);
     });
 
     testWidgets('has logo icon', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        wrapWithApp(child: const ForgotPasswordScreen()),
-      );
+      await tester.pumpWidget(wrapWithApp(child: const ForgotPasswordScreen()));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.send_rounded), findsOneWidget);
@@ -70,9 +56,7 @@ void main() {
     testWidgets('send button text is Отправить ссылку', (
       WidgetTester tester,
     ) async {
-      await tester.pumpWidget(
-        wrapWithApp(child: const ForgotPasswordScreen()),
-      );
+      await tester.pumpWidget(wrapWithApp(child: const ForgotPasswordScreen()));
       await tester.pumpAndSettle();
 
       expect(find.text('Отправить ссылку'), findsOneWidget);

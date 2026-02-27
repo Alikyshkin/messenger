@@ -134,8 +134,18 @@ class _ChatsListPageState extends State<ChatsListPage>
         return 'вчера';
       } else if (dt.year == now.year) {
         const months = [
-          'янв', 'фев', 'мар', 'апр', 'май', 'июн',
-          'июл', 'авг', 'сен', 'окт', 'ноя', 'дек',
+          'янв',
+          'фев',
+          'мар',
+          'апр',
+          'май',
+          'июн',
+          'июл',
+          'авг',
+          'сен',
+          'окт',
+          'ноя',
+          'дек',
         ];
         return '${dt.day} ${months[dt.month - 1]}';
       } else {
@@ -228,7 +238,10 @@ class _ChatsListPageState extends State<ChatsListPage>
                           : c.peer!.avatarUrl;
                       String subtitleText = '';
                       if (c.lastMessage != null) {
-                        final preview = _lastMessagePreview(context, c.lastMessage!);
+                        final preview = _lastMessagePreview(
+                          context,
+                          c.lastMessage!,
+                        );
                         if (c.lastMessage!.isMine) {
                           subtitleText = '${context.tr('you_prefix')}$preview';
                         } else {
@@ -319,8 +332,11 @@ class _ChatsListPageState extends State<ChatsListPage>
                                                 style: TextStyle(
                                                   fontSize: 12,
                                                   color: unread > 0
-                                                      ? theme.colorScheme.primary
-                                                      : theme.colorScheme
+                                                      ? theme
+                                                            .colorScheme
+                                                            .primary
+                                                      : theme
+                                                            .colorScheme
                                                             .onSurfaceVariant,
                                                 ),
                                               ),
@@ -339,7 +355,8 @@ class _ChatsListPageState extends State<ChatsListPage>
                                                       TextOverflow.ellipsis,
                                                   style: TextStyle(
                                                     fontSize: 14,
-                                                    color: theme.colorScheme
+                                                    color: theme
+                                                        .colorScheme
                                                         .onSurfaceVariant,
                                                   ),
                                                 ),
@@ -349,20 +366,21 @@ class _ChatsListPageState extends State<ChatsListPage>
                                                 Container(
                                                   constraints:
                                                       const BoxConstraints(
-                                                    minWidth: 20,
-                                                  ),
+                                                        minWidth: 20,
+                                                      ),
                                                   padding:
                                                       const EdgeInsets.symmetric(
-                                                    horizontal: 6,
-                                                    vertical: 2,
-                                                  ),
+                                                        horizontal: 6,
+                                                        vertical: 2,
+                                                      ),
                                                   decoration: BoxDecoration(
-                                                    color:
-                                                        theme.colorScheme.primary,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .primary,
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                      10,
-                                                    ),
+                                                          10,
+                                                        ),
                                                   ),
                                                   child: Text(
                                                     unread > 99
@@ -371,7 +389,8 @@ class _ChatsListPageState extends State<ChatsListPage>
                                                     style: const TextStyle(
                                                       color: Colors.white,
                                                       fontSize: 12,
-                                                      fontWeight: FontWeight.w600,
+                                                      fontWeight:
+                                                          FontWeight.w600,
                                                     ),
                                                     textAlign: TextAlign.center,
                                                   ),

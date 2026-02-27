@@ -33,19 +33,23 @@ double contrastRatio(Color fg, Color bg) {
 
 void main() {
   group('AppColors — bubble text contrast (WCAG AA)', () {
-    test('light theme: sent bubble text readable on light-green background', () {
-      // Светлая тема: фон пузырька = EFFFDE, текст = onSurface (1A1A1A)
-      final ratio = contrastRatio(
-        AppColors.lightSentBubbleText,
-        AppColors.lightSentBubble,
-      );
-      expect(
-        ratio,
-        greaterThanOrEqualTo(_kMinContrastAA),
-        reason: 'Light sent bubble text must pass WCAG AA '
-            '(ratio=$ratio, need>=$_kMinContrastAA)',
-      );
-    });
+    test(
+      'light theme: sent bubble text readable on light-green background',
+      () {
+        // Светлая тема: фон пузырька = EFFFDE, текст = onSurface (1A1A1A)
+        final ratio = contrastRatio(
+          AppColors.lightSentBubbleText,
+          AppColors.lightSentBubble,
+        );
+        expect(
+          ratio,
+          greaterThanOrEqualTo(_kMinContrastAA),
+          reason:
+              'Light sent bubble text must pass WCAG AA '
+              '(ratio=$ratio, need>=$_kMinContrastAA)',
+        );
+      },
+    );
 
     test('light theme: received bubble text readable on white background', () {
       final ratio = contrastRatio(
@@ -83,28 +87,36 @@ void main() {
       );
     });
 
-    test('light theme: onPrimary (white) is NOT readable on lightSentBubble — confirms the old bug', () {
-      // Этот тест документирует исходную ошибку: onPrimary (белый)
-      // на светло-зелёном фоне — плохой контраст (< 4.5:1).
-      const onPrimary = AppColors.lightOnPrimary; // белый
-      final ratio = contrastRatio(onPrimary, AppColors.lightSentBubble);
-      expect(
-        ratio,
-        lessThan(_kMinContrastAA),
-        reason: 'onPrimary on lightSentBubble should fail WCAG AA — '
-            'this confirms the bug that was fixed (ratio=$ratio)',
-      );
-    });
+    test(
+      'light theme: onPrimary (white) is NOT readable on lightSentBubble — confirms the old bug',
+      () {
+        // Этот тест документирует исходную ошибку: onPrimary (белый)
+        // на светло-зелёном фоне — плохой контраст (< 4.5:1).
+        const onPrimary = AppColors.lightOnPrimary; // белый
+        final ratio = contrastRatio(onPrimary, AppColors.lightSentBubble);
+        expect(
+          ratio,
+          lessThan(_kMinContrastAA),
+          reason:
+              'onPrimary on lightSentBubble should fail WCAG AA — '
+              'this confirms the bug that was fixed (ratio=$ratio)',
+        );
+      },
+    );
 
-    test('light theme: onSurface IS readable on lightSentBubble — confirms the fix', () {
-      const onSurface = AppColors.lightOnSurface;
-      final ratio = contrastRatio(onSurface, AppColors.lightSentBubble);
-      expect(
-        ratio,
-        greaterThanOrEqualTo(_kMinContrastAA),
-        reason: 'onSurface on lightSentBubble must pass WCAG AA (ratio=$ratio)',
-      );
-    });
+    test(
+      'light theme: onSurface IS readable on lightSentBubble — confirms the fix',
+      () {
+        const onSurface = AppColors.lightOnSurface;
+        final ratio = contrastRatio(onSurface, AppColors.lightSentBubble);
+        expect(
+          ratio,
+          greaterThanOrEqualTo(_kMinContrastAA),
+          reason:
+              'onSurface on lightSentBubble must pass WCAG AA (ratio=$ratio)',
+        );
+      },
+    );
 
     test('dark theme: onSurface is readable on darkSentBubble', () {
       const onSurface = AppColors.darkOnSurface;
@@ -122,7 +134,8 @@ void main() {
       expect(
         ratio,
         greaterThanOrEqualTo(_kMinContrastAA),
-        reason: 'onSurface on darkReceivedBubble must pass WCAG AA (ratio=$ratio)',
+        reason:
+            'onSurface on darkReceivedBubble must pass WCAG AA (ratio=$ratio)',
       );
     });
   });
@@ -131,10 +144,7 @@ void main() {
   // LastMessage preview logic
   // -------------------------------------------------------------------------
   group('LastMessage — type getters', () {
-    LastMessage make({
-      String messageType = 'text',
-      String content = '',
-    }) =>
+    LastMessage make({String messageType = 'text', String content = ''}) =>
         LastMessage(
           id: 1,
           content: content,
@@ -197,7 +207,9 @@ void main() {
       );
     }
 
-    testWidgets('location message shows emoji and label, not JSON', (tester) async {
+    testWidgets('location message shows emoji and label, not JSON', (
+      tester,
+    ) async {
       const jsonContent = '{"lat":55.75,"lng":37.62,"label":null}';
       final msg = LastMessage(
         id: 1,
@@ -213,7 +225,9 @@ void main() {
       expect(find.textContaining('lat'), findsNothing);
     });
 
-    testWidgets('poll message shows poll label, not question text', (tester) async {
+    testWidgets('poll message shows poll label, not question text', (
+      tester,
+    ) async {
       final msg = LastMessage(
         id: 2,
         content: 'Какой ваш любимый цвет?',
@@ -237,7 +251,9 @@ void main() {
       expect(find.text('Вы: Голосовое сообщение'), findsOneWidget);
     });
 
-    testWidgets('video note message shows human-readable content', (tester) async {
+    testWidgets('video note message shows human-readable content', (
+      tester,
+    ) async {
       final msg = LastMessage(
         id: 4,
         content: 'Видеокружок',

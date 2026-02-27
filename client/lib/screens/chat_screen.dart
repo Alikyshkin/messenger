@@ -1828,8 +1828,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                       Icon(
                                         Icons.forward,
                                         size: 14,
-                                        color:
-                                            bubbleSecondaryColor,
+                                        color: bubbleSecondaryColor,
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
@@ -1838,8 +1837,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                             .textTheme
                                             .bodySmall
                                             ?.copyWith(
-                                              color:
-                                                  bubbleSecondaryColor,
+                                              color: bubbleSecondaryColor,
                                             ),
                                       ),
                                     ],
@@ -1853,7 +1851,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                     width: double.infinity,
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color: bubbleTextColor.withValues(alpha: 0.1),
+                                      color: bubbleTextColor.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Column(
@@ -1888,7 +1888,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                                 .textTheme
                                                 .bodySmall
                                                 ?.copyWith(
-                                                  color: bubbleTextColor.withValues(alpha: 0.85),
+                                                  color: bubbleTextColor
+                                                      .withValues(alpha: 0.85),
                                                 ),
                                           ),
                                       ],
@@ -1959,7 +1960,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: bubbleTextColor.withValues(alpha: 0.12),
+                                            color: bubbleTextColor.withValues(
+                                              alpha: 0.12,
+                                            ),
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),

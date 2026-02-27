@@ -307,12 +307,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: _loading
                           ? null
                           : () {
-                              logAction(
-                                'login_screen',
-                                'nav_push',
-                                'done',
-                                {'route': '/forgot-password'},
-                              );
+                              logAction('login_screen', 'nav_push', 'done', {
+                                'route': '/forgot-password',
+                              });
                               context.push('/forgot-password');
                             },
                       child: Text(context.tr('forgot_password')),
@@ -365,9 +362,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               label: 'VK',
                               onPressed: _loading
                                   ? null
-                                  : () => _oauthLogin(
-                                      OAuthService.signInWithVk,
-                                    ),
+                                  : () =>
+                                        _oauthLogin(OAuthService.signInWithVk),
                             ),
                           if (_providers.telegram)
                             _OAuthButton(
@@ -376,8 +372,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               onPressed: _loading
                                   ? null
                                   : () async {
-                                      final messenger =
-                                          ScaffoldMessenger.of(context);
+                                      final messenger = ScaffoldMessenger.of(
+                                        context,
+                                      );
                                       try {
                                         await OAuthService.signInWithTelegram();
                                       } catch (e) {

@@ -403,7 +403,20 @@ class _HomeScreenState extends State<HomeScreen>
       } else if (msgDay == today.subtract(const Duration(days: 1))) {
         return 'вчера';
       } else if (dt.year == now.year) {
-        const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+        const months = [
+          'янв',
+          'фев',
+          'мар',
+          'апр',
+          'май',
+          'июн',
+          'июл',
+          'авг',
+          'сен',
+          'окт',
+          'ноя',
+          'дек',
+        ];
         return '${dt.day} ${months[dt.month - 1]}';
       } else {
         return '${dt.day}.${dt.month.toString().padLeft(2, '0')}.${dt.year.toString().substring(2)}';
@@ -597,8 +610,7 @@ class _HomeScreenState extends State<HomeScreen>
                                       avatarUrl != null && avatarUrl.isNotEmpty
                                       ? NetworkImage(avatarUrl)
                                       : null,
-                                  child:
-                                      avatarUrl == null || avatarUrl.isEmpty
+                                  child: avatarUrl == null || avatarUrl.isEmpty
                                       ? Text(
                                           title.isNotEmpty
                                               ? title[0].toUpperCase()
@@ -639,9 +651,7 @@ class _HomeScreenState extends State<HomeScreen>
                             child: InkWell(
                               onTap: () async {
                                 if (isGroup) {
-                                  await context.push(
-                                    '/group/${c.group!.id}',
-                                  );
+                                  await context.push('/group/${c.group!.id}');
                                 } else {
                                   await context.push('/chat/${c.peer!.id}');
                                 }
@@ -653,8 +663,7 @@ class _HomeScreenState extends State<HomeScreen>
                                   vertical: 8,
                                 ),
                                 child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     avatarWidget,
                                     const SizedBox(width: 12),
@@ -681,19 +690,17 @@ class _HomeScreenState extends State<HomeScreen>
                                                               .colorScheme
                                                               .onSurface,
                                                         ),
-                                                        overflow:
-                                                            TextOverflow
-                                                                .ellipsis,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
                                                         maxLines: 1,
                                                       ),
                                                     ),
                                                     if (isPinned)
                                                       Padding(
                                                         padding:
-                                                            const EdgeInsets
-                                                                .only(
-                                                          left: 4,
-                                                        ),
+                                                            const EdgeInsets.only(
+                                                              left: 4,
+                                                            ),
                                                         child: Icon(
                                                           Icons.push_pin,
                                                           size: 13,
@@ -705,10 +712,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                     if (isMuted)
                                                       Padding(
                                                         padding:
-                                                            const EdgeInsets
-                                                                .only(
-                                                          left: 3,
-                                                        ),
+                                                            const EdgeInsets.only(
+                                                              left: 3,
+                                                            ),
                                                         child: Icon(
                                                           Icons
                                                               .volume_off_outlined,
@@ -763,13 +769,13 @@ class _HomeScreenState extends State<HomeScreen>
                                                 Container(
                                                   constraints:
                                                       const BoxConstraints(
-                                                    minWidth: 20,
-                                                  ),
+                                                        minWidth: 20,
+                                                      ),
                                                   padding:
                                                       const EdgeInsets.symmetric(
-                                                    horizontal: 6,
-                                                    vertical: 2,
-                                                  ),
+                                                        horizontal: 6,
+                                                        vertical: 2,
+                                                      ),
                                                   decoration: BoxDecoration(
                                                     color: isMuted
                                                         ? theme
@@ -783,8 +789,8 @@ class _HomeScreenState extends State<HomeScreen>
                                                               .primary,
                                                     borderRadius:
                                                         BorderRadius.circular(
-                                                      10,
-                                                    ),
+                                                          10,
+                                                        ),
                                                   ),
                                                   child: Text(
                                                     unread > 99
@@ -793,9 +799,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                     style: TextStyle(
                                                       color: isMuted
                                                           ? Colors.white
-                                                              .withValues(
-                                                                alpha: 0.9,
-                                                              )
+                                                                .withValues(
+                                                                  alpha: 0.9,
+                                                                )
                                                           : Colors.white,
                                                       fontSize: 12,
                                                       fontWeight:
@@ -818,9 +824,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                 padding: EdgeInsets.zero,
                                                 constraints:
                                                     const BoxConstraints(
-                                                  minWidth: 28,
-                                                  minHeight: 28,
-                                                ),
+                                                      minWidth: 28,
+                                                      minHeight: 28,
+                                                    ),
                                                 onSelected: (value) async {
                                                   if (value == 'mute') {
                                                     await LocalDb.setChatMuted(
@@ -834,11 +840,10 @@ class _HomeScreenState extends State<HomeScreen>
                                                     );
                                                     if (mounted) {
                                                       setState(
-                                                        () =>
-                                                            _mutedChatKeys = {
-                                                              ..._mutedChatKeys,
-                                                              chatKey,
-                                                            },
+                                                        () => _mutedChatKeys = {
+                                                          ..._mutedChatKeys,
+                                                          chatKey,
+                                                        },
                                                       );
                                                     }
                                                   } else if (value ==
@@ -854,10 +859,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                     );
                                                     if (mounted) {
                                                       setState(
-                                                        () =>
-                                                            _mutedChatKeys = {
-                                                              ..._mutedChatKeys,
-                                                            }..remove(chatKey),
+                                                        () => _mutedChatKeys = {
+                                                          ..._mutedChatKeys,
+                                                        }..remove(chatKey),
                                                       );
                                                     }
                                                   } else if (value == 'pin') {
@@ -874,9 +878,8 @@ class _HomeScreenState extends State<HomeScreen>
                                                       setState(() {
                                                         _pinnedChats = {
                                                           ..._pinnedChats,
-                                                          chatKey:
-                                                              DateTime.now()
-                                                                  .toIso8601String(),
+                                                          chatKey: DateTime.now()
+                                                              .toIso8601String(),
                                                         };
                                                         _chats = _sortChats(
                                                           List.from(_chats),
@@ -884,8 +887,7 @@ class _HomeScreenState extends State<HomeScreen>
                                                         );
                                                       });
                                                     }
-                                                  } else if (value ==
-                                                      'unpin') {
+                                                  } else if (value == 'unpin') {
                                                     await LocalDb.setChatPinned(
                                                       peerId: isGroup
                                                           ? null
@@ -897,10 +899,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                     );
                                                     if (mounted) {
                                                       setState(() {
-                                                        _pinnedChats =
-                                                            Map.from(
-                                                              _pinnedChats,
-                                                            )..remove(chatKey);
+                                                        _pinnedChats = Map.from(
+                                                          _pinnedChats,
+                                                        )..remove(chatKey);
                                                         _chats = _sortChats(
                                                           List.from(_chats),
                                                           _pinnedChats,
@@ -981,9 +982,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                         Icon(
                                                           Icons.delete_outline,
                                                           size: 20,
-                                                          color:
-                                                              theme.colorScheme
-                                                                  .error,
+                                                          color: theme
+                                                              .colorScheme
+                                                              .error,
                                                         ),
                                                         const SizedBox(
                                                           width: 12,
@@ -993,9 +994,9 @@ class _HomeScreenState extends State<HomeScreen>
                                                             'delete_chat',
                                                           ),
                                                           style: TextStyle(
-                                                            color:
-                                                                theme.colorScheme
-                                                                    .error,
+                                                            color: theme
+                                                                .colorScheme
+                                                                .error,
                                                           ),
                                                         ),
                                                       ],
@@ -1125,16 +1126,16 @@ class _HomeScreenState extends State<HomeScreen>
             : null,
         body: isMobile
             ? (_isMainRoute
-                ? SafeArea(
-                    child: Navigator(
-                      key: _navigatorKey,
-                      onGenerateRoute: (settings) => MaterialPageRoute(
-                        builder: (_) => _buildContentView(context),
-                        settings: settings,
+                  ? SafeArea(
+                      child: Navigator(
+                        key: _navigatorKey,
+                        onGenerateRoute: (settings) => MaterialPageRoute(
+                          builder: (_) => _buildContentView(context),
+                          settings: settings,
+                        ),
                       ),
-                    ),
-                  )
-                : content)
+                    )
+                  : content)
             : Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -1224,7 +1225,9 @@ class _HomeScreenState extends State<HomeScreen>
             isActive: _currentView == _NavigationItem.chats,
             onPressed: () {
               final currentPath = GoRouterState.of(context).uri.path;
-              if (mounted && (_currentView != _NavigationItem.chats || currentPath != '/')) {
+              if (mounted &&
+                  (_currentView != _NavigationItem.chats ||
+                      currentPath != '/')) {
                 context.go('/');
               }
             },

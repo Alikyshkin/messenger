@@ -85,5 +85,4 @@ jobs:
         continue-on-error: true
 
       - name: Run tests
-        working-directory: ./server
-        run: npm test
+        run: npm run test:unit:server

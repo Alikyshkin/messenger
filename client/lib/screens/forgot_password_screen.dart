@@ -101,8 +101,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   const SizedBox(height: 20),
                   Text(
                     context.tr('messenger'),
-                    style: Theme.of(context).textTheme.headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
@@ -129,12 +130,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     const SizedBox(height: 24),
                     FilledButton(
                       onPressed: () {
-                        logAction(
-                          'forgot_password_screen',
-                          'nav_go',
-                          'done',
-                          {'route': '/login'},
-                        );
+                        logAction('forgot_password_screen', 'nav_go', 'done', {
+                          'route': '/login',
+                        });
                         context.go('/login');
                       },
                       child: Text(context.tr('back_to_login')),

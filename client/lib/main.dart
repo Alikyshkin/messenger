@@ -136,9 +136,7 @@ class MessengerApp extends StatelessWidget {
       listTileTheme: const ListTileThemeData(
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         minLeadingWidth: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.zero,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       ),
       dividerColor: AppColors.lightOutline,
       dividerTheme: const DividerThemeData(
@@ -178,7 +176,10 @@ class MessengerApp extends StatelessWidget {
         unselectedItemColor: AppColors.lightOnSurfaceVariant,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
-        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        selectedLabelStyle: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
         unselectedLabelStyle: TextStyle(fontSize: 11),
       ),
       snackBarTheme: SnackBarThemeData(
@@ -302,9 +303,7 @@ class MessengerApp extends StatelessWidget {
       listTileTheme: const ListTileThemeData(
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         minLeadingWidth: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.zero,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       ),
       dividerColor: AppColors.darkOutline,
       dividerTheme: const DividerThemeData(
@@ -344,7 +343,10 @@ class MessengerApp extends StatelessWidget {
         unselectedItemColor: AppColors.darkOnSurfaceVariant,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
-        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        selectedLabelStyle: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
         unselectedLabelStyle: TextStyle(fontSize: 11),
       ),
       snackBarTheme: SnackBarThemeData(

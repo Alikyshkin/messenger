@@ -98,9 +98,9 @@ class _ContactsScreenState extends State<ContactsScreen>
             icon: const Icon(Icons.add),
             tooltip: context.tr('add_by_username'),
             onPressed: () async {
-              await Navigator.of(context).push(
-                AppPageRoute(builder: (_) => const AddContactScreen()),
-              );
+              await Navigator.of(
+                context,
+              ).push(AppPageRoute(builder: (_) => const AddContactScreen()));
               _load();
             },
           ),
@@ -287,9 +287,10 @@ class _ContactsScreenState extends State<ContactsScreen>
                                     icon: const Icon(
                                       Icons.person_remove_outlined,
                                     ),
-                                    tooltip: context.tr('remove_friend_tooltip'),
-                                    onPressed: () =>
-                                        _confirmRemove(context, u),
+                                    tooltip: context.tr(
+                                      'remove_friend_tooltip',
+                                    ),
+                                    onPressed: () => _confirmRemove(context, u),
                                   ),
                                 ],
                               ),
@@ -504,11 +505,19 @@ class _RequestsSection extends StatelessWidget {
           ),
           SizedBox(
             // Высота зависит от числа элементов, но не менее 60
-            height: _listHeight(tabController, incoming.length, outgoing.length),
+            height: _listHeight(
+              tabController,
+              incoming.length,
+              outgoing.length,
+            ),
             child: TabBarView(
               controller: tabController,
               children: [
-                _IncomingList(requests: incoming, onAccept: onAccept, onReject: onReject),
+                _IncomingList(
+                  requests: incoming,
+                  onAccept: onAccept,
+                  onReject: onReject,
+                ),
                 _OutgoingList(requests: outgoing, onCancel: onCancel),
               ],
             ),
