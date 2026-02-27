@@ -208,6 +208,20 @@ try {
   `);
 } catch (_) {}
 
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS phone_verification_codes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      phone TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      expires_at DATETIME NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_phone_codes_phone ON phone_verification_codes(phone);
+    CREATE INDEX IF NOT EXISTS idx_phone_codes_expires ON phone_verification_codes(expires_at);
+  `);
+} catch (_) {}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
