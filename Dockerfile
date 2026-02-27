@@ -1,25 +1,35 @@
-# syntax=docker/dockerfile:1.4
-# Multi-stage build для оптимизации размера образа
+ # Multi-stage build для оптимизации размера образа
 
 # Stage 1: Build
-FROM node:20-alpine AS builder
+FROM node:20 AS builder
 
 WORKDIR /app
 
-# Копируем package.json и устанавливаем зависимости с кэшированием
+# Устанавливаем инструменты для сборки нативных модулей (better-sqlite3)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
+    libsqlite3-dev \
+  && rm -rf /var/lib/apt/lists/*
+
+# Копируем package.json и устанавливаем зависимости
 COPY server/package*.json ./server/
-RUN --mount=type=cache,target=/root/.npm \
-    cd server && npm ci --only=production
+WORKDIR /app/server
+# Собираем better-sqlite3 из исходников под архитектуру контейнера
+RUN npm ci --only=production --build-from-source=better-sqlite3
 
 # Stage 2: Production
-FROM node:20-alpine
+FROM node:20
 
 WORKDIR /app
 
 # Устанавливаем необходимые системные пакеты
-RUN apk add --no-cache \
-    sqlite \
-    bash
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    sqlite3 \
+    ca-certificates \
+    bash && \
+    rm -rf /var/lib/apt/lists/*
 
 # Копируем зависимости из builder
 COPY --from=builder /app/server/node_modules ./server/node_modules

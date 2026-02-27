@@ -23,6 +23,7 @@ import '../utils/format_last_seen.dart';
 import 'dart:async';
 import '../utils/error_utils.dart';
 import '../utils/download_file.dart';
+import '../app_colors.dart';
 import '../styles/app_sizes.dart';
 import '../utils/voice_file_io.dart';
 import '../widgets/app_back_button.dart';
@@ -1492,9 +1493,17 @@ class _ChatScreenState extends State<ChatScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final appBarBg = isDark
-        ? theme.colorScheme.surfaceContainerHighest
+        ? const Color(0xFF1F2D3B)
         : theme.colorScheme.primary;
-    final appBarFg = isDark ? theme.colorScheme.onSurface : Colors.white;
+    final appBarFg = Colors.white;
+    final sentBubbleColor = isDark
+        ? AppColors.darkSentBubble
+        : AppColors.lightSentBubble;
+    final receivedBubbleColor = isDark
+        ? AppColors.darkReceivedBubble
+        : AppColors.lightReceivedBubble;
+    final bubbleTextColor = theme.colorScheme.onSurface;
+    final bubbleSecondaryColor = theme.colorScheme.onSurfaceVariant;
     return Scaffold(
       appBar: AppBar(
         leading: const AppBackButton(),
@@ -1542,8 +1551,8 @@ class _ChatScreenState extends State<ChatScreen> {
                         : '@${widget.peer.username}',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: widget.peer.isOnline == true
-                          ? Colors.greenAccent
-                          : appBarFg.withValues(alpha: 0.8),
+                          ? const Color(0xFF7AEBAB)
+                          : Colors.white70,
                       fontSize: 13,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -1673,6 +1682,9 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
         ],
       ),
+      backgroundColor: isDark
+          ? AppColors.darkScaffoldBackground
+          : AppColors.lightScaffoldBackground,
       body: Column(
         children: [
           Expanded(
@@ -1778,22 +1790,25 @@ class _ChatScreenState extends State<ChatScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: m.isMine
-                                  ? Theme.of(context).colorScheme.primary
-                                  : Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(18),
+                                  ? sentBubbleColor
+                                  : receivedBubbleColor,
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(18),
+                                topRight: const Radius.circular(18),
+                                bottomLeft: m.isMine
+                                    ? const Radius.circular(18)
+                                    : const Radius.circular(4),
+                                bottomRight: m.isMine
+                                    ? const Radius.circular(4)
+                                    : const Radius.circular(18),
+                              ),
                               boxShadow: [
                                 BoxShadow(
                                   color: Colors.black.withValues(
-                                    alpha:
-                                        Theme.of(context).brightness ==
-                                            Brightness.dark
-                                        ? 0.25
-                                        : 0.06,
+                                    alpha: isDark ? 0.2 : 0.07,
                                   ),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
                                 ),
                               ],
                             ),
@@ -1808,14 +1823,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                         Icons.forward,
                                         size: 14,
                                         color:
-                                            (m.isMine
-                                                    ? Theme.of(
-                                                        context,
-                                                      ).colorScheme.onPrimary
-                                                    : Theme.of(
-                                                        context,
-                                                      ).colorScheme.onSurface)
-                                                .withValues(alpha: 0.8),
+                                            bubbleSecondaryColor,
                                       ),
                                       const SizedBox(width: 4),
                                       Text(
@@ -1825,14 +1833,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                             .bodySmall
                                             ?.copyWith(
                                               color:
-                                                  (m.isMine
-                                                          ? Theme.of(context)
-                                                                .colorScheme
-                                                                .onPrimary
-                                                          : Theme.of(context)
-                                                                .colorScheme
-                                                                .onSurface)
-                                                      .withValues(alpha: 0.8),
+                                                  bubbleSecondaryColor,
                                             ),
                                       ),
                                     ],
@@ -1846,15 +1847,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     width: double.infinity,
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
-                                      color:
-                                          (m.isMine
-                                                  ? Theme.of(
-                                                      context,
-                                                    ).colorScheme.onPrimary
-                                                  : Theme.of(
-                                                      context,
-                                                    ).colorScheme.onSurface)
-                                              .withValues(alpha: 0.12),
+                                      color: bubbleTextColor.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Column(
@@ -1889,21 +1882,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                 .textTheme
                                                 .bodySmall
                                                 ?.copyWith(
-                                                  color:
-                                                      (m.isMine
-                                                              ? Theme.of(
-                                                                      context,
-                                                                    )
-                                                                    .colorScheme
-                                                                    .onPrimary
-                                                              : Theme.of(
-                                                                      context,
-                                                                    )
-                                                                    .colorScheme
-                                                                    .onSurface)
-                                                          .withValues(
-                                                            alpha: 0.9,
-                                                          ),
+                                                  color: bubbleTextColor.withValues(alpha: 0.85),
                                                 ),
                                           ),
                                       ],
@@ -1936,13 +1915,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                     SelectableText(
                                       _safeMessageContent(m.content),
                                       style: TextStyle(
-                                        color: m.isMine
-                                            ? Theme.of(
-                                                context,
-                                              ).colorScheme.onPrimary
-                                            : Theme.of(
-                                                context,
-                                              ).colorScheme.onSurface,
+                                        color: bubbleTextColor,
+                                        fontSize: 15,
+                                        height: 1.4,
                                       ),
                                     ),
                                   if (m.hasAttachment) ...[
@@ -1978,15 +1953,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                             vertical: 4,
                                           ),
                                           decoration: BoxDecoration(
-                                            color:
-                                                (m.isMine
-                                                        ? Theme.of(context)
-                                                              .colorScheme
-                                                              .onPrimary
-                                                        : Theme.of(
-                                                            context,
-                                                          ).colorScheme.surface)
-                                                    .withValues(alpha: 0.2),
+                                            color: bubbleTextColor.withValues(alpha: 0.12),
                                             borderRadius: BorderRadius.circular(
                                               12,
                                             ),
@@ -2002,13 +1969,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                                     .textTheme
                                                     .labelSmall
                                                     ?.copyWith(
-                                                      color: m.isMine
-                                                          ? Theme.of(context)
-                                                                .colorScheme
-                                                                .onPrimary
-                                                          : Theme.of(context)
-                                                                .colorScheme
-                                                                .onSurface,
+                                                      color: bubbleTextColor,
                                                     ),
                                               ),
                                             ],
@@ -2029,43 +1990,20 @@ class _ChatScreenState extends State<ChatScreen> {
                                           .textTheme
                                           .bodySmall
                                           ?.copyWith(
-                                            color: m.isMine
-                                                ? Theme.of(context)
-                                                      .colorScheme
-                                                      .onPrimary
-                                                      .withValues(alpha: 0.8)
-                                                : Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
+                                            color: bubbleSecondaryColor,
+                                            fontSize: 11,
                                           ),
                                     ),
                                     if (m.isMine) ...[
-                                      const SizedBox(width: 4),
+                                      const SizedBox(width: 3),
                                       Icon(
                                         m.readAt != null
                                             ? Icons.done_all
                                             : Icons.done,
                                         size: 14,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onPrimary
-                                            .withValues(alpha: 0.8),
-                                      ),
-                                      const SizedBox(width: 2),
-                                      Text(
-                                        m.readAt != null
-                                            ? 'Прочитано'
-                                            : 'Отправлено',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onPrimary
-                                                  .withValues(alpha: 0.8),
-                                              fontSize: 11,
-                                            ),
+                                        color: m.readAt != null
+                                            ? theme.colorScheme.primary
+                                            : bubbleSecondaryColor,
                                       ),
                                     ],
                                   ],

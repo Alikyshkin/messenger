@@ -112,6 +112,31 @@ class _ChatsListPageState extends State<ChatsListPage>
     }
   }
 
+  String _formatChatTime(String? isoString) {
+    if (isoString == null || isoString.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(isoString).toLocal();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final msgDay = DateTime(dt.year, dt.month, dt.day);
+      if (msgDay == today) {
+        return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      } else if (msgDay == today.subtract(const Duration(days: 1))) {
+        return 'вчера';
+      } else if (dt.year == now.year) {
+        const months = [
+          'янв', 'фев', 'мар', 'апр', 'май', 'июн',
+          'июл', 'авг', 'сен', 'окт', 'ноя', 'дек',
+        ];
+        return '${dt.day} ${months[dt.month - 1]}';
+      } else {
+        return '${dt.day}.${dt.month.toString().padLeft(2, '0')}.${dt.year.toString().substring(2)}';
+      }
+    } catch (_) {
+      return '';
+    }
+  }
+
   String _previewContent(BuildContext context, String content) {
     if (content.startsWith('e2ee:')) return context.tr('message');
     return content;
@@ -164,7 +189,7 @@ class _ChatsListPageState extends State<ChatsListPage>
             onRefresh: _load,
             child: _loading && _chats.isEmpty
                 ? ListView.builder(
-                    padding: AppSpacing.listPadding,
+                    padding: EdgeInsets.zero,
                     itemCount: 10,
                     itemBuilder: (context, _) =>
                         const Card(child: SkeletonChatTile()),
@@ -178,7 +203,7 @@ class _ChatsListPageState extends State<ChatsListPage>
                 : _chats.isEmpty
                 ? EmptyStateWidget(message: context.tr('no_chats'))
                 : ListView.builder(
-                    padding: AppSpacing.listPadding,
+                    padding: EdgeInsets.zero,
                     itemCount: _chats.length,
                     itemBuilder: (context, i) {
                       final c = _chats[i];
@@ -204,85 +229,160 @@ class _ChatsListPageState extends State<ChatsListPage>
                               '$prefix${c.lastMessage!.isPoll ? context.tr('poll_prefix') : ''}${_previewContent(context, c.lastMessage!.content)}';
                         }
                       }
-                      return Card(
-                        margin: EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: ListTile(
-                          contentPadding: AppSpacing.cardPadding,
-                          leading: isGroup
-                              ? CircleAvatar(
-                                  radius: 28,
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.primaryContainer,
-                                  backgroundImage:
-                                      avatarUrl != null && avatarUrl.isNotEmpty
-                                      ? NetworkImage(avatarUrl)
-                                      : null,
-                                  child: avatarUrl == null || avatarUrl.isEmpty
-                                      ? Icon(
-                                          Icons.group,
-                                          size: 32,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onPrimaryContainer
-                                              .withValues(alpha: 0.7),
-                                        )
-                                      : null,
-                                )
-                              : UserAvatar(user: c.peer!, radius: 28),
-                          title: Text(
-                            title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontWeight: c.unreadCount > 0
-                                  ? FontWeight.w600
-                                  : FontWeight.w500,
+                      final theme = Theme.of(context);
+                      final unread = c.unreadCount;
+                      Widget avatarWidget = isGroup
+                          ? CircleAvatar(
+                              radius: 27,
+                              backgroundColor:
+                                  theme.colorScheme.primaryContainer,
+                              backgroundImage:
+                                  avatarUrl != null && avatarUrl.isNotEmpty
+                                  ? NetworkImage(avatarUrl)
+                                  : null,
+                              child: avatarUrl == null || avatarUrl.isEmpty
+                                  ? Icon(
+                                      Icons.group,
+                                      size: 28,
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.85),
+                                    )
+                                  : null,
+                            )
+                          : UserAvatar(user: c.peer!, radius: 27);
+
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Material(
+                            color: theme.colorScheme.surface,
+                            child: InkWell(
+                              onTap: () async {
+                                logUserAction('open_chat', {
+                                  'type': isGroup ? 'group' : 'dm',
+                                  'id': isGroup ? c.group!.id : c.peer!.id,
+                                  'name': title,
+                                });
+                                if (isGroup) {
+                                  await context.push('/group/${c.group!.id}');
+                                } else {
+                                  await context.push('/chat/${c.peer!.id}');
+                                }
+                                _load();
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                child: Row(
+                                  children: [
+                                    avatarWidget,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  title,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 16,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .onSurface,
+                                                  ),
+                                                ),
+                                              ),
+                                              Text(
+                                                _formatChatTime(
+                                                  c.lastMessage?.createdAt,
+                                                ),
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: unread > 0
+                                                      ? theme.colorScheme.primary
+                                                      : theme.colorScheme
+                                                            .onSurfaceVariant,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  subtitleText.isEmpty
+                                                      ? ' '
+                                                      : subtitleText,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: theme.colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (unread > 0) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                    minWidth: 20,
+                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        theme.colorScheme.primary,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      10,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    unread > 99
+                                                        ? '99+'
+                                                        : '$unread',
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                          subtitle: Text(
-                            subtitleText,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                          Divider(
+                            height: 0,
+                            thickness: 0.5,
+                            indent: 78,
+                            color: theme.dividerColor,
                           ),
-                          trailing: c.unreadCount > 0
-                              ? Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    '${c.unreadCount}',
-                                    style: TextStyle(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onPrimary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                )
-                              : null,
-                          onTap: () async {
-                            logUserAction('open_chat', {
-                              'type': isGroup ? 'group' : 'dm',
-                              'id': isGroup ? c.group!.id : c.peer!.id,
-                              'name': title,
-                            });
-                            if (isGroup) {
-                              await context.push('/group/${c.group!.id}');
-                            } else {
-                              await context.push('/chat/${c.peer!.id}');
-                            }
-                            _load();
-                          },
-                        ),
+                        ],
                       );
                     },
                   ),

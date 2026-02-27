@@ -7,6 +7,7 @@ import '../l10n/app_localizations.dart';
 import '../services/auth_service.dart';
 import '../services/api.dart' show ApiException, AuthResponse, OAuthProviders;
 import '../services/oauth_service.dart';
+import '../app_colors.dart';
 import '../styles/app_sizes.dart';
 import '../utils/user_action_logger.dart';
 
@@ -213,208 +214,194 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Telegram-style logo
+                    CircleAvatar(
+                      radius: 44,
+                      backgroundColor: AppColors.primary,
+                      child: const Icon(
+                        Icons.send_rounded,
+                        size: 44,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
                     Text(
                       context.tr('messenger'),
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.w700),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 32),
-                    Card(
-                      margin: EdgeInsets.zero,
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            TextFormField(
-                              controller: _username,
-                              decoration: InputDecoration(
-                                labelText: context.tr('username'),
-                                border: const OutlineInputBorder(),
-                              ),
-                              textInputAction: TextInputAction.next,
-                              autocorrect: false,
-                              enableInteractiveSelection: true,
-                              enableSuggestions: false,
-                              validator: (v) => v == null || v.trim().isEmpty
-                                  ? context.tr('enter_username')
-                                  : null,
-                            ),
-                            const SizedBox(height: 16),
-                            TextFormField(
-                              controller: _password,
-                              decoration: InputDecoration(
-                                labelText: context.tr('password'),
-                                border: const OutlineInputBorder(),
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _passwordVisible
-                                        ? Icons.visibility_off
-                                        : Icons.visibility,
-                                  ),
-                                  onPressed: () => setState(
-                                    () => _passwordVisible = !_passwordVisible,
-                                  ),
-                                  tooltip: _passwordVisible
-                                      ? 'Скрыть пароль'
-                                      : 'Показать пароль',
-                                ),
-                              ),
-                              obscureText: !_passwordVisible,
-                              enableInteractiveSelection: true,
-                              enableSuggestions: false,
-                              autocorrect: false,
-                              onFieldSubmitted: (_) => _submit(),
-                              validator: (v) => v == null || v.isEmpty
-                                  ? context.tr('enter_password')
-                                  : null,
-                            ),
-                            if (_error != null) ...[
-                              const SizedBox(height: 16),
-                              Text(
-                                _error!,
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.error,
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 24),
-                            FilledButton(
-                              onPressed: _loading
-                                  ? null
-                                  : () {
-                                      if (_formKey.currentState!.validate()) {
-                                        _submit();
-                                      }
-                                    },
-                              child: _loading
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Text(context.tr('login_btn')),
-                            ),
-                            const SizedBox(height: 12),
-                            TextButton(
-                              onPressed: _loading
-                                  ? null
-                                  : () {
-                                      logAction(
-                                        'login_screen',
-                                        'nav_push',
-                                        'done',
-                                        {'route': '/forgot-password'},
-                                      );
-                                      context.push('/forgot-password');
-                                    },
-                              child: Text(context.tr('forgot_password')),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                logAction('login_screen', 'nav_push', 'done', {
-                                  'route': '/register',
-                                });
-                                context.push('/register');
-                              },
-                              child: Text(context.tr('no_account_register')),
-                            ),
-                            if (_providers.google ||
-                                _providers.vk ||
-                                _providers.telegram ||
-                                _providers.phone) ...[
-                              const SizedBox(height: 24),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Divider(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.outline,
-                                    ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                    ),
-                                    child: Text(
-                                      context.tr('or_login_with'),
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall,
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Divider(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.outline,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Wrap(
-                                spacing: 12,
-                                runSpacing: 12,
-                                alignment: WrapAlignment.center,
-                                children: [
-                                  if (_providers.google) _buildGoogleButton(),
-                                  if (_providers.vk)
-                                    _OAuthButton(
-                                      icon: Icons.tag,
-                                      label: 'VK',
-                                      onPressed: _loading
-                                          ? null
-                                          : () => _oauthLogin(
-                                              OAuthService.signInWithVk,
-                                            ),
-                                    ),
-                                  if (_providers.telegram)
-                                    _OAuthButton(
-                                      icon: Icons.send_rounded,
-                                      label: 'Telegram',
-                                      onPressed: _loading
-                                          ? null
-                                          : () async {
-                                              final messenger =
-                                                  ScaffoldMessenger.of(context);
-                                              try {
-                                                await OAuthService.signInWithTelegram();
-                                              } catch (e) {
-                                                if (mounted) {
-                                                  messenger.showSnackBar(
-                                                    SnackBar(
-                                                      content: Text(
-                                                        e.toString(),
-                                                      ),
-                                                    ),
-                                                  );
-                                                }
-                                              }
-                                            },
-                                    ),
-                                  if (_providers.phone)
-                                    _OAuthButton(
-                                      icon: Icons.phone_android,
-                                      label: context.tr('phone'),
-                                      onPressed: _loading
-                                          ? null
-                                          : () => context.push('/login/phone'),
-                                    ),
-                                ],
-                              ),
-                            ],
-                          ],
+                    TextFormField(
+                      controller: _username,
+                      decoration: InputDecoration(
+                        labelText: context.tr('username'),
+                      ),
+                      textInputAction: TextInputAction.next,
+                      autocorrect: false,
+                      enableInteractiveSelection: true,
+                      enableSuggestions: false,
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? context.tr('enter_username')
+                          : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _password,
+                      decoration: InputDecoration(
+                        labelText: context.tr('password'),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _passwordVisible
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed: () => setState(
+                            () => _passwordVisible = !_passwordVisible,
+                          ),
+                          tooltip: _passwordVisible
+                              ? 'Скрыть пароль'
+                              : 'Показать пароль',
                         ),
                       ),
+                      obscureText: !_passwordVisible,
+                      enableInteractiveSelection: true,
+                      enableSuggestions: false,
+                      autocorrect: false,
+                      onFieldSubmitted: (_) => _submit(),
+                      validator: (v) => v == null || v.isEmpty
+                          ? context.tr('enter_password')
+                          : null,
                     ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        _error!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    FilledButton(
+                      onPressed: _loading
+                          ? null
+                          : () {
+                              if (_formKey.currentState!.validate()) {
+                                _submit();
+                              }
+                            },
+                      child: _loading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : Text(context.tr('login_btn')),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: _loading
+                          ? null
+                          : () {
+                              logAction(
+                                'login_screen',
+                                'nav_push',
+                                'done',
+                                {'route': '/forgot-password'},
+                              );
+                              context.push('/forgot-password');
+                            },
+                      child: Text(context.tr('forgot_password')),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        logAction('login_screen', 'nav_push', 'done', {
+                          'route': '/register',
+                        });
+                        context.push('/register');
+                      },
+                      child: Text(context.tr('no_account_register')),
+                    ),
+                    if (_providers.google ||
+                        _providers.vk ||
+                        _providers.telegram ||
+                        _providers.phone) ...[
+                      const SizedBox(height: 24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              context.tr('or_login_with'),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        alignment: WrapAlignment.center,
+                        children: [
+                          if (_providers.google) _buildGoogleButton(),
+                          if (_providers.vk)
+                            _OAuthButton(
+                              icon: Icons.tag,
+                              label: 'VK',
+                              onPressed: _loading
+                                  ? null
+                                  : () => _oauthLogin(
+                                      OAuthService.signInWithVk,
+                                    ),
+                            ),
+                          if (_providers.telegram)
+                            _OAuthButton(
+                              icon: Icons.send_rounded,
+                              label: 'Telegram',
+                              onPressed: _loading
+                                  ? null
+                                  : () async {
+                                      final messenger =
+                                          ScaffoldMessenger.of(context);
+                                      try {
+                                        await OAuthService.signInWithTelegram();
+                                      } catch (e) {
+                                        if (mounted) {
+                                          messenger.showSnackBar(
+                                            SnackBar(
+                                              content: Text(e.toString()),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                            ),
+                          if (_providers.phone)
+                            _OAuthButton(
+                              icon: Icons.phone_android,
+                              label: context.tr('phone'),
+                              onPressed: _loading
+                                  ? null
+                                  : () => context.push('/login/phone'),
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

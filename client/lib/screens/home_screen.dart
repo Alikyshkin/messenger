@@ -25,7 +25,6 @@ import '../services/app_update_service.dart';
 import '../services/chat_list_refresh_service.dart';
 import '../services/call_minimized_service.dart';
 import '../config/version.dart' show AppVersion;
-import '../styles/app_spacing.dart';
 import '../styles/app_sizes.dart';
 import '../utils/user_action_logger.dart';
 import '../widgets/nav_badge.dart';
@@ -391,6 +390,28 @@ class _HomeScreenState extends State<HomeScreen>
     return content;
   }
 
+  String _formatChatTime(String? isoString) {
+    if (isoString == null || isoString.isEmpty) return '';
+    try {
+      final dt = DateTime.parse(isoString).toLocal();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final msgDay = DateTime(dt.year, dt.month, dt.day);
+      if (msgDay == today) {
+        return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      } else if (msgDay == today.subtract(const Duration(days: 1))) {
+        return 'вчера';
+      } else if (dt.year == now.year) {
+        const months = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+        return '${dt.day} ${months[dt.month - 1]}';
+      } else {
+        return '${dt.day}.${dt.month.toString().padLeft(2, '0')}.${dt.year.toString().substring(2)}';
+      }
+    } catch (_) {
+      return '';
+    }
+  }
+
   String _getAppBarTitle(BuildContext context) {
     switch (_currentView) {
       case _NavigationItem.chats:
@@ -493,7 +514,7 @@ class _HomeScreenState extends State<HomeScreen>
             onRefresh: _load,
             child: _loading && _chats.isEmpty
                 ? ListView.builder(
-                    padding: AppSpacing.listPadding,
+                    padding: EdgeInsets.zero,
                     itemCount: 10,
                     itemBuilder: (_, _) =>
                         const Card(child: SkeletonChatTile()),
@@ -507,7 +528,7 @@ class _HomeScreenState extends State<HomeScreen>
                 : _chats.isEmpty
                 ? EmptyStateWidget(message: context.tr('no_chats'))
                 : ListView.builder(
-                    padding: AppSpacing.listPadding,
+                    padding: EdgeInsets.zero,
                     itemCount: _chats.length,
                     itemBuilder: (context, i) {
                       final c = _chats[i];
@@ -534,326 +555,465 @@ class _HomeScreenState extends State<HomeScreen>
                               '$prefix${c.lastMessage!.isPoll ? context.tr('poll_prefix') : ''}${_previewContent(context, c.lastMessage!.content)}';
                         }
                       }
-                      return Card(
-                        margin: EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: ListTile(
-                          contentPadding: AppSpacing.cardPadding,
-                          leading: isGroup
-                              ? CircleAvatar(
-                                  radius: AppSizes.avatarLG,
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.primaryContainer,
+                      final chatKey = isGroup
+                          ? 'g_${c.group!.id}'
+                          : 'p_${c.peer!.id}';
+                      final isMuted = _mutedChatKeys.contains(chatKey);
+                      final isPinned = _pinnedChats.containsKey(chatKey);
+                      final theme = Theme.of(context);
+
+                      Widget avatarWidget = isGroup
+                          ? CircleAvatar(
+                              radius: 27,
+                              backgroundColor:
+                                  theme.colorScheme.primaryContainer,
+                              backgroundImage:
+                                  avatarUrl != null && avatarUrl.isNotEmpty
+                                  ? NetworkImage(avatarUrl)
+                                  : null,
+                              child: avatarUrl == null || avatarUrl.isEmpty
+                                  ? Icon(
+                                      Icons.group,
+                                      size: 28,
+                                      color: theme.colorScheme.primary
+                                          .withValues(alpha: 0.85),
+                                    )
+                                  : null,
+                            )
+                          : Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                CircleAvatar(
+                                  radius: 27,
+                                  backgroundColor:
+                                      theme.colorScheme.primaryContainer,
                                   backgroundImage:
                                       avatarUrl != null && avatarUrl.isNotEmpty
                                       ? NetworkImage(avatarUrl)
                                       : null,
-                                  child: avatarUrl == null || avatarUrl.isEmpty
-                                      ? Icon(
-                                          Icons.group,
-                                          size: AppSizes.iconXXL,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onPrimaryContainer
-                                              .withValues(alpha: 0.7),
+                                  child:
+                                      avatarUrl == null || avatarUrl.isEmpty
+                                      ? Text(
+                                          title.isNotEmpty
+                                              ? title[0].toUpperCase()
+                                              : '?',
+                                          style: TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w600,
+                                            color: theme.colorScheme.primary,
+                                          ),
                                         )
                                       : null,
-                                )
-                              : Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    CircleAvatar(
-                                      radius: AppSizes.avatarLG,
-                                      backgroundColor: Theme.of(
-                                        context,
-                                      ).colorScheme.primaryContainer,
-                                      backgroundImage:
-                                          avatarUrl != null &&
-                                              avatarUrl.isNotEmpty
-                                          ? NetworkImage(avatarUrl)
-                                          : null,
-                                      child:
-                                          avatarUrl == null || avatarUrl.isEmpty
-                                          ? Icon(
-                                              Icons.person,
-                                              size: AppSizes.iconXXL,
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onPrimaryContainer
-                                                  .withValues(alpha: 0.7),
-                                            )
-                                          : null,
-                                    ),
-                                    if (c.peer?.isOnline == true)
-                                      Positioned(
-                                        right: -2,
-                                        bottom: -2,
-                                        child: Container(
-                                          width: 14,
-                                          height: 14,
-                                          decoration: BoxDecoration(
-                                            color: Colors.green,
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                              color: Theme.of(
-                                                context,
-                                              ).colorScheme.surface,
-                                              width: 2,
-                                            ),
-                                          ),
+                                ),
+                                if (c.peer?.isOnline == true)
+                                  Positioned(
+                                    right: 0,
+                                    bottom: 0,
+                                    child: Container(
+                                      width: 13,
+                                      height: 13,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF4CAF50),
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: theme.scaffoldBackgroundColor,
+                                          width: 2,
                                         ),
                                       ),
+                                    ),
+                                  ),
+                              ],
+                            );
+
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Material(
+                            color: theme.colorScheme.surface,
+                            child: InkWell(
+                              onTap: () async {
+                                if (isGroup) {
+                                  await context.push(
+                                    '/group/${c.group!.id}',
+                                  );
+                                } else {
+                                  await context.push('/chat/${c.peer!.id}');
+                                }
+                                _load();
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                child: Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.center,
+                                  children: [
+                                    avatarWidget,
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              Expanded(
+                                                child: Row(
+                                                  children: [
+                                                    Flexible(
+                                                      child: Text(
+                                                        title,
+                                                        style: TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 16,
+                                                          color: theme
+                                                              .colorScheme
+                                                              .onSurface,
+                                                        ),
+                                                        overflow:
+                                                            TextOverflow
+                                                                .ellipsis,
+                                                        maxLines: 1,
+                                                      ),
+                                                    ),
+                                                    if (isPinned)
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                          left: 4,
+                                                        ),
+                                                        child: Icon(
+                                                          Icons.push_pin,
+                                                          size: 13,
+                                                          color: theme
+                                                              .colorScheme
+                                                              .onSurfaceVariant,
+                                                        ),
+                                                      ),
+                                                    if (isMuted)
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .only(
+                                                          left: 3,
+                                                        ),
+                                                        child: Icon(
+                                                          Icons
+                                                              .volume_off_outlined,
+                                                          size: 14,
+                                                          color: theme
+                                                              .colorScheme
+                                                              .onSurfaceVariant,
+                                                        ),
+                                                      ),
+                                                  ],
+                                                ),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                _formatChatTime(
+                                                  c.lastMessage?.createdAt,
+                                                ),
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: unread > 0
+                                                      ? theme
+                                                            .colorScheme
+                                                            .primary
+                                                      : theme
+                                                            .colorScheme
+                                                            .onSurfaceVariant,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  subtitleText.isEmpty
+                                                      ? ' '
+                                                      : subtitleText,
+                                                  maxLines: 1,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: theme
+                                                        .colorScheme
+                                                        .onSurfaceVariant,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (unread > 0) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                    minWidth: 20,
+                                                  ),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: isMuted
+                                                        ? theme
+                                                              .colorScheme
+                                                              .onSurfaceVariant
+                                                              .withValues(
+                                                                alpha: 0.35,
+                                                              )
+                                                        : theme
+                                                              .colorScheme
+                                                              .primary,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                      10,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    unread > 99
+                                                        ? '99+'
+                                                        : '$unread',
+                                                    style: TextStyle(
+                                                      color: isMuted
+                                                          ? Colors.white
+                                                              .withValues(
+                                                                alpha: 0.9,
+                                                              )
+                                                          : Colors.white,
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                    textAlign: TextAlign.center,
+                                                  ),
+                                                ),
+                                              ],
+                                              const SizedBox(width: 2),
+                                              PopupMenuButton<String>(
+                                                icon: Icon(
+                                                  Icons.more_vert,
+                                                  size: 18,
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurfaceVariant
+                                                      .withValues(alpha: 0.6),
+                                                ),
+                                                padding: EdgeInsets.zero,
+                                                constraints:
+                                                    const BoxConstraints(
+                                                  minWidth: 28,
+                                                  minHeight: 28,
+                                                ),
+                                                onSelected: (value) async {
+                                                  if (value == 'mute') {
+                                                    await LocalDb.setChatMuted(
+                                                      peerId: isGroup
+                                                          ? null
+                                                          : c.peer!.id,
+                                                      groupId: isGroup
+                                                          ? c.group!.id
+                                                          : null,
+                                                      muted: true,
+                                                    );
+                                                    if (mounted) {
+                                                      setState(
+                                                        () =>
+                                                            _mutedChatKeys = {
+                                                              ..._mutedChatKeys,
+                                                              chatKey,
+                                                            },
+                                                      );
+                                                    }
+                                                  } else if (value ==
+                                                      'unmute') {
+                                                    await LocalDb.setChatMuted(
+                                                      peerId: isGroup
+                                                          ? null
+                                                          : c.peer!.id,
+                                                      groupId: isGroup
+                                                          ? c.group!.id
+                                                          : null,
+                                                      muted: false,
+                                                    );
+                                                    if (mounted) {
+                                                      setState(
+                                                        () =>
+                                                            _mutedChatKeys = {
+                                                              ..._mutedChatKeys,
+                                                            }..remove(chatKey),
+                                                      );
+                                                    }
+                                                  } else if (value == 'pin') {
+                                                    await LocalDb.setChatPinned(
+                                                      peerId: isGroup
+                                                          ? null
+                                                          : c.peer!.id,
+                                                      groupId: isGroup
+                                                          ? c.group!.id
+                                                          : null,
+                                                      pinned: true,
+                                                    );
+                                                    if (mounted) {
+                                                      setState(() {
+                                                        _pinnedChats = {
+                                                          ..._pinnedChats,
+                                                          chatKey:
+                                                              DateTime.now()
+                                                                  .toIso8601String(),
+                                                        };
+                                                        _chats = _sortChats(
+                                                          List.from(_chats),
+                                                          _pinnedChats,
+                                                        );
+                                                      });
+                                                    }
+                                                  } else if (value ==
+                                                      'unpin') {
+                                                    await LocalDb.setChatPinned(
+                                                      peerId: isGroup
+                                                          ? null
+                                                          : c.peer!.id,
+                                                      groupId: isGroup
+                                                          ? c.group!.id
+                                                          : null,
+                                                      pinned: false,
+                                                    );
+                                                    if (mounted) {
+                                                      setState(() {
+                                                        _pinnedChats =
+                                                            Map.from(
+                                                              _pinnedChats,
+                                                            )..remove(chatKey);
+                                                        _chats = _sortChats(
+                                                          List.from(_chats),
+                                                          _pinnedChats,
+                                                        );
+                                                      });
+                                                    }
+                                                  } else if (value ==
+                                                      'delete') {
+                                                    _confirmDeleteChat(
+                                                      context,
+                                                      c,
+                                                      isGroup,
+                                                    );
+                                                  }
+                                                },
+                                                itemBuilder: (ctx) => [
+                                                  PopupMenuItem(
+                                                    value: isPinned
+                                                        ? 'unpin'
+                                                        : 'pin',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          isPinned
+                                                              ? Icons.push_pin
+                                                              : Icons
+                                                                    .push_pin_outlined,
+                                                          size: 20,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 12,
+                                                        ),
+                                                        Text(
+                                                          isPinned
+                                                              ? context.tr(
+                                                                  'unpin_chat',
+                                                                )
+                                                              : context.tr(
+                                                                  'pin_chat',
+                                                                ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  PopupMenuItem(
+                                                    value: isMuted
+                                                        ? 'unmute'
+                                                        : 'mute',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          isMuted
+                                                              ? Icons
+                                                                    .notifications
+                                                              : Icons
+                                                                    .notifications_off,
+                                                          size: 20,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 12,
+                                                        ),
+                                                        Text(
+                                                          isMuted
+                                                              ? context.tr(
+                                                                  'unmute_chat',
+                                                                )
+                                                              : context.tr(
+                                                                  'mute_chat',
+                                                                ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  PopupMenuItem(
+                                                    value: 'delete',
+                                                    child: Row(
+                                                      children: [
+                                                        Icon(
+                                                          Icons.delete_outline,
+                                                          size: 20,
+                                                          color:
+                                                              theme.colorScheme
+                                                                  .error,
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 12,
+                                                        ),
+                                                        Text(
+                                                          context.tr(
+                                                            'delete_chat',
+                                                          ),
+                                                          style: TextStyle(
+                                                            color:
+                                                                theme.colorScheme
+                                                                    .error,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                   ],
                                 ),
-                          title: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  title,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 16,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
                               ),
-                              if (_pinnedChats.containsKey(
-                                isGroup
-                                    ? 'g_${c.group!.id}'
-                                    : 'p_${c.peer!.id}',
-                              ))
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 4),
-                                  child: Icon(
-                                    Icons.push_pin,
-                                    size: 14,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              if (_mutedChatKeys.contains(
-                                isGroup
-                                    ? 'g_${c.group!.id}'
-                                    : 'p_${c.peer!.id}',
-                              ))
-                                Padding(
-                                  padding: const EdgeInsets.only(right: 4),
-                                  child: Icon(
-                                    Icons.notifications_off,
-                                    size: 16,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              if (unread > 0)
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: AppSpacing.sm,
-                                    vertical: AppSpacing.xs,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    borderRadius: BorderRadius.circular(
-                                      AppSizes.radiusLG,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    unread > 99 ? '99+' : '$unread',
-                                    style: TextStyle(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onPrimary,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          subtitle: c.lastMessage != null
-                              ? Padding(
-                                  padding: EdgeInsets.only(top: AppSpacing.xs),
-                                  child: Text(
-                                    subtitleText,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                )
-                              : null,
-                          trailing: PopupMenuButton<String>(
-                            icon: Icon(
-                              Icons.more_vert,
-                              size: AppSizes.iconSM,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
                             ),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              minWidth: 32,
-                              minHeight: 32,
-                            ),
-                            onSelected: (value) async {
-                              final key = isGroup
-                                  ? 'g_${c.group!.id}'
-                                  : 'p_${c.peer!.id}';
-                              if (value == 'mute') {
-                                await LocalDb.setChatMuted(
-                                  peerId: isGroup ? null : c.peer!.id,
-                                  groupId: isGroup ? c.group!.id : null,
-                                  muted: true,
-                                );
-                                if (mounted) {
-                                  setState(
-                                    () => _mutedChatKeys = {
-                                      ..._mutedChatKeys,
-                                      key,
-                                    },
-                                  );
-                                }
-                              } else if (value == 'unmute') {
-                                await LocalDb.setChatMuted(
-                                  peerId: isGroup ? null : c.peer!.id,
-                                  groupId: isGroup ? c.group!.id : null,
-                                  muted: false,
-                                );
-                                if (mounted) {
-                                  setState(
-                                    () =>
-                                        _mutedChatKeys = {..._mutedChatKeys}
-                                          ..remove(key),
-                                  );
-                                }
-                              } else if (value == 'pin') {
-                                await LocalDb.setChatPinned(
-                                  peerId: isGroup ? null : c.peer!.id,
-                                  groupId: isGroup ? c.group!.id : null,
-                                  pinned: true,
-                                );
-                                if (mounted) {
-                                  setState(() {
-                                    _pinnedChats = {
-                                      ..._pinnedChats,
-                                      key: DateTime.now().toIso8601String(),
-                                    };
-                                    _chats = _sortChats(
-                                      List.from(_chats),
-                                      _pinnedChats,
-                                    );
-                                  });
-                                }
-                              } else if (value == 'unpin') {
-                                await LocalDb.setChatPinned(
-                                  peerId: isGroup ? null : c.peer!.id,
-                                  groupId: isGroup ? c.group!.id : null,
-                                  pinned: false,
-                                );
-                                if (mounted) {
-                                  setState(() {
-                                    _pinnedChats = Map.from(_pinnedChats)
-                                      ..remove(key);
-                                    _chats = _sortChats(
-                                      List.from(_chats),
-                                      _pinnedChats,
-                                    );
-                                  });
-                                }
-                              } else if (value == 'delete') {
-                                _confirmDeleteChat(context, c, isGroup);
-                              }
-                            },
-                            itemBuilder: (ctx) {
-                              final chatKey = isGroup
-                                  ? 'g_${c.group!.id}'
-                                  : 'p_${c.peer!.id}';
-                              final isMuted = _mutedChatKeys.contains(chatKey);
-                              final isPinned = _pinnedChats.containsKey(
-                                chatKey,
-                              );
-                              return [
-                                PopupMenuItem(
-                                  value: isPinned ? 'unpin' : 'pin',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        isPinned
-                                            ? Icons.push_pin
-                                            : Icons.push_pin_outlined,
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        isPinned
-                                            ? context.tr('unpin_chat')
-                                            : context.tr('pin_chat'),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                PopupMenuItem(
-                                  value: isMuted ? 'unmute' : 'mute',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        isMuted
-                                            ? Icons.notifications
-                                            : Icons.notifications_off,
-                                        size: 20,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        isMuted
-                                            ? context.tr('unmute_chat')
-                                            : context.tr('mute_chat'),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.delete_outline,
-                                        size: 20,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.error,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Text(
-                                        context.tr('delete_chat'),
-                                        style: TextStyle(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.error,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ];
-                            },
                           ),
-                          onTap: () async {
-                            if (isGroup) {
-                              await context.push('/group/${c.group!.id}');
-                            } else {
-                              await context.push('/chat/${c.peer!.id}');
-                            }
-                            _load();
-                          },
-                        ),
+                          Divider(
+                            height: 0,
+                            thickness: 0.5,
+                            indent: 78,
+                            color: theme.dividerColor,
+                          ),
+                        ],
                       );
                     },
                   ),

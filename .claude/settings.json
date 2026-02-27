@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/alikakuznecova/Documents/messenger/client/lib/screens -name \"*.dart\" -exec wc -l {} +)",
+      "Bash(lsof -ti:3000)",
+      "Bash(flutter devices)",
+      "Bash(flutter run -d chrome --web-port 8080)",
+      "Bash(lsof -ti:8080)",
+      "Bash(kill -9 49725 50086)",
+      "Bash(pkill -f \"flutter run\")",
+      "Bash(xargs kill -9)",
+      "Bash(xargs ps -p)",
+      "Bash(curl -s http://localhost:3000/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"\"username\"\":\"\"test\"\",\"\"password\"\":\"\"test\"\"}')",
+      "Bash(flutter run -d chrome --web-port 8080 --dart-define=API_BASE_URL=http://localhost:3000)"
+    ]
+  }
+}

@@ -43,6 +43,9 @@ class MessengerApp extends StatelessWidget {
         onSecondary: AppColors.lightOnPrimary,
         surface: AppColors.lightSurface,
         onSurface: AppColors.lightOnSurface,
+        surfaceContainerLowest: AppColors.lightScaffoldBackground,
+        surfaceContainerLow: AppColors.lightScaffoldBackground,
+        surfaceContainer: AppColors.lightSurfaceContainerHighest,
         surfaceContainerHighest: AppColors.lightSurfaceContainerHighest,
         onSurfaceVariant: AppColors.lightOnSurfaceVariant,
         outline: AppColors.lightOutline,
@@ -54,13 +57,15 @@ class MessengerApp extends StatelessWidget {
         backgroundColor: AppColors.lightPrimary,
         foregroundColor: AppColors.lightOnPrimary,
         elevation: 0,
-        scrolledUnderElevation: 0,
+        scrolledUnderElevation: 0.5,
+        shadowColor: Color(0x33000000),
         centerTitle: false,
         leadingWidth: 56,
         titleTextStyle: TextStyle(
           color: AppColors.lightOnPrimary,
-          fontSize: 22,
+          fontSize: 20,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.15,
         ),
         iconTheme: IconThemeData(color: AppColors.lightOnPrimary, size: 24),
         actionsIconTheme: IconThemeData(color: AppColors.lightOnPrimary),
@@ -68,32 +73,33 @@ class MessengerApp extends StatelessWidget {
       cardTheme: CardThemeData(
         color: AppColors.lightSurface,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
+        margin: EdgeInsets.zero,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.lightSurface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 14,
+          vertical: 13,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(24),
           borderSide: const BorderSide(color: AppColors.lightOutline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(24),
           borderSide: const BorderSide(color: AppColors.lightOutline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(24),
           borderSide: const BorderSide(
             color: AppColors.lightPrimary,
             width: 1.5,
           ),
         ),
         labelStyle: const TextStyle(color: AppColors.lightOnSurfaceVariant),
+        hintStyle: const TextStyle(color: AppColors.lightOnSurfaceVariant),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -102,8 +108,23 @@ class MessengerApp extends StatelessWidget {
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(24),
           ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.lightPrimary,
+          side: const BorderSide(color: AppColors.lightOutline),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -113,17 +134,58 @@ class MessengerApp extends StatelessWidget {
         style: IconButton.styleFrom(foregroundColor: AppColors.lightOnSurface),
       ),
       listTileTheme: const ListTileThemeData(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        minLeadingWidth: 56,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        minLeadingWidth: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(8)),
+          borderRadius: BorderRadius.zero,
         ),
       ),
       dividerColor: AppColors.lightOutline,
       dividerTheme: const DividerThemeData(
         color: AppColors.lightOutline,
-        thickness: 1,
-        space: 1,
+        thickness: 0.5,
+        space: 0,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.lightSurface,
+        indicatorColor: AppColors.lightPrimaryContainer,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              color: AppColors.lightPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            );
+          }
+          return const TextStyle(
+            color: AppColors.lightOnSurfaceVariant,
+            fontSize: 12,
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.lightPrimary, size: 24);
+          }
+          return const IconThemeData(
+            color: AppColors.lightOnSurfaceVariant,
+            size: 24,
+          );
+        }),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: AppColors.lightSurface,
+        selectedItemColor: AppColors.lightPrimary,
+        unselectedItemColor: AppColors.lightOnSurfaceVariant,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        unselectedLabelStyle: TextStyle(fontSize: 11),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: const Color(0xFF323232),
+        contentTextStyle: const TextStyle(color: Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        behavior: SnackBarBehavior.floating,
       ),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
@@ -147,6 +209,9 @@ class MessengerApp extends StatelessWidget {
         onSecondary: AppColors.darkOnPrimary,
         surface: AppColors.darkSurface,
         onSurface: AppColors.darkOnSurface,
+        surfaceContainerLowest: AppColors.darkScaffoldBackground,
+        surfaceContainerLow: AppColors.darkScaffoldBackground,
+        surfaceContainer: AppColors.darkSurfaceContainerHighest,
         surfaceContainerHighest: AppColors.darkSurfaceContainerHighest,
         onSurfaceVariant: AppColors.darkOnSurfaceVariant,
         outline: AppColors.darkOutline,
@@ -155,49 +220,52 @@ class MessengerApp extends StatelessWidget {
       ),
       scaffoldBackgroundColor: AppColors.darkScaffoldBackground,
       appBarTheme: const AppBarTheme(
-        backgroundColor: AppColors.darkSurfaceContainerHighest,
+        backgroundColor: Color(0xFF1F2D3B),
         foregroundColor: AppColors.darkOnSurface,
         elevation: 0,
-        scrolledUnderElevation: 0,
+        scrolledUnderElevation: 0.5,
+        shadowColor: Color(0x66000000),
         centerTitle: false,
         leadingWidth: 56,
         titleTextStyle: TextStyle(
           color: AppColors.darkOnSurface,
-          fontSize: 22,
+          fontSize: 20,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.15,
         ),
         iconTheme: IconThemeData(color: AppColors.darkOnSurface, size: 24),
         actionsIconTheme: IconThemeData(color: AppColors.darkOnSurface),
       ),
       cardTheme: CardThemeData(
-        color: AppColors.darkSurfaceContainerHighest,
+        color: AppColors.darkSurface,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
+        margin: EdgeInsets.zero,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.darkSurfaceContainerHighest,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
-          vertical: 14,
+          vertical: 13,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(24),
           borderSide: const BorderSide(color: AppColors.darkOutline),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(24),
           borderSide: const BorderSide(color: AppColors.darkOutline),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(24),
           borderSide: const BorderSide(
             color: AppColors.darkPrimary,
             width: 1.5,
           ),
         ),
         labelStyle: const TextStyle(color: AppColors.darkOnSurfaceVariant),
+        hintStyle: const TextStyle(color: AppColors.darkOnSurfaceVariant),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
@@ -206,8 +274,23 @@ class MessengerApp extends StatelessWidget {
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(24),
           ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.3,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.darkPrimary,
+          side: const BorderSide(color: AppColors.darkOutline),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -217,17 +300,58 @@ class MessengerApp extends StatelessWidget {
         style: IconButton.styleFrom(foregroundColor: AppColors.darkOnSurface),
       ),
       listTileTheme: const ListTileThemeData(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        minLeadingWidth: 56,
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        minLeadingWidth: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(8)),
+          borderRadius: BorderRadius.zero,
         ),
       ),
       dividerColor: AppColors.darkOutline,
       dividerTheme: const DividerThemeData(
         color: AppColors.darkOutline,
-        thickness: 1,
-        space: 1,
+        thickness: 0.5,
+        space: 0,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.darkSurface,
+        indicatorColor: AppColors.darkPrimaryContainer,
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const TextStyle(
+              color: AppColors.darkPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            );
+          }
+          return const TextStyle(
+            color: AppColors.darkOnSurfaceVariant,
+            fontSize: 12,
+          );
+        }),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.darkPrimary, size: 24);
+          }
+          return const IconThemeData(
+            color: AppColors.darkOnSurfaceVariant,
+            size: 24,
+          );
+        }),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: AppColors.darkSurface,
+        selectedItemColor: AppColors.darkPrimary,
+        unselectedItemColor: AppColors.darkOnSurfaceVariant,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        selectedLabelStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+        unselectedLabelStyle: TextStyle(fontSize: 11),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        backgroundColor: const Color(0xFF424242),
+        contentTextStyle: const TextStyle(color: Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        behavior: SnackBarBehavior.floating,
       ),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
