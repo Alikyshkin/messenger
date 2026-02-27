@@ -352,13 +352,15 @@ export const updateGroupSchema = Joi.object({
 });
 
 export const addGroupMemberSchema = Joi.object({
-  username: Joi.string().trim().min(VALIDATION_LIMITS.USERNAME_MIN_LENGTH).max(VALIDATION_LIMITS.USERNAME_MAX_LENGTH).required()
-    .label('Имя пользователя')
+  user_ids: Joi.array()
+    .items(Joi.number().integer().positive())
+    .min(1)
+    .max(100)
+    .required()
+    .label('Список участников')
     .messages({
-      'any.required': 'Имя пользователя обязательно',
-      'string.empty': 'Имя пользователя не может быть пустым',
-      'string.min': `Имя пользователя минимум ${VALIDATION_LIMITS.USERNAME_MIN_LENGTH} символа`,
-      'string.max': `Имя пользователя максимум ${VALIDATION_LIMITS.USERNAME_MAX_LENGTH} символов`,
+      'any.required': 'Список участников обязателен',
+      'array.min': 'Укажите хотя бы одного участника',
     }),
 });
 

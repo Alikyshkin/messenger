@@ -19,6 +19,7 @@ import { validatePagination, createPaginationMeta } from '../middleware/paginati
 import { ALLOWED_REACTION_EMOJIS, FILE_LIMITS, ALLOWED_FILE_TYPES } from '../config/constants.js';
 import { log } from '../utils/logger.js';
 import { getUserDisplayName } from '../utils/users.js';
+import { syncGroupMessagesFTS } from '../utils/ftsSync.js';
 
 const ALLOWED_EMOJIS = new Set(ALLOWED_REACTION_EMOJIS);
 function getGroupMessageReactions(groupMessageId) {
@@ -300,7 +301,7 @@ router.post('/:id/members', validateParams(idParamSchema), validate(addGroupMemb
   const id = req.validatedParams.id;
   const me = req.user.userId;
   if (!isAdmin(me, id)) return res.status(403).json({ error: 'Только администратор может добавлять участников' });
-  let userIds = req.body?.user_ids;
+  let userIds = req.validated?.user_ids ?? req.body?.user_ids;
   if (!Array.isArray(userIds)) userIds = [];
   userIds = [...new Set(userIds.map((u) => parseInt(u, 10)).filter((u) => !Number.isNaN(u) && u !== me))];
   const insertMember = db.prepare('INSERT OR IGNORE INTO group_members (group_id, user_id, role) VALUES (?, ?, ?)');
@@ -539,9 +540,9 @@ router.post('/:id/messages', validateParams(idParamSchema), messageLimiter, uplo
       poll_id: pollId,
       poll: {
         id: pollId,
-        question,
+        question: questionText,
         options: options.map((text, i) => ({ text, votes: 0, voted: false })),
-        multiple: !!multiple,
+        multiple: !!data.multiple,
       },
       reply_to_id: null,
       is_forwarded: false,

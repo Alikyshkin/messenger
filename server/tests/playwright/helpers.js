@@ -6,7 +6,7 @@ const PASSWORD = 'TestPass123!';
 
 let _counter = 0;
 function unique(prefix = 'user') {
-  return `${prefix}_${Date.now()}_${(++_counter).toString(36)}`;
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${(++_counter).toString(36)}`;
 }
 
 /**
@@ -53,11 +53,13 @@ async function createContactPair(request, serverBase) {
   await request.post(`${base}/contacts`, { headers: h1, data: { username: u2name } });
   await request.post(`${base}/contacts`, { headers: h2, data: { username: u1name } });
 
-  const inc2 = await (await request.get(`${base}/contacts/requests/incoming`, { headers: h2 })).json();
+  const inc2Raw = await (await request.get(`${base}/contacts/requests/incoming`, { headers: h2 })).json();
+  const inc2 = Array.isArray(inc2Raw) ? inc2Raw : [];
   for (const r of inc2) {
     await request.post(`${base}/contacts/requests/${r.id}/accept`, { headers: h2 });
   }
-  const inc1 = await (await request.get(`${base}/contacts/requests/incoming`, { headers: h1 })).json();
+  const inc1Raw = await (await request.get(`${base}/contacts/requests/incoming`, { headers: h1 })).json();
+  const inc1 = Array.isArray(inc1Raw) ? inc1Raw : [];
   for (const r of inc1) {
     await request.post(`${base}/contacts/requests/${r.id}/accept`, { headers: h1 });
   }

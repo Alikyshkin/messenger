@@ -901,3 +901,1018 @@ test.describe('22. Выход из аккаунта (API)', () => {
     expect(meRes2.status()).not.toBe(200);
   });
 });
+
+// ═══════════════════════════════════════════════
+// 23. РЕДАКТИРОВАНИЕ СООБЩЕНИЙ
+// ═══════════════════════════════════════════════
+
+test.describe('23. Редактирование сообщений', () => {
+  test('отправитель может редактировать текстовое сообщение', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+
+    const sendRes = await page.request.post(`${apiBase()}/messages`, {
+      headers: h1,
+      data: { receiver_id: pair.user2.id, content: 'original text' },
+    });
+    expect(sendRes.status()).toBe(201);
+    const msg = await sendRes.json();
+
+    const editRes = await page.request.patch(`${apiBase()}/messages/${msg.id}`, {
+      headers: h1,
+      data: { content: 'edited text' },
+    });
+    expect(editRes.status()).toBe(200);
+    const edited = await editRes.json();
+    expect(edited.content).toBe('edited text');
+  });
+
+  test('получатель не может редактировать чужое сообщение', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+    const h2 = { Authorization: `Bearer ${pair.user2.token}` };
+
+    const sendRes = await page.request.post(`${apiBase()}/messages`, {
+      headers: h1,
+      data: { receiver_id: pair.user2.id, content: 'cannot touch' },
+    });
+    const msg = await sendRes.json();
+
+    const editRes = await page.request.patch(`${apiBase()}/messages/${msg.id}`, {
+      headers: h2,
+      data: { content: 'hacked' },
+    });
+    expect(editRes.status()).toBe(403);
+  });
+
+  test('после редактирования изменённый текст виден в истории', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+
+    const sendRes = await page.request.post(`${apiBase()}/messages`, {
+      headers: h1,
+      data: { receiver_id: pair.user2.id, content: 'before edit' },
+    });
+    const msg = await sendRes.json();
+
+    await page.request.patch(`${apiBase()}/messages/${msg.id}`, {
+      headers: h1,
+      data: { content: 'after edit' },
+    });
+
+    const histRes = await page.request.get(`${apiBase()}/messages/${pair.user2.id}`, {
+      headers: h1,
+    });
+    const data = await histRes.json();
+    const messages = data.data ?? data;
+    const found = messages.find((m) => m.id === msg.id);
+    expect(found?.content).toBe('after edit');
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 24. УДАЛЕНИЕ ДЛЯ СЕБЯ (SOFT DELETE)
+// ═══════════════════════════════════════════════
+
+test.describe('24. Удаление для себя', () => {
+  test('удаление for_me=true возвращает 204', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+
+    const sendRes = await page.request.post(`${apiBase()}/messages`, {
+      headers: h1,
+      data: { receiver_id: pair.user2.id, content: 'delete for me' },
+    });
+    const msg = await sendRes.json();
+
+    const delRes = await page.request.delete(`${apiBase()}/messages/${msg.id}?for_me=true`, {
+      headers: h1,
+    });
+    expect(delRes.status()).toBe(204);
+  });
+
+  test('после soft-delete сообщение пропадает из истории для удалившего', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+    const h2 = { Authorization: `Bearer ${pair.user2.token}` };
+
+    const sendRes = await page.request.post(`${apiBase()}/messages`, {
+      headers: h1,
+      data: { receiver_id: pair.user2.id, content: 'soft del target' },
+    });
+    const msg = await sendRes.json();
+
+    await page.request.delete(`${apiBase()}/messages/${msg.id}?for_me=true`, { headers: h1 });
+
+    // Удалившему сообщение не видно
+    const h1Hist = await page.request.get(`${apiBase()}/messages/${pair.user2.id}`, { headers: h1 });
+    const d1 = await h1Hist.json();
+    const msgs1 = d1.data ?? d1;
+    expect(msgs1.some((m) => m.id === msg.id)).toBeFalsy();
+
+    // Второму пользователю сообщение по-прежнему видно
+    const h2Hist = await page.request.get(`${apiBase()}/messages/${pair.user1.id}`, { headers: h2 });
+    const d2 = await h2Hist.json();
+    const msgs2 = d2.data ?? d2;
+    expect(msgs2.some((m) => m.id === msg.id)).toBeTruthy();
+  });
+
+  test('удаление для всех: сообщение пропадает у обоих', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+    const h2 = { Authorization: `Bearer ${pair.user2.token}` };
+
+    const sendRes = await page.request.post(`${apiBase()}/messages`, {
+      headers: h1,
+      data: { receiver_id: pair.user2.id, content: 'delete for all' },
+    });
+    const msg = await sendRes.json();
+
+    await page.request.delete(`${apiBase()}/messages/${msg.id}`, { headers: h1 });
+
+    const h1Hist = await page.request.get(`${apiBase()}/messages/${pair.user2.id}`, { headers: h1 });
+    const d1 = await h1Hist.json();
+    expect((d1.data ?? d1).some((m) => m.id === msg.id)).toBeFalsy();
+
+    const h2Hist = await page.request.get(`${apiBase()}/messages/${pair.user1.id}`, { headers: h2 });
+    const d2 = await h2Hist.json();
+    expect((d2.data ?? d2).some((m) => m.id === msg.id)).toBeFalsy();
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 25. ОНЛАЙН-СТАТУС
+// ═══════════════════════════════════════════════
+
+test.describe('25. Онлайн-статус', () => {
+  test('GET /users/:id возвращает поля is_online и last_seen для контакта', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+
+    const res = await page.request.get(`${apiBase()}/users/${pair.user2.id}`, { headers: h1 });
+    expect(res.status()).toBe(200);
+    const user = await res.json();
+    expect('is_online' in user).toBeTruthy();
+    expect('last_seen' in user).toBeTruthy();
+  });
+
+  test('GET /chats включает is_online и last_seen для собеседника', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+
+    await page.request.post(`${apiBase()}/messages`, {
+      headers: h1,
+      data: { receiver_id: pair.user2.id, content: 'online check' },
+    });
+
+    const res = await page.request.get(`${apiBase()}/chats`, { headers: h1 });
+    const data = await res.json();
+    const chat = (data.data ?? data).find((c) => c.peer?.id === pair.user2.id);
+    expect(chat).toBeTruthy();
+    expect('is_online' in (chat?.peer ?? {})).toBeTruthy();
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 26. ГРУППОВЫЕ СООБЩЕНИЯ
+// ═══════════════════════════════════════════════
+
+test.describe('26. Групповые сообщения', () => {
+  async function createGroupWithMembers(page, creator, memberIds = []) {
+    const res = await page.request.post(`${apiBase()}/groups`, {
+      headers: { Authorization: `Bearer ${creator.token}` },
+      data: { name: `Тест ${Date.now()}`, member_ids: memberIds },
+    });
+    expect(res.status()).toBe(201);
+    return res.json();
+  }
+
+  test('отправка и получение текстового сообщения в группу', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const group = await createGroupWithMembers(page, r1, [r2.id]);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    const sendRes = await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+      data: { content: 'привет группа' },
+    });
+    expect(sendRes.status()).toBe(201);
+    const msg = await sendRes.json();
+    expect(msg.content).toBe('привет группа');
+    expect(msg.group_id).toBe(group.id);
+
+    const getRes = await page.request.get(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+    });
+    const data = await getRes.json();
+    const messages = data.data ?? data;
+    expect(messages.some((m) => m.content === 'привет группа')).toBeTruthy();
+  });
+
+  test('member видит сообщения созданные creator', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const group = await createGroupWithMembers(page, r1, [r2.id]);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+    const h2 = { Authorization: `Bearer ${r2.token}` };
+    const msgText = `group msg ${Date.now()}`;
+
+    await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+      data: { content: msgText },
+    });
+
+    const getRes = await page.request.get(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h2,
+    });
+    const data = await getRes.json();
+    const messages = data.data ?? data;
+    expect(messages.some((m) => m.content === msgText)).toBeTruthy();
+  });
+
+  test('не-участник получает 404 на сообщения группы', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const group = await createGroupWithMembers(page, r1, []);
+    const h2 = { Authorization: `Bearer ${r2.token}` };
+
+    const res = await page.request.get(`${apiBase()}/groups/${group.id}/messages`, { headers: h2 });
+    expect(res.status()).toBe(404);
+  });
+
+  test('sender_display_name присутствует в ответе', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const group = await createGroupWithMembers(page, r1, []);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+      data: { content: 'name check' },
+    });
+
+    const getRes = await page.request.get(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+    });
+    const data = await getRes.json();
+    const messages = data.data ?? data;
+    const found = messages.find((m) => m.content === 'name check');
+    expect(found?.sender_display_name).toBeTruthy();
+  });
+
+  test('пагинация группы через before', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const group = await createGroupWithMembers(page, r1, []);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    for (let i = 0; i < 5; i++) {
+      await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+        headers: h1,
+        data: { content: `msg ${i}` },
+      });
+    }
+
+    const r1Res = await page.request.get(`${apiBase()}/groups/${group.id}/messages?limit=100`, { headers: h1 });
+    const allData = await r1Res.json();
+    const allMsgs = allData.data ?? allData;
+    const pivotId = allMsgs[allMsgs.length - 1]?.id; // последнее сообщение
+
+    const beforeRes = await page.request.get(
+      `${apiBase()}/groups/${group.id}/messages?limit=2&before=${pivotId}`,
+      { headers: h1 }
+    );
+    const beforeData = await beforeRes.json();
+    const beforeMsgs = beforeData.data ?? beforeData;
+    expect(beforeMsgs.every((m) => m.id < pivotId)).toBeTruthy();
+    expect(beforeMsgs.length).toBeLessThanOrEqual(2);
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 27. РЕАКЦИИ В ГРУППОВЫХ СООБЩЕНИЯХ
+// ═══════════════════════════════════════════════
+
+test.describe('27. Реакции в групповых сообщениях', () => {
+  async function setupGroupMsg(page) {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: { Authorization: `Bearer ${r1.token}` },
+      data: { name: 'ReactGroup', member_ids: [r2.id] },
+    });
+    const group = await gRes.json();
+    const msgRes = await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: { Authorization: `Bearer ${r1.token}` },
+      data: { content: 'react me' },
+    });
+    const msg = await msgRes.json();
+    return { r1, r2, group, msg };
+  }
+
+  test('добавить реакцию на групповое сообщение', async ({ page }) => {
+    const { r2, group, msg } = await setupGroupMsg(page);
+    const h2 = { Authorization: `Bearer ${r2.token}` };
+
+    const rRes = await page.request.post(
+      `${apiBase()}/groups/${group.id}/messages/${msg.id}/reaction`,
+      { headers: h2, data: { emoji: '❤️' } }
+    );
+    expect(rRes.status()).toBe(200);
+    const body = await rRes.json();
+    expect(body.reactions.some((r) => r.emoji === '❤️')).toBeTruthy();
+  });
+
+  test('повторная та же реакция снимает её', async ({ page }) => {
+    const { r1, group, msg } = await setupGroupMsg(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    await page.request.post(
+      `${apiBase()}/groups/${group.id}/messages/${msg.id}/reaction`,
+      { headers: h1, data: { emoji: '👍' } }
+    );
+    const r2 = await page.request.post(
+      `${apiBase()}/groups/${group.id}/messages/${msg.id}/reaction`,
+      { headers: h1, data: { emoji: '👍' } }
+    );
+    const body = await r2.json();
+    const thumbs = body.reactions.find((r) => r.emoji === '👍');
+    expect(!thumbs || thumbs.user_ids.length === 0).toBeTruthy();
+  });
+
+  test('несколько пользователей реагируют на одно сообщение', async ({ page }) => {
+    const { r1, r2, group, msg } = await setupGroupMsg(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+    const h2 = { Authorization: `Bearer ${r2.token}` };
+
+    await page.request.post(
+      `${apiBase()}/groups/${group.id}/messages/${msg.id}/reaction`,
+      { headers: h1, data: { emoji: '🔥' } }
+    );
+    const rRes = await page.request.post(
+      `${apiBase()}/groups/${group.id}/messages/${msg.id}/reaction`,
+      { headers: h2, data: { emoji: '🔥' } }
+    );
+    const body = await rRes.json();
+    const fire = body.reactions.find((r) => r.emoji === '🔥');
+    expect(fire?.user_ids.length).toBe(2);
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 28. ПРОЧТЕНИЕ ГРУППОВОГО ЧАТА
+// ═══════════════════════════════════════════════
+
+test.describe('28. Прочтение группового чата', () => {
+  test('PATCH /groups/:id/read обнуляет unread_count', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: { Authorization: `Bearer ${r1.token}` },
+      data: { name: 'ReadGroup', member_ids: [r2.id] },
+    });
+    const group = await gRes.json();
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+    const h2 = { Authorization: `Bearer ${r2.token}` };
+
+    // r1 шлёт 3 сообщения
+    let lastMsgId;
+    for (let i = 0; i < 3; i++) {
+      const s = await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+        headers: h1,
+        data: { content: `unread group ${i}` },
+      });
+      const m = await s.json();
+      lastMsgId = m.id;
+    }
+
+    // r2 должен видеть 3 непрочитанных в /chats
+    const chatsRes1 = await page.request.get(`${apiBase()}/chats`, { headers: h2 });
+    const chats1 = await chatsRes1.json();
+    const chat1 = (chats1.data ?? chats1).find((c) => c.group?.id === group.id);
+    expect(chat1?.unread_count).toBe(3);
+
+    // r2 читает группу
+    await page.request.patch(`${apiBase()}/groups/${group.id}/read`, {
+      headers: h2,
+      data: { last_message_id: lastMsgId },
+    });
+
+    // Теперь 0 непрочитанных
+    const chatsRes2 = await page.request.get(`${apiBase()}/chats`, { headers: h2 });
+    const chats2 = await chatsRes2.json();
+    const chat2 = (chats2.data ?? chats2).find((c) => c.group?.id === group.id);
+    expect(chat2?.unread_count).toBe(0);
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 29. УПРАВЛЕНИЕ УЧАСТНИКАМИ ГРУППЫ
+// ═══════════════════════════════════════════════
+
+test.describe('29. Участники группы', () => {
+  test('добавление участника в группу (admin only)', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const r3 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'MemberGroup' },
+    });
+    const group = await gRes.json();
+
+    const addRes = await page.request.post(`${apiBase()}/groups/${group.id}/members`, {
+      headers: h1,
+      data: { user_ids: [r2.id, r3.id] },
+    });
+    expect(addRes.status()).toBe(204);
+
+    // r2 теперь может получить сообщения группы
+    const msgRes = await page.request.get(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: { Authorization: `Bearer ${r2.token}` },
+    });
+    expect(msgRes.status()).toBe(200);
+  });
+
+  test('не-администратор не может добавить участников', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const r3 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+    const h2 = { Authorization: `Bearer ${r2.token}` };
+
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'AdminOnly', member_ids: [r2.id] },
+    });
+    const group = await gRes.json();
+
+    const addRes = await page.request.post(`${apiBase()}/groups/${group.id}/members`, {
+      headers: h2,
+      data: { user_ids: [r3.id] },
+    });
+    expect(addRes.status()).toBe(403);
+  });
+
+  test('участник может покинуть группу', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+    const h2 = { Authorization: `Bearer ${r2.token}` };
+
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'LeaveGroup', member_ids: [r2.id] },
+    });
+    const group = await gRes.json();
+
+    // r2 выходит
+    const leaveRes = await page.request.delete(
+      `${apiBase()}/groups/${group.id}/members/${r2.id}`,
+      { headers: h2 }
+    );
+    expect(leaveRes.status()).toBe(204);
+
+    // r2 больше не видит сообщения группы
+    const msgRes = await page.request.get(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h2,
+    });
+    expect(msgRes.status()).toBe(404);
+  });
+
+  test('группа удаляется когда выходит последний участник', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'LastManGroup' },
+    });
+    const group = await gRes.json();
+
+    await page.request.delete(
+      `${apiBase()}/groups/${group.id}/members/${r1.id}`,
+      { headers: h1 }
+    );
+
+    const groupInfoRes = await page.request.get(`${apiBase()}/groups/${group.id}`, { headers: h1 });
+    expect(groupInfoRes.status()).toBe(404);
+  });
+
+  test('информация о группе возвращает список участников', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'InfoGroup', member_ids: [r2.id] },
+    });
+    const group = await gRes.json();
+
+    const infoRes = await page.request.get(`${apiBase()}/groups/${group.id}`, { headers: h1 });
+    expect(infoRes.status()).toBe(200);
+    const info = await infoRes.json();
+    expect(Array.isArray(info.members)).toBeTruthy();
+    expect(info.members.length).toBe(2);
+    expect(info.members.some((m) => m.id === r1.id)).toBeTruthy();
+    expect(info.members.some((m) => m.id === r2.id)).toBeTruthy();
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 30. ГРУППОВЫЕ ОПРОСЫ
+// ═══════════════════════════════════════════════
+
+test.describe('30. Групповые опросы', () => {
+  test('создание опроса в группе', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'PollGroup', member_ids: [r2.id] },
+    });
+    const group = await gRes.json();
+
+    const pollRes = await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+      data: {
+        content: '',
+        type: 'poll',
+        question: 'Лучший язык?',
+        options: ['Dart', 'JavaScript', 'Python'],
+      },
+    });
+    expect(pollRes.status()).toBe(201);
+    const poll = await pollRes.json();
+    expect(poll.message_type).toBe('poll');
+    expect(poll.poll_id).toBeTruthy();
+    expect(poll.poll?.question).toBe('Лучший язык?');
+    expect(poll.poll?.options.length).toBe(3);
+  });
+
+  test('голосование за вариант в групповом опросе', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+    const h2 = { Authorization: `Bearer ${r2.token}` };
+
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'VoteGroup', member_ids: [r2.id] },
+    });
+    const group = await gRes.json();
+
+    const pollRes = await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+      data: {
+        type: 'poll',
+        question: 'Голосуем?',
+        options: ['Да', 'Нет'],
+      },
+    });
+    const pollMsg = await pollRes.json();
+
+    // Используем маршрут голосования в групповых опросах
+    const voteRes = await page.request.post(
+      `${apiBase()}/groups/${group.id}/polls/${pollMsg.poll_id}/vote`,
+      { headers: h2, data: { option_index: 0 } }
+    );
+    expect(voteRes.status()).toBe(200);
+    const voteBody = await voteRes.json();
+    const daOpt = voteBody.options?.[0] ?? voteBody.poll?.options?.[0];
+    expect(daOpt?.votes).toBeGreaterThan(0);
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 31. REPLY И FORWARD В ГРУППОВЫХ ЧАТАХ
+// ═══════════════════════════════════════════════
+
+test.describe('31. Reply и Forward в группах', () => {
+  async function makeGroupAndSend(page, content) {
+    const r1 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'ReplyGroup' },
+    });
+    const group = await gRes.json();
+    const msgRes = await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+      data: { content },
+    });
+    const msg = await msgRes.json();
+    return { r1, h1, group, msg };
+  }
+
+  test('ответ на сообщение в группе содержит reply_to_id', async ({ page }) => {
+    const { r1, h1, group, msg } = await makeGroupAndSend(page, 'original');
+
+    const replyRes = await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+      data: { content: 'reply!', reply_to_id: msg.id },
+    });
+    expect(replyRes.status()).toBe(201);
+    const reply = await replyRes.json();
+    expect(reply.reply_to_id).toBe(msg.id);
+  });
+
+  test('пересылка сообщения в группу', async ({ page }) => {
+    const { r1, h1, group } = await makeGroupAndSend(page, 'fwd source');
+
+    const fwdRes = await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+      data: {
+        content: 'forwarded content',
+        is_forwarded: true,
+        forward_from_display_name: 'Источник',
+      },
+    });
+    expect(fwdRes.status()).toBe(201);
+    const fwd = await fwdRes.json();
+    expect(fwd.is_forwarded).toBe(true);
+    expect(fwd.forward_from_display_name).toBe('Источник');
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 32. МНОЖЕСТВЕННЫЕ РЕАКЦИИ В 1-1 ЧАТЕ
+// ═══════════════════════════════════════════════
+
+test.describe('32. Множественные реакции (1-1)', () => {
+  test('оба пользователя ставят одинаковую реакцию — счётчик 2', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+    const h2 = { Authorization: `Bearer ${pair.user2.token}` };
+
+    const sendRes = await page.request.post(`${apiBase()}/messages`, {
+      headers: h1,
+      data: { receiver_id: pair.user2.id, content: 'multi react' },
+    });
+    const msg = await sendRes.json();
+
+    await page.request.post(`${apiBase()}/messages/${msg.id}/reaction`, {
+      headers: h1,
+      data: { emoji: '😂' },
+    });
+    const r2 = await page.request.post(`${apiBase()}/messages/${msg.id}/reaction`, {
+      headers: h2,
+      data: { emoji: '😂' },
+    });
+    const body = await r2.json();
+    const laugh = body.reactions.find((r) => r.emoji === '😂');
+    expect(laugh?.user_ids.length).toBe(2);
+  });
+
+  test('замена реакции: новая эмодзи', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+
+    const sendRes = await page.request.post(`${apiBase()}/messages`, {
+      headers: h1,
+      data: { receiver_id: pair.user2.id, content: 'switch react' },
+    });
+    const msg = await sendRes.json();
+
+    await page.request.post(`${apiBase()}/messages/${msg.id}/reaction`, {
+      headers: h1,
+      data: { emoji: '👍' },
+    });
+    const r2 = await page.request.post(`${apiBase()}/messages/${msg.id}/reaction`, {
+      headers: h1,
+      data: { emoji: '❤️' },
+    });
+    const body = await r2.json();
+    const heart = body.reactions.find((r) => r.emoji === '❤️');
+    const thumbs = body.reactions.find((r) => r.emoji === '👍');
+    expect(heart?.user_ids.includes(pair.user1.id)).toBeTruthy();
+    expect(!thumbs || !thumbs.user_ids.includes(pair.user1.id)).toBeTruthy();
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 33. СПИСОК ЧАТОВ С ГРУППАМИ
+// ═══════════════════════════════════════════════
+
+test.describe('33. Список чатов с группами', () => {
+  test('группа появляется в /chats после первого сообщения', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'ChatListGroup' },
+    });
+    const group = await gRes.json();
+
+    await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+      data: { content: 'first group message' },
+    });
+
+    const chatsRes = await page.request.get(`${apiBase()}/chats`, { headers: h1 });
+    const data = await chatsRes.json();
+    const chats = data.data ?? data;
+    expect(chats.some((c) => c.group?.id === group.id)).toBeTruthy();
+  });
+
+  test('последнее сообщение группы видно в превью чата', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'PreviewGroup' },
+    });
+    const group = await gRes.json();
+    const lastText = `preview ${Date.now()}`;
+
+    await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+      data: { content: 'first' },
+    });
+    await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+      data: { content: lastText },
+    });
+
+    const chatsRes = await page.request.get(`${apiBase()}/chats`, { headers: h1 });
+    const data = await chatsRes.json();
+    const chat = (data.data ?? data).find((c) => c.group?.id === group.id);
+    expect(chat?.last_message?.content).toBe(lastText);
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 34. ПАГИНАЦИЯ С КУРСОРОМ (before)
+// ═══════════════════════════════════════════════
+
+test.describe('34. Пагинация с курсором', () => {
+  test('before возвращает только более старые сообщения (1-1)', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+
+    for (let i = 0; i < 5; i++) {
+      await page.request.post(`${apiBase()}/messages`, {
+        headers: h1,
+        data: { receiver_id: pair.user2.id, content: `cursor msg ${i}` },
+      });
+    }
+
+    const allRes = await page.request.get(`${apiBase()}/messages/${pair.user2.id}?limit=100`, {
+      headers: h1,
+    });
+    const allData = await allRes.json();
+    const allMsgs = allData.data ?? allData;
+    const pivotId = allMsgs[allMsgs.length - 1]?.id; // самое новое
+
+    const pageRes = await page.request.get(
+      `${apiBase()}/messages/${pair.user2.id}?limit=2&before=${pivotId}`,
+      { headers: h1 }
+    );
+    const pageData = await pageRes.json();
+    const pageMsgs = pageData.data ?? pageData;
+    expect(pageMsgs.every((m) => m.id < pivotId)).toBeTruthy();
+    expect(pageMsgs.length).toBeLessThanOrEqual(2);
+  });
+
+  test('hasMore=true когда сообщений больше чем limit', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+
+    for (let i = 0; i < 5; i++) {
+      await page.request.post(`${apiBase()}/messages`, {
+        headers: h1,
+        data: { receiver_id: pair.user2.id, content: `has more ${i}` },
+      });
+    }
+
+    const res = await page.request.get(`${apiBase()}/messages/${pair.user2.id}?limit=2`, {
+      headers: h1,
+    });
+    const data = await res.json();
+    expect(data.pagination?.hasMore).toBeTruthy();
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 35. ОБНОВЛЕНИЕ ГРУППЫ
+// ═══════════════════════════════════════════════
+
+test.describe('35. Обновление группы', () => {
+  test('администратор может переименовать группу', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'OldName' },
+    });
+    const group = await gRes.json();
+
+    const patchRes = await page.request.patch(`${apiBase()}/groups/${group.id}`, {
+      headers: h1,
+      data: { name: 'NewName' },
+    });
+    expect(patchRes.status()).toBe(200);
+    const updated = await patchRes.json();
+    expect(updated.name).toBe('NewName');
+  });
+
+  test('не-администратор не может переименовать группу', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+    const h2 = { Authorization: `Bearer ${r2.token}` };
+
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'AdminGroup', member_ids: [r2.id] },
+    });
+    const group = await gRes.json();
+
+    const patchRes = await page.request.patch(`${apiBase()}/groups/${group.id}`, {
+      headers: h2,
+      data: { name: 'HackedName' },
+    });
+    expect(patchRes.status()).toBe(403);
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 36. ГЕОЛОКАЦИЯ
+// ═══════════════════════════════════════════════
+
+test.describe('36. Геолокация', () => {
+  test('отправка геолокации в 1-1 чат', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+
+    const res = await page.request.post(`${apiBase()}/messages`, {
+      headers: h1,
+      data: {
+        receiver_id: pair.user2.id,
+        type: 'location',
+        lat: 55.7558,
+        lng: 37.6173,
+        location_label: 'Москва',
+      },
+    });
+    expect(res.status()).toBe(201);
+    const msg = await res.json();
+    expect(msg.message_type).toBe('location');
+    const coords = JSON.parse(msg.content);
+    expect(coords.lat).toBeCloseTo(55.7558, 3);
+    expect(coords.lng).toBeCloseTo(37.6173, 3);
+    expect(coords.label).toBe('Москва');
+  });
+
+  test('отправка геолокации в группу', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    const gRes = await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'GeoGroup' },
+    });
+    const group = await gRes.json();
+
+    const res = await page.request.post(`${apiBase()}/groups/${group.id}/messages`, {
+      headers: h1,
+      data: {
+        type: 'location',
+        lat: 48.8566,
+        lng: 2.3522,
+        location_label: 'Париж',
+      },
+    });
+    expect(res.status()).toBe(201);
+    const msg = await res.json();
+    expect(msg.message_type).toBe('location');
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 37. СПИСОК ГРУПП
+// ═══════════════════════════════════════════════
+
+test.describe('37. Список групп пользователя', () => {
+  test('GET /groups возвращает группы текущего пользователя', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+
+    await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'MyGroup1' },
+    });
+    await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'MyGroup2' },
+    });
+
+    const res = await page.request.get(`${apiBase()}/groups`, { headers: h1 });
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    const groups = data.data ?? data;
+    expect(groups.length).toBeGreaterThanOrEqual(2);
+    expect(groups.some((g) => g.name === 'MyGroup1')).toBeTruthy();
+    expect(groups.some((g) => g.name === 'MyGroup2')).toBeTruthy();
+  });
+
+  test('пользователь не видит группы, в которых не состоит', async ({ page }) => {
+    const r1 = await registerViaAPI(page);
+    const r2 = await registerViaAPI(page);
+    const h1 = { Authorization: `Bearer ${r1.token}` };
+    const h2 = { Authorization: `Bearer ${r2.token}` };
+
+    await page.request.post(`${apiBase()}/groups`, {
+      headers: h1,
+      data: { name: 'PrivateGroup' },
+    });
+
+    const res = await page.request.get(`${apiBase()}/groups`, { headers: h2 });
+    const data = await res.json();
+    const groups = data.data ?? data;
+    expect(groups.some((g) => g.name === 'PrivateGroup')).toBeFalsy();
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 38. SEARCH
+// ═══════════════════════════════════════════════
+
+test.describe('38. Полнотекстовый поиск', () => {
+  test('поиск по тексту находит сообщение', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+    const unique_text = `findme${Date.now()}`;
+
+    await page.request.post(`${apiBase()}/messages`, {
+      headers: h1,
+      data: { receiver_id: pair.user2.id, content: unique_text },
+    });
+
+    // Дать FTS индексу обновиться
+    await page.waitForTimeout(500);
+
+    const res = await page.request.get(
+      `${apiBase()}/search/messages?q=${encodeURIComponent(unique_text)}`,
+      { headers: h1 }
+    );
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    const results = data.data ?? [];
+    expect(results.some((m) => m.content?.includes(unique_text))).toBeTruthy();
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 39. ОПРОС: множественный выбор
+// ═══════════════════════════════════════════════
+
+test.describe('39. Опросы: множественный выбор', () => {
+  test('опрос с multiple=true позволяет голосовать за несколько вариантов', async ({ page }) => {
+    const pair = await createContactPair(page.request, apiBase());
+    const h1 = { Authorization: `Bearer ${pair.user1.token}` };
+    const h2 = { Authorization: `Bearer ${pair.user2.token}` };
+
+    const sendRes = await page.request.post(`${apiBase()}/messages`, {
+      headers: h1,
+      data: {
+        receiver_id: pair.user2.id,
+        type: 'poll',
+        question: 'Что вы любите?',
+        options: ['Кошки', 'Собаки', 'Рыбки'],
+        multiple: true,
+      },
+    });
+    expect(sendRes.status()).toBe(201);
+    const msg = await sendRes.json();
+
+    const voteRes = await page.request.post(`${apiBase()}/polls/${msg.poll_id}/vote`, {
+      headers: h2,
+      data: { option_indexes: [0, 2] },
+    });
+    expect(voteRes.status()).toBe(200);
+  });
+});
+
+// ═══════════════════════════════════════════════
+// 40. SYNC API
+// ═══════════════════════════════════════════════
+
+test.describe('40. Sync API', () => {
+  test('GET /sync/status возвращает статус синхронизации', async ({ page }) => {
+    const { token } = await registerViaAPI(page);
+    const res = await page.request.get(`${apiBase()}/sync/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    expect(data.synced).toBeTruthy();
+  });
+});

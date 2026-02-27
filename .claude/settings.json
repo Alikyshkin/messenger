@@ -36,11 +36,30 @@
       "Bash(npx playwright test --config=playwright.config.js -g \"успешный вход\")",
       "Bash(npx playwright test --config=playwright.e2e.config.js -g \"успешный вход\")",
       "Bash(du -sh /Users/alikakuznecova/Documents/messenger/*)",
-      "Bash(grep -n \"backup-db\\\\|backup_db\" /Users/alikakuznecova/Documents/messenger/.github/workflows/*.yml /Users/alikakuznecova/Documents/messenger/scripts/*.sh)"
+      "Bash(grep -n \"backup-db\\\\|backup_db\" /Users/alikakuznecova/Documents/messenger/.github/workflows/*.yml /Users/alikakuznecova/Documents/messenger/scripts/*.sh)",
+      "Bash(grep -l \"onNewMessage\\\\|takeIncoming\\\\|reactionUpdate\" /Users/alikakuznecova/Documents/messenger/client/lib/screens/*.dart)",
+      "Bash(NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/auth.test.js tests/unit/api.test.js tests/unit/validation.test.js tests/e2e/chat_e2e.test.js)",
+      "Bash(NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/integration/messages-integration.test.js)",
+      "Bash(NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test)",
+      "Bash(NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/auth.test.js tests/unit/api.test.js tests/unit/validation.test.js tests/integration/messages-integration.test.js tests/e2e/chat_e2e.test.js)",
+      "Bash(NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret node --test tests/unit/auth.test.js tests/unit/api.test.js tests/unit/websocket.test.js tests/unit/validation.test.js tests/unit/sanitize.test.js tests/unit/pagination.test.js tests/unit/apiVersioning.test.js tests/unit/fileValidation.test.js tests/unit/csrf.test.js tests/unit/sanitizeLogs.test.js tests/unit/cipher.test.js tests/integration/messages-integration.test.js tests/e2e/chat_e2e.test.js tests/smoke/smoke.test.js tests/smoke/routes-smoke.test.js)",
+      "Bash(NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret npx playwright test --config=playwright.e2e.config.js)",
+      "Read(//private/tmp/**)",
+      "Bash(NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret npx playwright test --config=playwright.config.js)",
+      "Bash(NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret npx playwright test --config=playwright.config.js --grep \"23\\\\.|24\\\\.|25\\\\.|26\\\\.|27\\\\.|28\\\\.|29\\\\.|30\\\\.\" tests/playwright/messenger.e2e.spec.js)",
+      "Bash(NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret npx playwright test --config=playwright.config.js tests/playwright/messaging.spec.js)",
+      "Bash(NODE_ENV=test MESSENGER_DB_PATH=:memory: JWT_SECRET=test-secret npx playwright test --config=playwright.config.js --workers=1 tests/playwright/messaging.spec.js)",
+      "Bash(node -e \"import\\(''express''\\).then\\(m => console.log\\(m.default.version || require\\(''./node_modules/express/package.json''\\).version\\)\\)\")",
+      "Bash(ls /Users/alikakuznecova/Documents/messenger/server/*.js)",
+      "Bash(grep -n \"fix_fts_triggers\\\\|ensure_fts_triggers\\\\|group_messages_fts.*trigger\\\\|trigger.*group_messages\" /Users/alikakuznecova/Documents/messenger/server/migrations/versions/*.sql)",
+      "Bash(npx playwright test tests/playwright/messaging.spec.js --config playwright.config.js)",
+      "Bash(npx playwright test tests/playwright/messaging.spec.js --config playwright.config.js --workers=1 --grep \"редактирует|for_me=true\")",
+      "Bash(npx playwright test tests/playwright/messaging.spec.js --config playwright.config.js --workers=1)"
     ],
     "additionalDirectories": [
       "/Users/alikakuznecova/Documents/messenger",
-      "/Users/alikakuznecova/Documents/messenger/data"
+      "/Users/alikakuznecova/Documents/messenger/data",
+      "/tmp"
     ]
   }
 }

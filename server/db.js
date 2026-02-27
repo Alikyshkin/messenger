@@ -243,6 +243,31 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_poll_votes_poll_user ON poll_votes(poll_id, user_id);
 `);
 
+// Fix poll_votes: migration 001 created it with UNIQUE(poll_id, user_id) which prevents multiple votes.
+// If the table has an 'id' column it's the old schema — recreate without the unique constraint.
+try {
+  const pvCols = db.prepare("SELECT name FROM pragma_table_info('poll_votes')").all().map(r => r.name);
+  if (pvCols.includes('id')) {
+    db.exec(`
+      CREATE TABLE poll_votes_temp (
+        poll_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        option_index INTEGER NOT NULL,
+        PRIMARY KEY (poll_id, user_id, option_index),
+        FOREIGN KEY (poll_id) REFERENCES polls(id),
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      );
+      INSERT OR IGNORE INTO poll_votes_temp (poll_id, user_id, option_index)
+        SELECT poll_id, user_id, option_index FROM poll_votes;
+      DROP TABLE poll_votes;
+      ALTER TABLE poll_votes_temp RENAME TO poll_votes;
+      CREATE INDEX IF NOT EXISTS idx_poll_votes_poll ON poll_votes(poll_id);
+      CREATE INDEX IF NOT EXISTS idx_poll_votes_user ON poll_votes(user_id);
+      CREATE INDEX IF NOT EXISTS idx_poll_votes_poll_user ON poll_votes(poll_id, user_id);
+    `);
+  }
+} catch (_) {}
+
 // Групповые чаты
 try {
   db.exec(`
@@ -328,6 +353,15 @@ try {
   log.warn({ error: err }, 'Ошибка при создании таблиц групп, миграция исправит структуру');
 }
 
+// Fix group_messages: migration 001 used attachment_url instead of attachment_path and is missing
+// several columns that the code depends on. Add them if they don't already exist.
+try { db.exec('ALTER TABLE group_messages ADD COLUMN attachment_path TEXT'); } catch (_) {}
+try { db.exec('ALTER TABLE group_messages ADD COLUMN attachment_duration_sec INTEGER'); } catch (_) {}
+try { db.exec('ALTER TABLE group_messages ADD COLUMN attachment_encrypted INTEGER DEFAULT 0'); } catch (_) {}
+try { db.exec('ALTER TABLE group_messages ADD COLUMN is_forwarded INTEGER DEFAULT 0'); } catch (_) {}
+try { db.exec('ALTER TABLE group_messages ADD COLUMN forward_from_sender_id INTEGER'); } catch (_) {}
+try { db.exec('ALTER TABLE group_messages ADD COLUMN forward_from_display_name TEXT'); } catch (_) {}
+
 // Создаем индексы для group_poll_votes отдельно, чтобы не падать при старой структуре
 // Проверяем, существует ли колонка group_poll_id перед созданием индексов
 try {
@@ -380,6 +414,30 @@ try {
     CREATE INDEX IF NOT EXISTS idx_group_message_reactions_msg ON group_message_reactions(group_message_id);
     CREATE INDEX IF NOT EXISTS idx_group_message_reactions_user ON group_message_reactions(user_id);
   `);
+} catch (_) {}
+
+// Fix group_message_reactions: migration 001 created it with column 'message_id' but code uses 'group_message_id'.
+// If the table has message_id but not group_message_id, recreate it with the correct column name.
+try {
+  const gmrCols = db.prepare("SELECT name FROM pragma_table_info('group_message_reactions')").all().map(r => r.name);
+  if (gmrCols.includes('message_id') && !gmrCols.includes('group_message_id')) {
+    db.exec(`
+      CREATE TABLE group_message_reactions_temp (
+        group_message_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        emoji TEXT NOT NULL,
+        PRIMARY KEY (group_message_id, user_id),
+        FOREIGN KEY (group_message_id) REFERENCES group_messages(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id)
+      );
+      INSERT OR IGNORE INTO group_message_reactions_temp (group_message_id, user_id, emoji)
+        SELECT message_id, user_id, emoji FROM group_message_reactions;
+      DROP TABLE group_message_reactions;
+      ALTER TABLE group_message_reactions_temp RENAME TO group_message_reactions;
+      CREATE INDEX IF NOT EXISTS idx_group_message_reactions_msg ON group_message_reactions(group_message_id);
+      CREATE INDEX IF NOT EXISTS idx_group_message_reactions_user ON group_message_reactions(user_id);
+    `);
+  }
 } catch (_) {}
 
 export default db;
