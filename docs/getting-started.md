@@ -7,7 +7,7 @@
 - **Node.js** 20.x или выше
 - **Flutter** 3.38.9 или выше
 - **Git**
-- **Docker** (опционально, для контейнеризации)
+
 
 ## Установка
 
@@ -86,14 +86,6 @@ flutter build macos
 ```
 
 Приложение будет в `client/build/macos/Build/Products/Release/`.
-
-## Docker (рекомендуется для продакшена)
-
-См. [Развёртывание](deployment.md#docker) для подробной инструкции.
-
-```bash
-docker-compose up -d
-```
 
 ## Следующие шаги
 

@@ -3,8 +3,8 @@
 ## Содержание
 
 - **[Быстрый старт](getting-started.md)** — установка и первый запуск
-- **[Настройка секретов](setup-secrets.md)** — Docker Hub, SSH для GitHub Actions
-- **[Развёртывание](deployment.md)** — Docker, VPS, HTTPS, автодеплой
+- **[Настройка секретов](setup-secrets.md)** — SSH для GitHub Actions
+- **[Развёртывание](deployment.md)** — VPS, HTTPS, автодеплой
 - **[Разработка](development.md)** — тесты, CI/CD, стандарты кода
 - **[Эксплуатация](operations.md)** — бэкапы, мониторинг, кэш, политика хранения
 - **[Миграции БД](migrations.md)** — схема и версии

@@ -89,7 +89,7 @@ export function handleHealth(db, req, res) {
 }
 
 /**
- * Обработчик GET /ready (readiness для Kubernetes/Docker).
+ * Обработчик GET /ready (readiness check).
  * @param {import('better-sqlite3').Database} db
  * @param {import('express').Request} req
  * @param {import('express').Response} res
@@ -104,7 +104,7 @@ export function handleReady(db, req, res) {
 }
 
 /**
- * Обработчик GET /live (liveness для Kubernetes/Docker).
+ * Обработчик GET /live (liveness check).
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */

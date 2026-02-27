@@ -2,7 +2,7 @@
 
 ## Мониторинг
 
-Prometheus + Grafana: `docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d`. Prometheus: :9090, Grafana: :3001 (admin/admin). Метрики сервера: `/metrics` (HTTP, WebSocket, DB, сообщения, пользователи). Пароль Grafana в продакшене сменить.
+Prometheus + Grafana: установить локально, настроить scrape target на `localhost:3000`. Prometheus: :9090, Grafana: :3001 (admin/admin). Метрики сервера: `/metrics` (HTTP, WebSocket, DB, сообщения, пользователи). Пароль Grafana в продакшене сменить.
 
 ## Бэкапы
 
@@ -20,4 +20,4 @@ Prometheus + Grafana: `docker-compose -f docker-compose.yml -f docker-compose.mo
 
 ## Логирование
 
-Сервер: Pino (error, warn, info, debug). Просмотр: PM2 — `pm2 logs messenger`; Docker — `docker compose logs -f messenger-server`. Не логировать пароли и токены; при необходимости — ротация и отправка в ELK/Loki.
+Сервер: Pino (error, warn, info, debug). Просмотр: PM2 — `pm2 logs messenger`. Не логировать пароли и токены; при необходимости — ротация и отправка в ELK/Loki.

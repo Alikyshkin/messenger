@@ -17,7 +17,7 @@
 ## CI/CD
 
 - **CI** (push/PR в main, develop): format, analyze, build web, `npm test`.
-- **Deploy** (push в main): сборка образа → Docker Hub → деплой по SSH. Секреты: `DOCKER_USERNAME`, `DOCKER_PASSWORD`, `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`.
+- **Deploy** (push в main): деплой по SSH + PM2 restart. Секреты: `DEPLOY_HOST`, `DEPLOY_USER`, `DEPLOY_SSH_KEY`.
 - **Release** (тег `v*`): сборки под все платформы, GitHub Release. Версия в `client/pubspec.yaml` и `client/lib/config/version.dart`.
 
 ## Стандарты кода
