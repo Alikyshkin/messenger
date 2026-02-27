@@ -40,7 +40,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-enum _NavigationItem { chats, contacts, profile }
+enum _NavigationItem { chats, contacts, profile, settings }
 
 class _HomeScreenState extends State<HomeScreen>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
@@ -58,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen>
   _NavigationItem _viewFromPath(String path) {
     if (path.startsWith('/contacts')) return _NavigationItem.contacts;
     if (path.startsWith('/profile')) return _NavigationItem.profile;
+    if (path.startsWith('/settings')) return _NavigationItem.settings;
     return _NavigationItem.chats;
   }
 
@@ -420,6 +421,8 @@ class _HomeScreenState extends State<HomeScreen>
         return context.tr('contacts');
       case _NavigationItem.profile:
         return context.tr('profile');
+      case _NavigationItem.settings:
+        return context.tr('settings');
     }
   }
 
@@ -486,6 +489,8 @@ class _HomeScreenState extends State<HomeScreen>
             },
           ),
         ];
+      case _NavigationItem.settings:
+        return [];
     }
   }
 
@@ -502,6 +507,8 @@ class _HomeScreenState extends State<HomeScreen>
         );
       case _NavigationItem.profile:
         return ProfileContent(navigator: _navigatorKey.currentState);
+      case _NavigationItem.settings:
+        return widget.child ?? const SizedBox.shrink();
     }
   }
 
@@ -1277,9 +1284,15 @@ class _HomeScreenState extends State<HomeScreen>
           ),
           // Настройки
           _NavButton(
-            icon: const Icon(Icons.settings, size: AppSizes.iconXL),
+            icon: Icon(
+              Icons.settings,
+              size: AppSizes.iconXL,
+              color: _currentView == _NavigationItem.settings
+                  ? Theme.of(context).colorScheme.primary
+                  : null,
+            ),
             tooltip: context.tr('settings'),
-            isActive: false,
+            isActive: _currentView == _NavigationItem.settings,
             onPressed: () => context.push('/settings'),
           ),
           const SizedBox(height: 4),

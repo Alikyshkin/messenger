@@ -273,7 +273,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? context.tr('enter_password')
                           : null,
                     ),
-                    if (_error != null) ...[
+                    if (_error != null && _error!.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       Text(
                         _error!,

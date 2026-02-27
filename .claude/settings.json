@@ -11,7 +11,30 @@
       "Bash(xargs kill -9)",
       "Bash(xargs ps -p)",
       "Bash(curl -s http://localhost:3000/auth/login -X POST -H \"Content-Type: application/json\" -d '{\"\"username\"\":\"\"test\"\",\"\"password\"\":\"\"test\"\"}')",
-      "Bash(flutter run -d chrome --web-port 8080 --dart-define=API_BASE_URL=http://localhost:3000)"
+      "Bash(flutter run -d chrome --web-port 8080 --dart-define=API_BASE_URL=http://localhost:3000)",
+      "Bash(flutter analyze lib/screens/home_screen.dart lib/routes/app_router.dart)",
+      "Bash(curl -s http://127.0.0.1:3000/health)",
+      "Bash(curl -s http://127.0.0.1:8765)",
+      "Bash(lsof -i :3000)",
+      "Bash(lsof -i :8765)",
+      "mcp__playwright__playwright_navigate",
+      "Bash(npx playwright install chromium)",
+      "Bash(npx playwright install --with-deps)",
+      "Read(//Users/alikakuznecova/Library/Caches/ms-playwright/**)",
+      "Bash(curl -s http://127.0.0.1:38473/health)",
+      "Bash(lsof -i :8765 -i :38473)",
+      "Bash(npx playwright test --config=playwright.e2e.config.js \"2. Экран входа\")",
+      "Bash(npx playwright test --config=playwright.e2e.config.js --grep \"Экран входа\")",
+      "Bash(node -e \"console.log\\(process.version\\)\")",
+      "Bash(pkill -f \"start-client-and-server\")",
+      "Bash(pkill -f \"start-test-server\")",
+      "Bash(npx playwright test --config=playwright.e2e.config.js --grep \"Форма входа|Форма регистрации|Загрузка\")",
+      "Bash(cat /Users/alikakuznecova/Documents/messenger/server/test-results/*/error-context.md)",
+      "Bash(npm run test:playwright:e2e)",
+      "Bash(npx playwright test tests/playwright/messenger.e2e.spec.js --grep \"успешный вход через UI\")",
+      "Bash(npx playwright test tests/playwright/messenger.e2e.spec.js --grep \"успешный вход\")",
+      "Bash(npx playwright test --config=playwright.config.js -g \"успешный вход\")",
+      "Bash(npx playwright test --config=playwright.e2e.config.js -g \"успешный вход\")"
     ]
   }
 }

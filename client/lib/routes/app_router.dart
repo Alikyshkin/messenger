@@ -83,10 +83,6 @@ GoRouter createAppRouter(AuthService authService) {
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
       ),
-      GoRoute(
-        path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
-      ),
       ShellRoute(
         builder: (context, state, child) {
           final auth = Provider.of<AuthService>(context, listen: false);
@@ -268,6 +264,10 @@ GoRouter createAppRouter(AuthService authService) {
                 path: 'profile',
                 builder: (context, state) =>
                     const ProfileContent(navigator: null),
+              ),
+              GoRoute(
+                path: 'settings',
+                builder: (context, state) => const SettingsScreen(),
               ),
               GoRoute(
                 path: 'media/:peerId',

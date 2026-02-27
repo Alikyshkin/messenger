@@ -65,9 +65,63 @@ const MIME_TYPES = {
   '.wasm': 'application/wasm',
 };
 
-function servePrebuiltClient() {
+// API-пути, которые проксируются на тестовый сервер
+const API_PATH_PREFIXES = [
+  '/auth/',
+  '/users/',
+  '/contacts/',
+  '/messages/',
+  '/groups/',
+  '/chats/',
+  '/polls/',
+  '/sync/',
+  '/search/',
+  '/gdpr/',
+  '/notifications/',
+];
+const API_EXACT_PATHS = new Set(['/health', '/ready', '/live', '/metrics']);
+
+function isApiPath(pathname) {
+  if (API_EXACT_PATHS.has(pathname)) return true;
+  return API_PATH_PREFIXES.some((p) => pathname.startsWith(p));
+}
+
+async function proxyToApi(req, res, targetBase) {
+  const url = `${targetBase}${req.url}`;
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const body = chunks.length ? Buffer.concat(chunks) : undefined;
+
+  try {
+    const apiRes = await fetch(url, {
+      method: req.method,
+      headers: Object.fromEntries(
+        Object.entries(req.headers).filter(([k]) => k !== 'host')
+      ),
+      body: body && body.length ? body : undefined,
+      redirect: 'manual',
+    });
+    res.writeHead(apiRes.status, Object.fromEntries(apiRes.headers));
+    const buf = await apiRes.arrayBuffer();
+    res.end(Buffer.from(buf));
+  } catch (err) {
+    log(`Proxy error for ${req.url}: ${err.message}`);
+    res.writeHead(502, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Proxy error', detail: err.message }));
+  }
+}
+
+function servePrebuiltClient(apiServerUrl) {
   return new Promise((resolve) => {
-    const httpServer = createServer((req, res) => {
+    const httpServer = createServer(async (req, res) => {
+      const pathname = (req.url || '/').split('?')[0].split('#')[0];
+
+      // Проксируем API-запросы на тестовый сервер
+      if (isApiPath(pathname)) {
+        await proxyToApi(req, res, apiServerUrl);
+        return;
+      }
+
       let filePath = join(buildDir, req.url === '/' ? 'index.html' : req.url);
       if (!existsSync(filePath) || filePath.indexOf(buildDir) !== 0) {
         filePath = join(buildDir, 'index.html');
@@ -83,7 +137,7 @@ function servePrebuiltClient() {
       }
     });
     httpServer.listen(CLIENT_PORT, '127.0.0.1', () => {
-      log(`Клиент (pre-built) запущен на http://127.0.0.1:${CLIENT_PORT}`);
+      log(`Клиент (pre-built) запущен на http://127.0.0.1:${CLIENT_PORT}, API проксируется на ${apiServerUrl}`);
       resolve(httpServer);
     });
   });
@@ -118,7 +172,7 @@ async function main() {
 
   if (existsSync(buildDir)) {
     log('Найден pre-built клиент, запускаем статический сервер...');
-    clientServer = await servePrebuiltClient();
+    clientServer = await servePrebuiltClient(SERVER_URL);
   } else {
     log('Pre-built клиент не найден, запускаем flutter run...');
     const apiBaseUrl = SERVER_URL;
